@@ -1,0 +1,357 @@
+/* ---------- Role badges ---------- */
+.role-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.01em;
+}
+
+.role-badge-lg {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+/* ---------- Stars ---------- */
+.star-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.star-count {
+  margin-left: 5px;
+  font-size: 12px;
+  color: var(--ink-500);
+  font-weight: 600;
+}
+
+.star-input {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.star-input-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+}
+
+/* ---------- Seller mini card ---------- */
+.seller-mini-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  margin-top: 14px;
+}
+
+/* ---------- Product detail images ---------- */
+.product-detail-main-img {
+  aspect-ratio: 1/1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.product-detail-main-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-detail-thumbs {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.product-detail-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  padding: 0;
+  background: var(--surface);
+}
+
+.product-detail-thumb.active {
+  border-color: var(--blue-600);
+}
+
+.product-detail-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------- Reviews ---------- */
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.review-item {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- Sell form ---------- */
+.sell-form {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 14px 0 6px;
+  color: var(--ink-700);
+}
+
+.sell-form input,
+.sell-form select,
+.sell-form textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.sell-form input:focus,
+.sell-form select:focus,
+.sell-form textarea:focus {
+  border-color: var(--blue-500);
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.image-upload-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.image-upload-item {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.image-upload-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-upload-item button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.image-upload-add {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  border: 1.5px dashed var(--border);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-500);
+  cursor: pointer;
+  text-align: center;
+}
+
+/* ---------- Purchase request card ---------- */
+.purchase-request-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.purchase-request-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blue-600);
+  margin: 0 0 4px;
+}
+
+.purchase-request-product {
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ---------- Rekber members / invite ---------- */
+.rekber-member-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.rekber-member-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 5px 10px 5px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.invite-form {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.invite-form input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+}
+
+.review-form-box {
+  margin-top: 14px;
+  padding: 16px 20px;
+  background: var(--blue-50);
+  border-radius: var(--radius-md);
+}
+
+.review-form-box textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13.5px;
+  outline: none;
+  font-family: inherit;
+}
+
+/* ---------- Account extras ---------- */
+.avatar-edit-btn {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--blue-600);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--blue-600);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 0;
+}
+
+.account-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.owner-panel {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Multi-tag role badges ---------- */
+.role-badge-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+.badge-midman {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: brightness(0) invert(1) drop-shadow(0 0 0.5px rgba(0,0,0,0.4));
+  background: #8a97ad;
+  border-radius: 50%;
+  padding: 2px;
+}
+
+/* ---------- Chat attachments ---------- */
+.attachment-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-500);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.attachment-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--blue-500);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.chat-attachment-media {
+  max-width: 220px;
+  border-radius: 10px;
+  display: block;
+}
