@@ -55,6 +55,12 @@ export function AuthProvider({ children }) {
     setProfile(created);
   }
 
+  async function refreshProfile() {
+    if (!session?.user) return;
+    const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+    if (data) setProfile(data);
+  }
+
   async function signInWithGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -68,7 +74,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, loading, signInWithGoogle, signOut }}
+      value={{ session, user: session?.user ?? null, profile, loading, signInWithGoogle, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>
