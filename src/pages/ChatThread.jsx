@@ -2,23 +2,32 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import PurchaseRequestCard from "../components/PurchaseRequestCard";
+import AttachmentButton from "../components/AttachmentButton";
 
 export default function ChatThread() {
   const { threadId } = useParams();
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
+  const [request, setRequest] = useState(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef(null);
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .eq("thread_id", threadId)
-        .order("created_at", { ascending: true });
-      setMessages(data || []);
+      const [{ data: msgs }, { data: req }] = await Promise.all([
+        supabase.from("chat_messages").select("*").eq("thread_id", threadId).order("created_at", { ascending: true }),
+        supabase
+          .from("purchase_requests")
+          .select("*, product:products(name)")
+          .eq("thread_id", threadId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      setMessages(msgs || []);
+      setRequest(req || null);
       setLoading(false);
     }
     load();
@@ -51,8 +60,30 @@ export default function ChatThread() {
     });
   }
 
+  async function sendAttachment({ url, type }) {
+    if (!user) return;
+    await supabase.from("chat_messages").insert({
+      thread_id: threadId,
+      sender_id: user.id,
+      content: type === "video" ? "📹 Video" : "🖼️ Gambar",
+      attachment_url: url,
+      attachment_type: type,
+    });
+  }
+
   return (
     <main className="chat-thread-page">
+      {!loading && request && (
+        <div className="container" style={{ paddingTop: 14 }}>
+          <PurchaseRequestCard
+            request={request}
+            isSeller={user?.id === request.seller_id}
+            currentUserId={user?.id}
+            onUpdate={setRequest}
+          />
+        </div>
+      )}
+
       <div className="chat-messages">
         {loading ? (
           <div className="skeleton" style={{ height: 200, margin: 16 }} />
@@ -62,13 +93,22 @@ export default function ChatThread() {
               key={m.id}
               className={"chat-bubble" + (m.sender_id === user?.id ? " chat-bubble-mine" : "")}
             >
-              {m.content}
+              {m.attachment_url ? (
+                m.attachment_type === "video" ? (
+                  <video src={m.attachment_url} controls className="chat-attachment-media" />
+                ) : (
+                  <img src={m.attachment_url} alt="" className="chat-attachment-media" />
+                )
+              ) : (
+                m.content
+              )}
             </div>
           ))
         )}
         <div ref={bottomRef} />
       </div>
       <form className="chat-input-bar" onSubmit={sendMessage}>
+        <AttachmentButton userId={user?.id} onUploaded={sendAttachment} />
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}

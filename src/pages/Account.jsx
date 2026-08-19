@@ -1,7 +1,19 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
+import RoleBadge from "../components/RoleBadge";
 
 export default function Account() {
-  const { user, profile, signInWithGoogle, signOut } = useAuth();
+  const { user, profile, signInWithGoogle, signOut, refreshProfile } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(profile?.display_name || "");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [tagEmail, setTagEmail] = useState("");
+  const [tagType, setTagType] = useState("is_verified");
+  const [tagMsg, setTagMsg] = useState("");
 
   if (!user) {
     return (
@@ -15,21 +27,108 @@ export default function Account() {
     );
   }
 
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    const path = `${user.id}/avatar-${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file);
+    if (!error) {
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id);
+      refreshProfile?.();
+    }
+    setAvatarUploading(false);
+  }
+
+  async function saveName() {
+    if (!name.trim()) return;
+    setSaving(true);
+    await supabase.from("profiles").update({ display_name: name.trim() }).eq("id", user.id);
+    refreshProfile?.();
+    setSaving(false);
+    setEditing(false);
+  }
+
+  async function assignTag(e) {
+    e.preventDefault();
+    setTagMsg("");
+    const { data: target } = await supabase.from("profiles").select("id").eq("email", tagEmail.trim()).maybeSingle();
+    if (!target) {
+      setTagMsg("Email tidak ditemukan.");
+      return;
+    }
+    const { error } = await supabase.from("profiles").update({ [tagType]: true }).eq("id", target.id);
+    setTagMsg(error ? "Gagal menerapkan tag." : `Berhasil menambahkan tag ke ${tagEmail}.`);
+    setTagEmail("");
+  }
+
   return (
     <main className="container">
       <div className="account-card">
-        <div className="account-avatar">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" />
-          ) : (
-            <span>{(profile?.display_name || "U")[0].toUpperCase()}</span>
-          )}
+        <div style={{ position: "relative" }}>
+          <div className="account-avatar">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" />
+            ) : (
+              <span>{(profile?.display_name || "U")[0].toUpperCase()}</span>
+            )}
+          </div>
+          <label className="avatar-edit-btn">
+            {avatarUploading ? "..." : "✎"}
+            <input type="file" accept="image/*" hidden onChange={handleAvatarChange} disabled={avatarUploading} />
+          </label>
         </div>
         <div>
-          <h2 style={{ margin: "0 0 4px" }}>{profile?.display_name}</h2>
-          <p style={{ margin: 0, color: "var(--ink-500)" }}>{profile?.email}</p>
+          {editing ? (
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={name} onChange={(e) => setName(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)" }} />
+              <button className="btn btn-primary" style={{ padding: "6px 14px" }} onClick={saveName} disabled={saving}>
+                Simpan
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h2 style={{ margin: 0 }}>{profile?.display_name}</h2>
+              <RoleBadge profile={profile} />
+              <button className="link-btn" onClick={() => setEditing(true)}>
+                Edit
+              </button>
+            </div>
+          )}
+          <p style={{ margin: "4px 0 0", color: "var(--ink-500)" }}>{profile?.email}</p>
         </div>
       </div>
+
+      <div className="account-links">
+        <Link to="/jual" className="thread-item">
+          <span>📦 Produk Saya</span>
+        </Link>
+        <Link to="/rekber" className="thread-item">
+          <span>🤝 Grup Rekber</span>
+        </Link>
+      </div>
+
+      {profile?.is_owner && (
+        <div className="owner-panel">
+          <h3 style={{ fontSize: 15, marginBottom: 10 }}>Panel Owner — Kelola Tag Pengguna</h3>
+          <form onSubmit={assignTag} className="card-form" style={{ padding: 16 }}>
+            <input
+              value={tagEmail}
+              onChange={(e) => setTagEmail(e.target.value)}
+              placeholder="Email pengguna"
+              style={{ marginBottom: 10 }}
+            />
+            <select value={tagType} onChange={(e) => setTagType(e.target.value)} style={{ marginBottom: 10, width: "100%", padding: 10, borderRadius: 10, border: "1px solid var(--border)" }}>
+              <option value="is_verified">Tandai Terverifikasi (centang biru)</option>
+              <option value="is_midman">Tandai Mid Man</option>
+            </select>
+            {tagMsg && <p className="thread-item-sub" style={{ marginBottom: 8 }}>{tagMsg}</p>}
+            <button className="btn btn-primary btn-full">Terapkan Tag</button>
+          </form>
+        </div>
+      )}
+
       <button className="btn btn-outline" onClick={signOut} style={{ marginTop: 20 }}>
         Keluar
       </button>
