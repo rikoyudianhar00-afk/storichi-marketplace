@@ -3,12 +3,12 @@ import { supabase } from "./supabase";
 
 async function getUnreadCount(userId) {
   if (!userId) return 0;
-  const { count } = await supabase
+  const { data } = await supabase
     .from("chat_notifications")
-    .select("id", { count: "exact", head: true })
+    .select("thread_id")
     .eq("recipient_id", userId)
     .is("read_at", null);
-  return count || 0;
+  return new Set((data || []).map((notification) => notification.thread_id)).size;
 }
 
 export function useUnreadChatNotifications(userId) {
