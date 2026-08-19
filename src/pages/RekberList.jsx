@@ -35,15 +35,14 @@ export default function RekberList() {
     <main className="container">
       <h1 className="page-title">Grup Rekber</h1>
       <p className="page-subtitle">
-        Grup rekber otomatis dibuat saat penjual menyetujui permintaan beli di chat. Buka dari
-        percakapan produk untuk memulai transaksi rekber.
+        Setelah penjual menyetujui permintaan beli, buka percakapan produk untuk memilih midman resmi dan membuat lobby tiga pihak.
       </p>
 
       {loading ? (
         <div className="skeleton" style={{ height: 120 }} />
       ) : groups.length === 0 ? (
         <div className="empty-state">
-          <p>Belum ada grup rekber. Grup akan muncul otomatis setelah transaksi disetujui di chat.</p>
+          <p>Belum ada lobby Rekber. Lobby dibuat dari chat setelah permintaan beli disetujui dan midman dipilih.</p>
           <Link to="/chat" className="btn btn-primary" style={{ marginTop: 12 }}>
             Buka Chat
           </Link>

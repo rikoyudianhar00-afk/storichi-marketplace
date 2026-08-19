@@ -1,43 +1,54 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-
-function generateCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "RB-";
-  for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
 
 export default function PurchaseRequestCard({ request, isSeller, currentUserId, onUpdate }) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [showMidmanPicker, setShowMidmanPicker] = useState(false);
+  const [midmen, setMidmen] = useState([]);
+  const [selectedMidman, setSelectedMidman] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!showMidmanPicker) return;
+    supabase
+      .from("profiles")
+      .select("id, display_name, avatar_url, bio, is_verified, is_midman")
+      .eq("is_midman", true)
+      .order("display_name", { ascending: true })
+      .then(({ data, error: loadError }) => {
+        if (loadError) setError("Daftar midman belum bisa dimuat. Pastikan migrasi database sudah dijalankan.");
+        setMidmen(data || []);
+      });
+  }, [showMidmanPicker]);
 
   async function respond(status) {
     setBusy(true);
-    await supabase.from("purchase_requests").update({ status }).eq("id", request.id);
+    setError("");
+    const { error: updateError } = await supabase.from("purchase_requests").update({ status }).eq("id", request.id);
     setBusy(false);
+    if (updateError) return setError("Status permintaan gagal diperbarui.");
     onUpdate?.({ ...request, status });
   }
 
   async function createRekber() {
-    setBusy(true);
-    const code = generateCode();
-    const { data: group } = await supabase
-      .from("rekber_groups")
-      .insert({ name: `Rekber: ${request.product?.name || "Transaksi"}`, code, created_by: currentUserId })
-      .select()
-      .single();
-
-    if (group) {
-      await supabase.from("rekber_members").insert([
-        { group_id: group.id, user_id: request.buyer_id, role: "member" },
-        { group_id: group.id, user_id: request.seller_id, role: "member" },
-      ]);
-      await supabase.from("purchase_requests").update({ rekber_group_id: group.id }).eq("id", request.id);
-      navigate(`/rekber/${group.id}`);
+    if (!selectedMidman) {
+      setError("Pilih midman terlebih dahulu.");
+      return;
     }
+    setBusy(true);
+    setError("");
+    const { data: groupId, error: createError } = await supabase.rpc("create_rekber_lobby", {
+      p_purchase_request_id: request.id,
+      p_midman_id: selectedMidman,
+    });
     setBusy(false);
+    if (createError || !groupId) {
+      setError(createError?.message || "Lobby Rekber gagal dibuat. Jalankan schema_v7.sql terlebih dahulu.");
+      return;
+    }
+    navigate(`/rekber/${groupId}`);
   }
 
   return (
@@ -47,37 +58,37 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
 
       {request.status === "pending" && isSeller && (
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} disabled={busy} onClick={() => respond("approved")}>
-            Setujui
-          </button>
-          <button className="btn btn-outline" style={{ flex: 1 }} disabled={busy} onClick={() => respond("rejected")}>
-            Tolak
-          </button>
+          <button className="btn btn-primary" style={{ flex: 1 }} disabled={busy} onClick={() => respond("approved")}>Setujui</button>
+          <button className="btn btn-outline" style={{ flex: 1 }} disabled={busy} onClick={() => respond("rejected")}>Tolak</button>
         </div>
       )}
 
-      {request.status === "pending" && !isSeller && (
-        <p className="thread-item-sub" style={{ marginTop: 8 }}>Menunggu persetujuan penjual...</p>
-      )}
-
+      {request.status === "pending" && !isSeller && <p className="thread-item-sub" style={{ marginTop: 8 }}>Menunggu persetujuan penjual...</p>}
       {request.status === "approved" && !request.rekber_group_id && (
         <div style={{ marginTop: 10 }}>
           <p className="thread-item-sub" style={{ marginBottom: 8, color: "#0f9d68" }}>✓ Disetujui penjual</p>
-          <button className="btn btn-primary btn-full" disabled={busy} onClick={createRekber}>
-            {busy ? "Membuat..." : "Buat Grup Rekber"}
-          </button>
+          {!showMidmanPicker ? (
+            <button className="btn btn-primary btn-full" disabled={busy} onClick={() => setShowMidmanPicker(true)}>Pilih Midman & Buat Lobby</button>
+          ) : (
+            <div className="midman-picker">
+              <label className="form-label" htmlFor="midman-select">Pilih midman</label>
+              <select id="midman-select" value={selectedMidman} onChange={(e) => setSelectedMidman(e.target.value)}>
+                <option value="">Pilih midman terverifikasi</option>
+                {midmen.map((midman) => <option key={midman.id} value={midman.id}>{midman.display_name}{midman.is_verified ? " · Terverifikasi" : ""}</option>)}
+              </select>
+              <p className="thread-item-sub">Midman memegang konfirmasi item dan dana secara terpisah sampai keduanya siap dilepas.</p>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button type="button" className="btn btn-primary" style={{ flex: 1 }} disabled={busy} onClick={createRekber}>{busy ? "Membuat..." : "Buat Lobby"}</button>
+                <button type="button" className="btn btn-outline" onClick={() => setShowMidmanPicker(false)}>Batal</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {request.status === "approved" && request.rekber_group_id && (
-        <button className="btn btn-outline btn-full" style={{ marginTop: 10 }} onClick={() => navigate(`/rekber/${request.rekber_group_id}`)}>
-          Buka Grup Rekber
-        </button>
-      )}
-
-      {request.status === "rejected" && (
-        <p className="thread-item-sub" style={{ marginTop: 8, color: "var(--accent-coral)" }}>✕ Ditolak penjual</p>
-      )}
+      {request.status === "approved" && request.rekber_group_id && <button className="btn btn-outline btn-full" style={{ marginTop: 10 }} onClick={() => navigate(`/rekber/${request.rekber_group_id}`)}>Buka Grup Rekber</button>}
+      {request.status === "rejected" && <p className="thread-item-sub" style={{ marginTop: 8, color: "var(--accent-coral)" }}>✕ Ditolak penjual</p>}
+      {error && <p className="form-error" style={{ marginTop: 8 }}>{error}</p>}
     </div>
   );
 }

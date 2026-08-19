@@ -40,7 +40,7 @@ export default function CategoryPage() {
     <main className="container category-page">
       <div className="category-page-top">
         <div className="corridor-breadcrumb"><Link to="/">Beranda</Link>{group && <><span>/</span><Link to={`/grup/${group.slug}`}>{group.label}</Link></>}<span>/</span><span>{category?.label || "Kategori"}</span></div>
-        <div className="category-heading-row"><div><span className="section-kicker">{group ? "Koridor kategori" : "Kategori mandiri"}</span><h1 className="page-title">{category?.label || "Kategori"}</h1><p className="page-subtitle">Produk terpopuler dan penjual terpercaya di kategori ini.</p></div><ProductFilters value={sort} onChange={setSort} /></div>
+        <div className="category-heading-row"><div><span className="section-kicker">{group ? "Grup kategori" : "Kategori mandiri"}</span><h1 className="page-title">{category?.label || "Kategori"}</h1><p className="page-subtitle">Produk terpopuler dan penjual terpercaya di kategori ini.</p></div><ProductFilters value={sort} onChange={setSort} /></div>
       </div>
       <ProductList items={visibleItems} loading={loading} emptyText="Belum ada produk di kategori ini." />
     </main>

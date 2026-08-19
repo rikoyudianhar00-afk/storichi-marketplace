@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import PurchaseRequestCard from "../components/PurchaseRequestCard";
 import AttachmentButton from "../components/AttachmentButton";
 import { markChatThreadRead } from "../lib/chatNotifications";
+import { moderateMessage } from "../lib/moderation";
 import { supabase } from "../lib/supabase";
 
 function formatMessageTime(value) {
@@ -19,6 +20,7 @@ export default function ChatThread() {
   const [request, setRequest] = useState(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [chatError, setChatError] = useState("");
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -60,14 +62,22 @@ export default function ChatThread() {
   async function sendMessage(e) {
     e.preventDefault();
     if (!text.trim() || !user) return;
-    const content = text.trim();
+    const result = moderateMessage(text);
+    if (!result.allowed) {
+      setChatError(result.message);
+      return;
+    }
+    setChatError("");
     setText("");
-    await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content });
+    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: result.value });
+    if (error) setChatError("Pesan gagal dikirim. Coba lagi.");
   }
 
   async function sendAttachment({ url, type }) {
     if (!user) return;
-    await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type });
+    setChatError("");
+    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type });
+    if (error) setChatError("Lampiran gagal dikirim.");
   }
 
   if (!user) return <main className="container empty-state"><h2>Masuk untuk membuka chat</h2></main>;
@@ -98,6 +108,7 @@ export default function ChatThread() {
         <div ref={bottomRef} />
       </div>
 
+      {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
       <form className="chat-input-bar" onSubmit={sendMessage}>
         <AttachmentButton userId={user.id} onUploaded={sendAttachment} />
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Tulis pesan..." aria-label="Tulis pesan" />

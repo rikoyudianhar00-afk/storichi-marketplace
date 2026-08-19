@@ -10,6 +10,7 @@ export default function Account() {
   const { user, profile, signInWithGoogle, signOut, refreshProfile } = useAuth();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(profile?.display_name || "");
+  const [bio, setBio] = useState(profile?.bio || "");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cropSource, setCropSource] = useState(null);
@@ -64,13 +65,16 @@ export default function Account() {
     setAvatarUploading(false);
   }
 
-  async function saveName() {
+  async function saveProfile() {
     if (!name.trim()) return;
     setSaving(true);
-    await supabase.from("profiles").update({ display_name: name.trim() }).eq("id", user.id);
-    refreshProfile?.();
+    const { error } = await supabase.from("profiles").update({ display_name: name.trim(), bio: bio.trim().slice(0, 500) }).eq("id", user.id);
+    if (error) setImageError("Profil gagal disimpan. Pastikan migrasi bio sudah dijalankan.");
+    else {
+      refreshProfile?.();
+      setEditing(false);
+    }
     setSaving(false);
-    setEditing(false);
   }
 
   async function assignTag(e) {
@@ -129,11 +133,13 @@ export default function Account() {
         </div>
         <div>
           {editing ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              <input value={name} onChange={(e) => setName(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)" }} />
-              <button className="btn btn-primary" style={{ padding: "6px 14px" }} onClick={saveName} disabled={saving}>
-                Simpan
-              </button>
+            <div className="profile-edit-fields">
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama tampilan" />
+              <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} rows={3} placeholder="Bio penjual, misalnya spesialisasi dan jam online..." />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-primary" style={{ padding: "6px 14px" }} onClick={saveProfile} disabled={saving}>Simpan</button>
+                <button className="btn btn-outline" style={{ padding: "6px 14px" }} onClick={() => setEditing(false)} type="button">Batal</button>
+              </div>
             </div>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -145,6 +151,7 @@ export default function Account() {
             </div>
           )}
           <p style={{ margin: "4px 0 0", color: "var(--ink-500)" }}>{profile?.email}</p>
+          {profile?.bio && !editing && <p className="profile-bio">{profile.bio}</p>}
         </div>
       </div>
 

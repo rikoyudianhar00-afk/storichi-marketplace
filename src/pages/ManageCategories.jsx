@@ -26,12 +26,13 @@ export default function ManageCategories() {
   }, []);
 
   async function load() {
-    const [{ data: categoryData }, { data: groupData }] = await Promise.all([
+    const [{ data: categoryData, error: categoryError }, { data: groupData, error: groupError }] = await Promise.all([
       supabase.from("categories").select("*").order("sort_order", { ascending: true }),
       supabase.from("category_groups").select("*").order("sort_order", { ascending: true }),
     ]);
     setCategories(categoryData || []);
     setGroups(groupData || []);
+    if (categoryError || groupError) setImageError("Grup kategori belum aktif. Jalankan schema_v6.sql dan schema_v7.sql di Supabase SQL Editor.");
     setLoading(false);
   }
 
@@ -161,10 +162,10 @@ export default function ManageCategories() {
 
       <h1 className="page-title">Kelola Kategori</h1>
       {imageError && <p className="form-error">{imageError}</p>}
-      <p className="page-subtitle">Atur grup sebagai pintu luar, lalu tetapkan kategori mana yang berada di dalamnya.</p>
+      <p className="page-subtitle">Buat grup kategori, lalu tetapkan kategori mana yang termasuk di dalamnya.</p>
 
       <section className="category-group-manager">
-        <h2 className="category-manager-heading">Grup kategori / pintu luar</h2>
+        <h2 className="category-manager-heading">Grup kategori</h2>
         <form onSubmit={addGroup} className="invite-form" style={{ marginBottom: 12 }}>
           <input value={newGroupLabel} onChange={(e) => setNewGroupLabel(e.target.value)} placeholder="Nama grup baru, misalnya Game" />
           <button className="btn btn-primary" disabled={groupSaving}>{groupSaving ? "..." : "+ Grup"}</button>

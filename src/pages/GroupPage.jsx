@@ -45,15 +45,23 @@ export default function GroupPage() {
     <main className="container category-corridor-page">
       <div className="corridor-hero">
         <div className="corridor-hero-icon">{group.image_url ? <img src={group.image_url} alt="" /> : <span>{group.label?.[0]}</span>}</div>
-        <div><span className="section-kicker">Pintu grup kategori</span><h1 className="page-title">{group.label}</h1><p className="page-subtitle">Masuk ke koridor kategori dan temukan produk terpopuler.</p></div>
+        <div><span className="section-kicker">Grup kategori</span><h1 className="page-title">{group.label}</h1><p className="page-subtitle">Kategori yang tergabung dalam grup ini.</p></div>
       </div>
       <div className="corridor-breadcrumb"><Link to="/">Beranda</Link><span>/</span><span>{group.label}</span></div>
+      <div className="group-category-chip-list">
+        {corridors.map((category) => (
+          <Link key={category.id} to={`/kategori/${category.slug}`} className="group-category-chip">
+            <span className="group-category-chip-icon">{category.image_url ? <img src={category.image_url} alt="" /> : <span>{category.label?.[0] || "K"}</span>}</span>
+            <span>{category.label}</span>
+          </Link>
+        ))}
+      </div>
       {corridors.length === 0 ? (
         <div className="empty-state"><p>Belum ada kategori di dalam grup ini.</p></div>
       ) : corridors.map((category) => (
         <section key={category.id} className="corridor-section">
           <div className="corridor-section-head">
-            <div><span className="section-kicker">Koridor kategori</span><h2>{category.label}</h2></div>
+            <div><span className="section-kicker">Kategori</span><h2>{category.label}</h2></div>
             <Link to={`/kategori/${category.slug}`} className="see-all">Lihat semua →</Link>
           </div>
           <ProductList items={category.products} emptyText="Belum ada produk di kategori ini." />

@@ -170,6 +170,7 @@ export default function ProductDetail() {
                   <RoleBadge profile={seller} />
                 </div>
                 <StarDisplay rating={avgRating} count={reviews.length} />
+                {seller.bio && <p className="seller-bio-snippet">{seller.bio}</p>}
               </div>
             </div>
           )}

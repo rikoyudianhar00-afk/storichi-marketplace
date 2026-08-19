@@ -635,3 +635,9 @@
 .product-like-button { border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink-700); padding: 7px 11px; font-size: 13px; font-weight: 700; }
 .product-like-button.is-liked { border-color: rgba(238, 94, 104, .35); color: var(--accent-coral); background: #fff5f5; }
 .product-view-count { color: var(--ink-500); font-size: 12px; }
+
+.group-category-chip-list { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 24px; }
+.group-category-chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; border: 1px solid rgba(36,84,255,.24); border-radius: 999px; background: var(--surface); color: var(--ink-700); text-decoration: none; font-size: 12px; font-weight: 700; }
+.group-category-chip-icon { width: 30px; height: 30px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--blue-50); color: var(--blue-600); font-weight: 800; }
+.group-category-chip-icon img { width: 100%; height: 100%; object-fit: cover; }
+.group-category-chip:hover { border-color: var(--blue-600); background: var(--blue-50); }

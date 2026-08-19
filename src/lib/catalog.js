@@ -13,7 +13,7 @@ export async function enrichProducts(products = []) {
   if (!sellerIds.length) return products.map((product) => ({ ...product, rating: 0, rating_count: 0 }));
 
   const [{ data: sellers }, { data: reviews }] = await Promise.all([
-    supabase.from("profiles").select("id, display_name, avatar_url, is_verified, is_owner").in("id", sellerIds),
+    supabase.from("profiles").select("id, display_name, avatar_url, bio, is_verified, is_owner").in("id", sellerIds),
     supabase.from("seller_reviews").select("seller_id, rating").in("seller_id", sellerIds),
   ]);
 

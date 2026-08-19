@@ -17,11 +17,15 @@ import Account from "./pages/Account";
 import ManageCategories from "./pages/ManageCategories";
 import InfoHelp from "./pages/InfoHelp";
 import SimplePage from "./pages/SimplePage";
+import ChatNotificationToast from "./components/ChatNotificationToast";
+import { useAuth } from "./context/AuthContext";
 
 export default function App() {
+  const { user } = useAuth();
   return (
     <>
       <Navbar />
+      <ChatNotificationToast userId={user?.id} />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/kategori/:slug" element={<CategoryPage />} />
