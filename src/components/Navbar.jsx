@@ -26,8 +26,7 @@ export default function Navbar() {
           </svg>
         </button>
 
-        <Link to="/" className="navbar-logo">
-          <span className="navbar-logo-mark">S</span>
+        <Link to="/" className="navbar-logo"
           <span>storichi</span>
         </Link>
 
