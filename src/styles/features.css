@@ -355,3 +355,130 @@
   border-radius: 10px;
   display: block;
 }
+
+/* ---------- Info / Help page ---------- */
+.info-section {
+  margin-top: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-section:last-child {
+  border-bottom: none;
+}
+
+.info-section h2 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  margin: 0 0 10px;
+}
+
+.info-section p {
+  color: var(--ink-700);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.info-section ol {
+  padding-left: 20px;
+  color: var(--ink-700);
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.role-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.role-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+}
+
+.role-info-item strong {
+  font-size: 13.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.role-info-item p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-500);
+}
+
+/* ---------- Category images (dynamic, owner-managed) ---------- */
+.category-tile-icon-img {
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.category-tile-icon-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.category-tile-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-weight: 800;
+  color: var(--ink-500);
+  font-family: var(--font-display);
+}
+
+.category-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.category-manage-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.category-manage-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.category-manage-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.category-manage-name {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+}
+
+.category-manage-name:focus {
+  border-color: var(--blue-500);
+}
