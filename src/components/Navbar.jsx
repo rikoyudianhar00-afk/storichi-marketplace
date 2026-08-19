@@ -29,6 +29,7 @@ export default function Navbar() {
         <Link to="/" className="navbar-logo">
           <span>storichi</span>
         </Link>
+
         <div className="navbar-actions">
           {user ? (
             <div className="navbar-user">
@@ -79,6 +80,7 @@ export default function Navbar() {
           <Link to="/" onClick={() => setMenuOpen(false)}>Beranda</Link>
           <Link to="/kategori/top-up" onClick={() => setMenuOpen(false)}>Top Up Game</Link>
           <Link to="/kategori/akun" onClick={() => setMenuOpen(false)}>Jual Beli Akun</Link>
+          <Link to="/jual/baru" onClick={() => setMenuOpen(false)}>Jual Produk</Link>
           <Link to="/rekber" onClick={() => setMenuOpen(false)}>Grup Rekber</Link>
           <Link to="/chat" onClick={() => setMenuOpen(false)}>Chat</Link>
           {user && (
