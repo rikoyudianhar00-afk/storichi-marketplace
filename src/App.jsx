@@ -5,6 +5,8 @@ import BottomNav from "./components/BottomNav";
 import Home from "./pages/Home";
 import CategoryPage from "./pages/CategoryPage";
 import ProductDetail from "./pages/ProductDetail";
+import SellProduct from "./pages/SellProduct";
+import MyProducts from "./pages/MyProducts";
 import ChatList from "./pages/ChatList";
 import ChatThread from "./pages/ChatThread";
 import RekberList from "./pages/RekberList";
@@ -20,6 +22,9 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/kategori/:slug" element={<CategoryPage />} />
         <Route path="/produk/:slug" element={<ProductDetail />} />
+        <Route path="/jual" element={<MyProducts />} />
+        <Route path="/jual/baru" element={<SellProduct />} />
+        <Route path="/jual/edit/:productId" element={<SellProduct />} />
         <Route path="/chat" element={<ChatList />} />
         <Route path="/chat/:threadId" element={<ChatThread />} />
         <Route path="/rekber" element={<RekberList />} />
