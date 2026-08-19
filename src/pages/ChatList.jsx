@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { enableChatPush, isPushSupported } from "../lib/pushNotifications";
 
 function formatChatTime(value) {
   if (!value) return "";
@@ -17,6 +18,8 @@ export default function ChatList() {
   const { user } = useAuth();
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pushMessage, setPushMessage] = useState("");
+  const [pushBusy, setPushBusy] = useState(false);
 
   useEffect(() => {
     if (!user) return undefined;
@@ -60,9 +63,18 @@ export default function ChatList() {
 
   if (!user) return <main className="container empty-state"><h2>Masuk untuk melihat chat</h2><p>Login dengan Google untuk mulai chat dengan penjual atau pembeli.</p></main>;
 
+  async function enablePush() {
+    setPushBusy(true);
+    const result = await enableChatPush(user.id);
+    setPushMessage(result.message);
+    setPushBusy(false);
+  }
+
   return (
     <main className="container chat-inbox-page">
       <div className="chat-list-heading"><div><span className="section-kicker">Percakapan</span><h1 className="page-title">Chat</h1></div><span className="chat-list-status">Aman dan langsung</span></div>
+      {isPushSupported() && <div className="push-notification-panel"><div><strong>Jangan lewatkan pesan masuk</strong><p>Aktifkan notifikasi agar pesan tetap terlihat saat Storichi ditutup.</p></div><button type="button" className="btn btn-outline" onClick={enablePush} disabled={pushBusy}>{pushBusy ? "Mengaktifkan..." : "Aktifkan notifikasi"}</button></div>}
+      {pushMessage && <p className="thread-item-sub push-notification-message">{pushMessage}</p>}
       {loading ? <div className="skeleton" style={{ height: 260 }} /> : !threads.length ? (
         <div className="empty-state"><p>Belum ada percakapan. Mulai chat dari halaman produk.</p></div>
       ) : (

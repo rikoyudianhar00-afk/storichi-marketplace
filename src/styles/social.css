@@ -351,3 +351,9 @@
 @media (max-width: 860px) {
   .chat-thread-page { min-height: calc(100dvh - 74px - 72px); height: calc(100dvh - 74px - 72px); }
 }
+
+.push-notification-panel { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 12px; padding: 12px 14px; border: 1px solid rgba(36,84,255,.16); border-radius: 14px; background: linear-gradient(135deg, #f5f8ff, #fff); }
+.push-notification-panel strong { font-size: 13px; }
+.push-notification-panel p { margin: 3px 0 0; color: var(--ink-500); font-size: 11px; }
+.push-notification-message { margin: -4px 0 12px; color: var(--blue-600); }
+@media (max-width: 600px) { .push-notification-panel { align-items: flex-start; flex-direction: column; } .push-notification-panel .btn { width: 100%; } }

@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
+async function getUnreadCount(userId) {
+  if (!userId) return 0;
+  const { count } = await supabase
+    .from("chat_notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", userId)
+    .is("read_at", null);
+  return count || 0;
+}
+
 export function useUnreadChatNotifications(userId) {
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -11,26 +21,27 @@ export function useUnreadChatNotifications(userId) {
     }
 
     let active = true;
-    supabase
-      .from("chat_notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("recipient_id", userId)
-      .is("read_at", null)
-      .then(({ count }) => {
-        if (active) setUnreadCount(count || 0);
-      });
+    const refresh = async () => {
+      const count = await getUnreadCount(userId);
+      if (active) setUnreadCount(count);
+    };
+
+    refresh();
+    const onLocalChange = () => refresh();
+    window.addEventListener("chat-notifications-updated", onLocalChange);
 
     const channel = supabase
       .channel(`chat_notifications_${userId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_notifications", filter: `recipient_id=eq.${userId}` },
-        () => setUnreadCount((current) => current + 1)
+        { event: "*", schema: "public", table: "chat_notifications", filter: `recipient_id=eq.${userId}` },
+        refresh
       )
       .subscribe();
 
     return () => {
       active = false;
+      window.removeEventListener("chat-notifications-updated", onLocalChange);
       supabase.removeChannel(channel);
     };
   }, [userId]);
@@ -39,11 +50,26 @@ export function useUnreadChatNotifications(userId) {
 }
 
 export async function markChatThreadRead(userId, threadId) {
-  if (!userId || !threadId) return;
-  await supabase
+  if (!userId || !threadId) return 0;
+  const { data, error } = await supabase
     .from("chat_notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("recipient_id", userId)
     .eq("thread_id", threadId)
+    .is("read_at", null)
+    .select("id");
+  if (!error) window.dispatchEvent(new Event("chat-notifications-updated"));
+  return data?.length || 0;
+}
+
+export async function markChatNotificationRead(userId, notificationId) {
+  if (!userId || !notificationId) return false;
+  const { error } = await supabase
+    .from("chat_notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_id", userId)
+    .eq("id", notificationId)
     .is("read_at", null);
+  if (!error) window.dispatchEvent(new Event("chat-notifications-updated"));
+  return !error;
 }
