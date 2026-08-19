@@ -26,10 +26,9 @@ export default function Navbar() {
           </svg>
         </button>
 
-        <Link to="/" className="navbar-logo"
+        <Link to="/" className="navbar-logo">
           <span>storichi</span>
         </Link>
-
         <div className="navbar-actions">
           {user ? (
             <div className="navbar-user">
