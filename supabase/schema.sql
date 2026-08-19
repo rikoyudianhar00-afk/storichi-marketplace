@@ -179,4 +179,3 @@ create policy "Member bisa kirim pesan di grupnya" on rekber_messages
 alter publication supabase_realtime add table chat_messages;
 alter publication supabase_realtime add table rekber_messages;
 alter publication supabase_realtime add table rekber_members;
-  
