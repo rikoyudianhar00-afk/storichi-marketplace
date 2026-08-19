@@ -1,25 +1,24 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ProductCard } from "../components/ProductSection";
-import { CATEGORIES } from "../lib/categories";
 import { supabase } from "../lib/supabase";
 
 export default function CategoryPage() {
   const { slug } = useParams();
   const [items, setItems] = useState([]);
+  const [category, setCategory] = useState(null);
   const [loading, setLoading] = useState(true);
-  const category = CATEGORIES.find((c) => c.slug === slug);
 
   useEffect(() => {
     setLoading(true);
-    supabase
-      .from("products")
-      .select("*")
-      .eq("category", slug)
-      .then(({ data }) => {
-        setItems(data || []);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase.from("categories").select("*").eq("slug", slug).maybeSingle(),
+      supabase.from("products").select("*").eq("category", slug),
+    ]).then(([{ data: cat }, { data: products }]) => {
+      setCategory(cat);
+      setItems(products || []);
+      setLoading(false);
+    });
   }, [slug]);
 
   return (

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
-import { CATEGORIES } from "../lib/categories";
 
 function slugify(text) {
   return (
@@ -22,7 +21,8 @@ export default function SellProduct() {
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0].slug);
+  const [categories, setCategories] = useState([]);
+  const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState(1);
   const [description, setDescription] = useState("");
@@ -31,6 +31,17 @@ export default function SellProduct() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(!!productId);
+
+  useEffect(() => {
+    supabase
+      .from("categories")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        setCategories(data || []);
+        if (data?.length && !category) setCategory(data[0].slug);
+      });
+  }, []);
 
   useEffect(() => {
     if (!productId) return;
@@ -154,7 +165,7 @@ export default function SellProduct() {
 
         <label className="form-label">Kategori</label>
         <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <option key={c.slug} value={c.slug}>
               {c.label}
             </option>

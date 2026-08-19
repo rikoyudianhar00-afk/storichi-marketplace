@@ -111,7 +111,11 @@ export default function Account() {
 
       {profile?.is_owner && (
         <div className="owner-panel">
-          <h3 style={{ fontSize: 15, marginBottom: 10 }}>Panel Owner — Kelola Tag Pengguna</h3>
+          <h3 style={{ fontSize: 15, marginBottom: 10 }}>Panel Owner</h3>
+          <Link to="/kelola-kategori" className="thread-item" style={{ marginBottom: 14 }}>
+            <span>🖼️ Kelola Kategori</span>
+          </Link>
+          <h4 style={{ fontSize: 13.5, marginBottom: 8 }}>Kelola Tag Pengguna</h4>
           <form onSubmit={assignTag} className="card-form" style={{ padding: 16 }}>
             <input
               value={tagEmail}
