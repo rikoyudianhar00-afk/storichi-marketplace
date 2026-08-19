@@ -15,6 +15,7 @@ begin
   return check_email in (
     'hoshiizenstore@gmail.com',
     'Biasa101009@gmail.com',
+    'dimazmew@gmail.com'
     'opsionalketiga@gmail.com'
   );
 end;
