@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import ImageCropModal from "../components/ImageCropModal";
 
 function slugify(text) {
   return (
@@ -31,6 +32,7 @@ export default function SellProduct() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(!!productId);
+  const [cropTarget, setCropTarget] = useState(null); // { source, replaceIndex? }
 
   useEffect(() => {
     supabase
@@ -63,22 +65,33 @@ export default function SellProduct() {
       });
   }, [productId]);
 
-  async function handleImageUpload(e) {
-    const files = Array.from(e.target.files || []);
-    if (!files.length || !user) return;
-    setUploading(true);
-    const uploaded = [];
+  function pickImage(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) setCropTarget({ source: file });
+  }
 
-    for (const file of files) {
-      const path = `${user.id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage.from("product-images").upload(path, file);
-      if (!uploadError) {
-        const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-        uploaded.push(data.publicUrl);
+  function repositionImage(idx) {
+    setCropTarget({ source: images[idx], replaceIndex: idx });
+  }
+
+  async function handleCropConfirm(blob) {
+    const { replaceIndex } = cropTarget;
+    setCropTarget(null);
+    if (!user) return;
+    setUploading(true);
+    const path = `${user.id}/${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(path, blob, { contentType: "image/jpeg" });
+    if (!uploadError) {
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      if (replaceIndex != null) {
+        setImages((prev) => prev.map((img, i) => (i === replaceIndex ? data.publicUrl : img)));
+      } else {
+        setImages((prev) => [...prev, data.publicUrl]);
       }
     }
-
-    setImages((prev) => [...prev, ...uploaded]);
     setUploading(false);
   }
 
@@ -141,6 +154,15 @@ export default function SellProduct() {
 
   return (
     <main className="container" style={{ paddingBottom: 40 }}>
+      {cropTarget && (
+        <ImageCropModal
+          source={cropTarget.source}
+          aspect="free"
+          onCancel={() => setCropTarget(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
+
       <h1 className="page-title">{productId ? "Edit Produk" : "Jual Produk Baru"}</h1>
 
       <form className="sell-form" onSubmit={handleSubmit}>
@@ -149,14 +171,17 @@ export default function SellProduct() {
           {images.map((img, i) => (
             <div key={i} className="image-upload-item">
               <img src={img} alt="" />
-              <button type="button" onClick={() => removeImage(i)} aria-label="Hapus gambar">
+              <button type="button" className="image-reposition-btn" onClick={() => repositionImage(i)} aria-label="Reposisi gambar">
+                ⤢
+              </button>
+              <button type="button" className="image-remove-btn" onClick={() => removeImage(i)} aria-label="Hapus gambar">
                 ×
               </button>
             </div>
           ))}
           <label className="image-upload-add">
             {uploading ? "..." : "+ Tambah"}
-            <input type="file" accept="image/*" multiple onChange={handleImageUpload} hidden disabled={uploading} />
+            <input type="file" accept="image/*" onChange={pickImage} hidden disabled={uploading} />
           </label>
         </div>
 

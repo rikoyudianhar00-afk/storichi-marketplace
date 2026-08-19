@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import RoleBadge from "../components/RoleBadge";
+import ImageCropModal from "../components/ImageCropModal";
 
 export default function Account() {
   const { user, profile, signInWithGoogle, signOut, refreshProfile } = useAuth();
@@ -10,6 +11,7 @@ export default function Account() {
   const [name, setName] = useState(profile?.display_name || "");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cropSource, setCropSource] = useState(null);
 
   const [tagEmail, setTagEmail] = useState("");
   const [tagType, setTagType] = useState("is_verified");
@@ -27,12 +29,17 @@ export default function Account() {
     );
   }
 
-  async function handleAvatarChange(e) {
+  function handlePickAvatar(e) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    e.target.value = "";
+    if (file) setCropSource(file);
+  }
+
+  async function handleCropConfirm(blob) {
+    setCropSource(null);
     setAvatarUploading(true);
-    const path = `${user.id}/avatar-${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file);
+    const path = `${user.id}/avatar-${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("product-images").upload(path, blob, { contentType: "image/jpeg" });
     if (!error) {
       const { data } = supabase.storage.from("product-images").getPublicUrl(path);
       await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id);
@@ -65,6 +72,15 @@ export default function Account() {
 
   return (
     <main className="container">
+      {cropSource && (
+        <ImageCropModal
+          source={cropSource}
+          aspect="square"
+          onCancel={() => setCropSource(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
+
       <div className="account-card">
         <div style={{ position: "relative" }}>
           <div className="account-avatar">
@@ -76,8 +92,19 @@ export default function Account() {
           </div>
           <label className="avatar-edit-btn">
             {avatarUploading ? "..." : "✎"}
-            <input type="file" accept="image/*" hidden onChange={handleAvatarChange} disabled={avatarUploading} />
+            <input type="file" accept="image/*" hidden onChange={handlePickAvatar} disabled={avatarUploading} />
           </label>
+          {profile?.avatar_url && !avatarUploading && (
+            <button
+              type="button"
+              className="avatar-reposition-btn"
+              onClick={() => setCropSource(profile.avatar_url)}
+              aria-label="Reposisi foto profil"
+              title="Reposisi"
+            >
+              ⤢
+            </button>
+          )}
         </div>
         <div>
           {editing ? (

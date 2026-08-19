@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import ImageCropModal from "../components/ImageCropModal";
 
 function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -13,6 +14,7 @@ export default function ManageCategories() {
   const [newLabel, setNewLabel] = useState("");
   const [uploadingId, setUploadingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [cropTarget, setCropTarget] = useState(null); // { categoryId, source }
 
   useEffect(() => {
     load();
@@ -40,11 +42,21 @@ export default function ManageCategories() {
     setSaving(false);
   }
 
-  async function uploadImage(categoryId, file) {
+  function pickImage(categoryId, file) {
     if (!file) return;
+    setCropTarget({ categoryId, source: file });
+  }
+
+  function repositionImage(categoryId, imageUrl) {
+    setCropTarget({ categoryId, source: imageUrl });
+  }
+
+  async function handleCropConfirm(blob) {
+    const { categoryId } = cropTarget;
+    setCropTarget(null);
     setUploadingId(categoryId);
-    const path = `${categoryId}-${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("category-images").upload(path, file);
+    const path = `${categoryId}-${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("category-images").upload(path, blob, { contentType: "image/jpeg" });
     if (!error) {
       const { data } = supabase.storage.from("category-images").getPublicUrl(path);
       await supabase.from("categories").update({ image_url: data.publicUrl }).eq("id", categoryId);
@@ -76,6 +88,15 @@ export default function ManageCategories() {
 
   return (
     <main className="container" style={{ paddingBottom: 40 }}>
+      {cropTarget && (
+        <ImageCropModal
+          source={cropTarget.source}
+          aspect="square"
+          onCancel={() => setCropTarget(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
+
       <h1 className="page-title">Kelola Kategori</h1>
       <p className="page-subtitle">Atur gambar, nama, tambah, atau hapus kategori yang tampil di beranda.</p>
 
@@ -101,7 +122,10 @@ export default function ManageCategories() {
                 type="file"
                 accept="image/*"
                 hidden
-                onChange={(e) => uploadImage(cat.id, e.target.files?.[0])}
+                onChange={(e) => {
+                  pickImage(cat.id, e.target.files?.[0]);
+                  e.target.value = "";
+                }}
                 disabled={uploadingId === cat.id}
               />
             </label>
@@ -110,6 +134,17 @@ export default function ManageCategories() {
               defaultValue={cat.label}
               onBlur={(e) => renameCategory(cat.id, e.target.value)}
             />
+            {cat.image_url && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ padding: "8px 12px", fontSize: 12.5 }}
+                onClick={() => repositionImage(cat.id, cat.image_url)}
+                disabled={uploadingId === cat.id}
+              >
+                Reposisi
+              </button>
+            )}
             <button
               className="btn btn-outline"
               style={{ padding: "8px 12px", fontSize: 12.5, color: "var(--accent-coral)", borderColor: "var(--accent-coral)" }}
