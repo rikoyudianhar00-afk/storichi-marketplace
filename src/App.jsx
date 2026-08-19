@@ -4,6 +4,8 @@ import Footer from "./components/Footer";
 import BottomNav from "./components/BottomNav";
 import Home from "./pages/Home";
 import CategoryPage from "./pages/CategoryPage";
+import GroupPage from "./pages/GroupPage";
+import SearchPage from "./pages/SearchPage";
 import ProductDetail from "./pages/ProductDetail";
 import SellProduct from "./pages/SellProduct";
 import MyProducts from "./pages/MyProducts";
@@ -23,6 +25,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/kategori/:slug" element={<CategoryPage />} />
+        <Route path="/grup/:slug" element={<GroupPage />} />
         <Route path="/produk/:slug" element={<ProductDetail />} />
         <Route path="/jual" element={<MyProducts />} />
         <Route path="/jual/baru" element={<SellProduct />} />
@@ -35,7 +38,7 @@ export default function App() {
         <Route path="/kelola-kategori" element={<ManageCategories />} />
         <Route path="/favorit" element={<SimplePage title="Favorit" description="Produk favorit kamu akan muncul di sini." />} />
         <Route path="/transaksi" element={<SimplePage title="Transaksi" description="Riwayat transaksi kamu akan muncul di sini." />} />
-        <Route path="/cari" element={<SimplePage title="Hasil Pencarian" description="Fitur pencarian sedang disiapkan." />} />
+        <Route path="/cari" element={<SearchPage />} />
         <Route path="/bantuan" element={<InfoHelp />} />
       </Routes>
       <Footer />

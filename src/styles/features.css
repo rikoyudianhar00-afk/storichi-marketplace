@@ -580,3 +580,58 @@
 .crop-modal-actions .btn {
   flex: 1;
 }
+
+/* ---------- Category doors and corridors ---------- */
+.section-kicker { display: inline-block; color: var(--blue-600); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.category-doors-section { margin-top: 28px; }
+.category-doors-title { font-family: var(--font-display); font-size: 22px; margin: 5px 0 14px; }
+.category-doors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.category-door { display: flex; align-items: center; gap: 14px; min-height: 116px; padding: 14px; border-radius: 18px; color: #fff; text-decoration: none; overflow: hidden; position: relative; }
+.category-door::after { content: ""; position: absolute; width: 130px; height: 130px; right: -45px; top: -40px; border-radius: 50%; background: rgba(255,255,255,.13); }
+.category-door-group { background: linear-gradient(135deg, var(--navy-900), #283e95); }
+.category-door-single { background: linear-gradient(135deg, #177f72, #1ab89b); }
+.category-door-art { width: 68px; height: 68px; flex: 0 0 68px; border-radius: 16px; overflow: hidden; display: grid; place-items: center; background: rgba(255,255,255,.18); position: relative; z-index: 1; }
+.category-door-art img { width: 100%; height: 100%; object-fit: cover; }
+.category-door-fallback { font-family: var(--font-display); font-size: 28px; font-weight: 800; }
+.category-door > div:last-child { min-width: 0; position: relative; z-index: 1; display: grid; gap: 4px; }
+.category-door strong { font-family: var(--font-display); font-size: 17px; }
+.category-door-eyebrow, .category-door-link { font-size: 11px; opacity: .78; }
+.category-door-link { margin-top: 5px; font-weight: 700; }
+.category-door-skeleton { min-height: 116px; border-radius: 18px; }
+.corridor-hero { display: flex; align-items: center; gap: 16px; margin: 22px 0 12px; padding: 18px; border-radius: 18px; background: linear-gradient(135deg, var(--blue-50), #fff); }
+.corridor-hero-icon { width: 72px; height: 72px; flex: 0 0 72px; border-radius: 18px; overflow: hidden; display: grid; place-items: center; background: var(--blue-100); color: var(--blue-600); font-family: var(--font-display); font-size: 30px; font-weight: 800; }
+.corridor-hero-icon img { width: 100%; height: 100%; object-fit: cover; }
+.corridor-hero .page-title { margin: 3px 0 4px; }
+.corridor-section { margin: 30px 0; }
+.corridor-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.corridor-section-head h2 { font-family: var(--font-display); font-size: 19px; margin: 4px 0 0; }
+.category-group-manager { padding: 16px; margin: 18px 0; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.category-manager-heading { margin: 0 0 12px; font-size: 15px; }
+.category-group-list { display: grid; gap: 8px; }
+.category-group-row { display: flex; gap: 8px; }
+.category-group-row input { flex: 1; min-width: 0; }
+.category-group-row .btn { padding: 8px 12px; font-size: 12px; }
+.category-group-select { width: 100%; min-width: 140px; padding: 8px 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--ink-700); font-size: 12px; }
+.navbar-chat-link { position: relative; }
+.navbar-notification-badge, .chat-unread-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--accent-coral); color: #fff; font-size: 10px; font-weight: 800; }
+.navbar-notification-badge { position: absolute; top: -3px; right: -4px; border: 2px solid var(--surface); }
+@media (max-width: 600px) {
+  .category-doors { grid-template-columns: 1fr; }
+  .category-door { min-height: 102px; }
+  .category-door-art { width: 58px; height: 58px; flex-basis: 58px; }
+  .category-door strong { font-size: 15px; }
+  .corridor-hero { padding: 14px; }
+  .category-group-row { flex-wrap: wrap; }
+  .category-group-select { flex: 1 1 100%; }
+}
+
+/* Group category marker: the icon remains unchanged, only receives a subtle spaced outline. */
+.category-tile-icon-wrap, .category-tile-group-marker { display: inline-grid; place-items: center; border-radius: 20px; }
+.category-tile-group-marker { padding: 5px; border: 1px solid rgba(36, 84, 255, .28); background: rgba(36, 84, 255, .035); }
+.category-tile-group-label { color: var(--blue-600); font-size: 9.5px; font-weight: 700; line-height: 1.1; max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.category-tile-grouped { gap: 5px; }
+
+.product-engagement-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }
+.product-like-button { border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink-700); padding: 7px 11px; font-size: 13px; font-weight: 700; }
+.product-like-button.is-liked { border-color: rgba(238, 94, 104, .35); color: var(--accent-coral); background: #fff5f5; }
+.product-view-count { color: var(--ink-500); font-size: 12px; }

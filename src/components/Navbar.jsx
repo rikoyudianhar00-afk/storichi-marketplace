@@ -1,17 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useUnreadChatNotifications } from "../lib/chatNotifications";
 
 export default function Navbar() {
   const { user, profile, signInWithGoogle, signOut } = useAuth();
-  const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const navigate = useNavigate();
-
-  function handleSearch(e) {
-    e.preventDefault();
-    if (query.trim()) navigate(`/cari?q=${encodeURIComponent(query.trim())}`);
-  }
+  const unreadCount = useUnreadChatNotifications(user?.id);
 
   return (
     <header className="navbar">
@@ -31,9 +26,15 @@ export default function Navbar() {
         </Link>
 
         <div className="navbar-actions">
+          <Link to="/cari" className="icon-btn" aria-label="Cari produk" title="Cari produk">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+              <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </Link>
           {user ? (
             <div className="navbar-user">
-              <Link to="/chat" className="icon-btn" aria-label="Chat">
+              <Link to="/chat" className="icon-btn navbar-chat-link" aria-label={unreadCount ? `Chat, ${unreadCount} pesan belum dibaca` : "Chat"}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path
                     d="M21 11.5a8.38 8.38 0 0 1-8.5 8.4 8.5 8.5 0 0 1-4-1L3 20l1.1-5.5A8.4 8.4 0 1 1 21 11.5Z"
@@ -42,6 +43,7 @@ export default function Navbar() {
                     strokeLinejoin="round"
                   />
                 </svg>
+                {unreadCount > 0 && <span className="navbar-notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
               </Link>
               <Link to="/akun" className="navbar-avatar">
                 {profile?.avatar_url ? (
@@ -60,20 +62,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div className="navbar-search container">
-        <form onSubmit={handleSearch} className="search-bar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-            <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari game, akun, diamond, top up..."
-            aria-label="Cari produk"
-          />
-        </form>
-      </div>
 
       {menuOpen && (
         <nav className="navbar-drawer">

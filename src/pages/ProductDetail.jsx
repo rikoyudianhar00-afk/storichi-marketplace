@@ -15,11 +15,21 @@ export default function ProductDetail() {
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
 
   useEffect(() => {
     async function load() {
       const { data: p } = await supabase.from("products").select("*").eq("slug", slug).single();
       setProduct(p);
+      setLikeCount(p?.like_count || 0);
+      if (p?.id) {
+        supabase.rpc("increment_product_view", { product_uuid: p.id });
+        if (user) {
+          const { data: existingLike } = await supabase.from("product_likes").select("id").eq("product_id", p.id).eq("user_id", user.id).maybeSingle();
+          setLiked(Boolean(existingLike));
+        }
+      }
       if (p?.seller_id) {
         const { data: s } = await supabase.from("profiles").select("*").eq("id", p.seller_id).single();
         setSeller(s);
@@ -38,6 +48,24 @@ export default function ProductDetail() {
   const avgRating = reviews.length
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : 0;
+
+  async function toggleLike() {
+    if (!user) return signInWithGoogle();
+    if (!product?.id) return;
+    if (liked) {
+      const { error } = await supabase.from("product_likes").delete().eq("product_id", product.id).eq("user_id", user.id);
+      if (!error) {
+        setLiked(false);
+        setLikeCount((count) => Math.max(0, count - 1));
+      }
+      return;
+    }
+    const { error } = await supabase.from("product_likes").insert({ product_id: product.id, user_id: user.id });
+    if (!error) {
+      setLiked(true);
+      setLikeCount((count) => count + 1);
+    }
+  }
 
   async function requestToBuy() {
     if (!user) return signInWithGoogle();
@@ -120,6 +148,12 @@ export default function ProductDetail() {
               Rp{Number(product.price_from).toLocaleString("id-ID")}
             </p>
           )}
+          <div className="product-engagement-row">
+            <button type="button" className={`product-like-button ${liked ? "is-liked" : ""}`} onClick={toggleLike} aria-label={liked ? "Hapus like" : "Sukai produk"}>
+              {liked ? "♥" : "♡"} <span>{likeCount}</span>
+            </button>
+            <span className="product-view-count">{product.view_count || 0} kunjungan</span>
+          </div>
 
           <p className="thread-item-sub" style={{ marginBottom: 16 }}>
             Stok: <strong>{product.stock ?? 1}</strong>

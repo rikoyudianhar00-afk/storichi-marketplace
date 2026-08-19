@@ -1,50 +1,74 @@
 import { Link } from "react-router-dom";
+import { StarDisplay } from "./Stars";
+import RoleBadge from "./RoleBadge";
+
+function formatPrice(value) {
+  return value ? `Rp${Number(value).toLocaleString("id-ID")}` : "Harga belum ditentukan";
+}
 
 export function ProductCard({ product }) {
+  const rating = Number(product.rating || 0);
+  const description = product.description?.trim() || "Lihat detail produk untuk informasi selengkapnya.";
+
   return (
-    <Link to={`/produk/${product.slug}`} className="product-card">
-      <div className="product-card-thumb">
-        {product.image_url ? (
-          <img src={product.image_url} alt={product.name} loading="lazy" />
-        ) : (
-          <div className="product-card-thumb-fallback">{product.name[0]}</div>
-        )}
+    <Link to={`/produk/${product.slug}`} className="product-list-card">
+      <div className="product-list-thumb-wrap">
+        <div className="product-list-thumb">
+          {product.image_url ? (
+            <img src={product.image_url} alt={product.name} loading="lazy" />
+          ) : (
+            <div className="product-card-thumb-fallback">{product.name?.[0] || "P"}</div>
+          )}
+        </div>
+        <StarDisplay rating={rating} count={product.rating_count || 0} />
       </div>
-      <div className="product-card-name">{product.name}</div>
-      {product.price_from && (
-        <div className="product-card-price">mulai Rp{Number(product.price_from).toLocaleString("id-ID")}</div>
-      )}
+      <div className="product-list-content">
+        <div className="product-list-title-row">
+          <h3 className="product-card-name">{product.name}</h3>
+          {product.seller && <RoleBadge profile={product.seller} size={16} />}
+        </div>
+        <p className="product-list-description">{description}</p>
+        <div className="product-list-footer">
+          <strong className="product-card-price">{formatPrice(product.price_from)}</strong>
+          {product.seller?.display_name && <span className="product-list-seller">{product.seller.display_name}</span>}
+        </div>
+      </div>
     </Link>
   );
 }
 
-export default function ProductSection({ title, icon, items, viewAllHref, loading }) {
+export function ProductList({ items = [], loading = false, emptyText = "Belum ada produk." }) {
+  if (loading) {
+    return (
+      <div className="product-list">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="product-list-card-skeleton">
+            <div className="skeleton" />
+            <div className="product-list-skeleton-copy">
+              <div className="skeleton" />
+              <div className="skeleton" />
+              <div className="skeleton" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!items.length) return <div className="empty-state product-list-empty"><p>{emptyText}</p></div>;
+  return <div className="product-list">{items.map((product) => <ProductCard key={product.id} product={product} />)}</div>;
+}
+
+export default function ProductSection({ title, icon, items, viewAllHref, loading, limit }) {
+  const visibleItems = limit ? items.slice(0, limit) : items;
   return (
     <section className="product-section">
       <div className="product-section-head">
-        <h2>
-          <span aria-hidden="true">{icon}</span> {title}
-        </h2>
-        {viewAllHref && (
-          <Link to={viewAllHref} className="see-all">
-            Lihat Semua
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-        )}
+        <h2><span aria-hidden="true">{icon}</span> {title}</h2>
+        {viewAllHref && <Link to={viewAllHref} className="see-all">Lihat Semua <span aria-hidden="true">→</span></Link>}
       </div>
       <div className="product-section-panel">
-        <div className="product-grid">
-          {loading
-            ? Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="product-card-skeleton">
-                  <div className="skeleton" style={{ aspectRatio: "1/1" }} />
-                  <div className="skeleton" style={{ height: 12, width: "80%", marginTop: 8 }} />
-                </div>
-              ))
-            : items.map((p) => <ProductCard key={p.id} product={p} />)}
-        </div>
+        <ProductList items={visibleItems} loading={loading} />
       </div>
     </section>
   );
