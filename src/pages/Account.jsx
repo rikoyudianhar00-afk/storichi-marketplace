@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import RoleBadge from "../components/RoleBadge";
 import ImageCropModal from "../components/ImageCropModal";
+import { MAX_IMAGE_SIZE_BYTES, validateImageFile } from "../lib/image";
 
 export default function Account() {
   const { user, profile, signInWithGoogle, signOut, refreshProfile } = useAuth();
@@ -12,6 +13,7 @@ export default function Account() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cropSource, setCropSource] = useState(null);
+  const [imageError, setImageError] = useState("");
 
   const [tagEmail, setTagEmail] = useState("");
   const [tagType, setTagType] = useState("is_verified");
@@ -32,11 +34,25 @@ export default function Account() {
   function handlePickAvatar(e) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (file) setCropSource(file);
+    if (!file) return;
+
+    const fileError = validateImageFile(file);
+    if (fileError) {
+      setImageError(fileError);
+      return;
+    }
+    setImageError("");
+    setCropSource(file);
   }
 
   async function handleCropConfirm(blob) {
     setCropSource(null);
+    if (blob.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageError("Ukuran foto hasil pengolahan melebihi 5 MB. Pilih foto lain atau kurangi zoom.");
+      return;
+    }
+
+    setImageError("");
     setAvatarUploading(true);
     const path = `${user.id}/avatar-${Date.now()}.jpg`;
     const { error } = await supabase.storage.from("product-images").upload(path, blob, { contentType: "image/jpeg" });
@@ -78,8 +94,13 @@ export default function Account() {
           aspect="square"
           onCancel={() => setCropSource(null)}
           onConfirm={handleCropConfirm}
+          onError={(message) => {
+            setCropSource(null);
+            setImageError(message);
+          }}
         />
       )}
+      {imageError && <p className="form-error">{imageError}</p>}
 
       <div className="account-card">
         <div style={{ position: "relative" }}>

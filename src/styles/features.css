@@ -155,12 +155,13 @@
   height: 72px;
   border-radius: 10px;
   overflow: hidden;
+  background: var(--surface-muted, #f4f6fb);
 }
 
 .image-upload-item img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .image-remove-btn {
@@ -535,6 +536,13 @@
 .crop-modal-title {
   font-weight: 700;
   font-size: 15px;
+  margin: 0 0 6px;
+  text-align: center;
+}
+.crop-modal-hint {
+  color: var(--ink-500);
+  font-size: 12px;
+  line-height: 1.4;
   margin: 0 0 14px;
   text-align: center;
 }

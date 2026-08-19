@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import ImageCropModal from "../components/ImageCropModal";
+import { MAX_IMAGE_SIZE_BYTES, validateImageFile } from "../lib/image";
 
 function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -15,6 +16,7 @@ export default function ManageCategories() {
   const [uploadingId, setUploadingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [cropTarget, setCropTarget] = useState(null); // { categoryId, source }
+  const [imageError, setImageError] = useState("");
 
   useEffect(() => {
     load();
@@ -44,6 +46,12 @@ export default function ManageCategories() {
 
   function pickImage(categoryId, file) {
     if (!file) return;
+    const fileError = validateImageFile(file);
+    if (fileError) {
+      setImageError(fileError);
+      return;
+    }
+    setImageError("");
     setCropTarget({ categoryId, source: file });
   }
 
@@ -54,6 +62,12 @@ export default function ManageCategories() {
   async function handleCropConfirm(blob) {
     const { categoryId } = cropTarget;
     setCropTarget(null);
+    if (blob.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageError("Ukuran foto hasil pengolahan melebihi 5 MB. Pilih foto lain atau kurangi zoom.");
+      return;
+    }
+
+    setImageError("");
     setUploadingId(categoryId);
     const path = `${categoryId}-${Date.now()}.jpg`;
     const { error } = await supabase.storage.from("category-images").upload(path, blob, { contentType: "image/jpeg" });
@@ -94,10 +108,15 @@ export default function ManageCategories() {
           aspect="square"
           onCancel={() => setCropTarget(null)}
           onConfirm={handleCropConfirm}
+          onError={(message) => {
+            setCropTarget(null);
+            setImageError(message);
+          }}
         />
       )}
 
       <h1 className="page-title">Kelola Kategori</h1>
+      {imageError && <p className="form-error">{imageError}</p>}
       <p className="page-subtitle">Atur gambar, nama, tambah, atau hapus kategori yang tampil di beranda.</p>
 
       <form onSubmit={addCategory} className="invite-form" style={{ marginBottom: 20 }}>

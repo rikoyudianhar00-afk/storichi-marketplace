@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { validateImageFile } from "../lib/image";
 
 export default function AttachmentButton({ userId, onUploaded, disabled }) {
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !userId) return;
+    if (file.type.startsWith("image/")) {
+      const fileError = validateImageFile(file);
+      if (fileError) {
+        setError(fileError);
+        return;
+      }
+    }
+    setError("");
 
     setUploading(true);
     const path = `${userId}/${Date.now()}-${file.name}`;
@@ -21,7 +31,7 @@ export default function AttachmentButton({ userId, onUploaded, disabled }) {
   }
 
   return (
-    <label className="attachment-btn" aria-label="Kirim gambar atau video">
+    <label className="attachment-btn" aria-label="Kirim gambar atau video" title={error || "Kirim gambar atau video"}>
       {uploading ? (
         <span className="attachment-spinner" />
       ) : (

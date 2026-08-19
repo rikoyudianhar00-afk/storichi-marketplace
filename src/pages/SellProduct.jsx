@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import ImageCropModal from "../components/ImageCropModal";
+import { MAX_IMAGE_SIZE_BYTES, validateImageFile } from "../lib/image";
 
 function slugify(text) {
   return (
@@ -68,7 +69,15 @@ export default function SellProduct() {
   function pickImage(e) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (file) setCropTarget({ source: file });
+    if (!file) return;
+
+    const fileError = validateImageFile(file);
+    if (fileError) {
+      setError(fileError);
+      return;
+    }
+    setError("");
+    setCropTarget({ source: file });
   }
 
   function repositionImage(idx) {
@@ -79,6 +88,12 @@ export default function SellProduct() {
     const { replaceIndex } = cropTarget;
     setCropTarget(null);
     if (!user) return;
+    if (blob.size > MAX_IMAGE_SIZE_BYTES) {
+      setError("Ukuran foto hasil pengolahan melebihi 5 MB. Kurangi zoom atau pilih foto lain.");
+      return;
+    }
+
+    setError("");
     setUploading(true);
     const path = `${user.id}/${Date.now()}.jpg`;
     const { error: uploadError } = await supabase.storage
@@ -160,6 +175,10 @@ export default function SellProduct() {
           aspect="free"
           onCancel={() => setCropTarget(null)}
           onConfirm={handleCropConfirm}
+          onError={(message) => {
+            setCropTarget(null);
+            setError(message);
+          }}
         />
       )}
 

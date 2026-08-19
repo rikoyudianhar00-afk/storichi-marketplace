@@ -1,61 +1,132 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * ImageCropModal
- * props:
- *  - source: File object (new upload) OR string URL (existing stored image, for reposition)
- *  - aspect: "square" | "free"
- *  - onCancel: () => void
- *  - onConfirm: (blob: Blob) => void
+ * source: File object (new upload) OR string URL (existing stored image)
+ * aspect: "square" for avatars/categories, "free" to preserve the photo ratio
+ * onConfirm: (blob: Blob) => void
+ * onError: (message: string) => void
  */
-export default function ImageCropModal({ source, aspect = "square", onCancel, onConfirm }) {
+export default function ImageCropModal({ source, aspect = "square", onCancel, onConfirm, onError }) {
   const imgRef = useRef(null);
+  const dragState = useRef(null);
   const isUrlSource = typeof source === "string";
   const imgUrl = useMemo(() => (isUrlSource ? source : URL.createObjectURL(source)), [source, isUrlSource]);
+  const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const dragState = useRef(null);
 
-  const frameStyle =
-    aspect === "square" ? { width: 260, height: 260 } : { width: 300, height: 200 };
+  useEffect(() => {
+    return () => {
+      if (!isUrlSource) URL.revokeObjectURL(imgUrl);
+    };
+  }, [imgUrl, isUrlSource]);
 
-  const handlePointerDown = useCallback((e) => {
-    const point = e.touches ? e.touches[0] : e;
-    dragState.current = { startX: point.clientX, startY: point.clientY, origin: offset };
-  }, [offset]);
+  useEffect(() => {
+    setNaturalSize({ width: 0, height: 0 });
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+  }, [source]);
 
-  const handlePointerMove = useCallback((e) => {
-    if (!dragState.current) return;
-    const point = e.touches ? e.touches[0] : e;
-    const dx = point.clientX - dragState.current.startX;
-    const dy = point.clientY - dragState.current.startY;
-    setOffset({ x: dragState.current.origin.x + dx, y: dragState.current.origin.y + dy });
-  }, []);
+  const frameStyle = useMemo(() => {
+    if (aspect === "square" || !naturalSize.width || !naturalSize.height) {
+      return { width: 260, height: 260 };
+    }
 
-  const handlePointerUp = useCallback(() => {
+    // For product photos, preserve the original ratio so the initial view never crops it.
+    const ratio = naturalSize.width / naturalSize.height;
+    const maxWidth = 300;
+    const maxHeight = 260;
+    const width = Math.min(maxWidth, Math.max(1, maxHeight * ratio));
+    const height = Math.min(maxHeight, Math.max(1, width / ratio));
+    return { width: Math.round(width), height: Math.round(height) };
+  }, [aspect, naturalSize]);
+
+  const baseScale = naturalSize.width && naturalSize.height
+    ? (aspect === "square"
+        ? Math.max(frameStyle.width / naturalSize.width, frameStyle.height / naturalSize.height)
+        : Math.min(frameStyle.width / naturalSize.width, frameStyle.height / naturalSize.height))
+    : 1;
+
+  const getOffsetBounds = useCallback(
+    (nextScale) => {
+      const imageWidth = naturalSize.width * baseScale * nextScale;
+      const imageHeight = naturalSize.height * baseScale * nextScale;
+      return {
+        x: Math.max(0, (imageWidth - frameStyle.width) / 2),
+        y: Math.max(0, (imageHeight - frameStyle.height) / 2),
+      };
+    },
+    [baseScale, frameStyle, naturalSize]
+  );
+
+  const clampOffset = useCallback(
+    (nextOffset, nextScale = scale) => {
+      const bounds = getOffsetBounds(nextScale);
+      return {
+        x: Math.min(bounds.x, Math.max(-bounds.x, nextOffset.x)),
+        y: Math.min(bounds.y, Math.max(-bounds.y, nextOffset.y)),
+      };
+    },
+    [getOffsetBounds, scale]
+  );
+
+  const handlePointerDown = useCallback(
+    (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      dragState.current = { startX: e.clientX, startY: e.clientY, origin: offset };
+    },
+    [offset]
+  );
+
+  const handlePointerMove = useCallback(
+    (e) => {
+      if (!dragState.current) return;
+      const dx = e.clientX - dragState.current.startX;
+      const dy = e.clientY - dragState.current.startY;
+      setOffset(clampOffset({ x: dragState.current.origin.x + dx, y: dragState.current.origin.y + dy }));
+    },
+    [clampOffset]
+  );
+
+  const handlePointerUp = useCallback((e) => {
+    if (dragState.current) e.currentTarget.releasePointerCapture?.(e.pointerId);
     dragState.current = null;
   }, []);
 
+  function handleZoomChange(e) {
+    const nextScale = Number(e.target.value);
+    setScale(nextScale);
+    setOffset((current) => clampOffset(current, nextScale));
+  }
+
   function confirmCrop() {
     const img = imgRef.current;
-    const frame = frameStyle;
+    if (!img || !naturalSize.width || !naturalSize.height) {
+      onError?.("Foto belum selesai dimuat. Silakan coba lagi.");
+      return;
+    }
+
+    const outputScale = aspect === "square" ? 600 / frameStyle.width : Math.min(1600 / frameStyle.width, 1600 / frameStyle.height);
     const canvas = document.createElement("canvas");
-    const outputSize = aspect === "square" ? 600 : 800;
-    canvas.width = outputSize;
-    canvas.height = aspect === "square" ? outputSize : Math.round((outputSize * frame.height) / frame.width);
-
+    canvas.width = Math.max(1, Math.round(frameStyle.width * outputScale));
+    canvas.height = Math.max(1, Math.round(frameStyle.height * outputScale));
     const ctx = canvas.getContext("2d");
-    const naturalW = img.naturalWidth;
-    const naturalH = img.naturalHeight;
-    const displayedScale = Math.max(frame.width / naturalW, frame.height / naturalH) * scale;
+    if (!ctx) {
+      onError?.("Foto tidak dapat diproses di browser ini.");
+      return;
+    }
 
-    const drawW = naturalW * displayedScale;
-    const drawH = naturalH * displayedScale;
-    const centerX = frame.width / 2 + offset.x;
-    const centerY = frame.height / 2 + offset.y;
+    const drawScale = baseScale * scale;
+    const drawW = naturalSize.width * drawScale;
+    const drawH = naturalSize.height * drawScale;
+    const safeOffset = clampOffset(offset);
+    const centerX = frameStyle.width / 2 + safeOffset.x;
+    const centerY = frameStyle.height / 2 + safeOffset.y;
 
-    const outputScale = canvas.width / frame.width;
-
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(
       img,
       (centerX - drawW / 2) * outputScale,
@@ -67,27 +138,29 @@ export default function ImageCropModal({ source, aspect = "square", onCancel, on
     canvas.toBlob(
       (blob) => {
         if (blob) onConfirm(blob);
+        else onError?.("Foto tidak dapat diproses.");
       },
       "image/jpeg",
       0.9
     );
   }
 
+  const renderedWidth = naturalSize.width ? naturalSize.width * baseScale : undefined;
+  const renderedHeight = naturalSize.height ? naturalSize.height * baseScale : undefined;
+
   return (
     <div className="crop-modal-backdrop">
       <div className="crop-modal">
         <p className="crop-modal-title">{isUrlSource ? "Reposisi Gambar" : "Atur Gambar"}</p>
+        <p className="crop-modal-hint">Geser foto untuk mengatur posisi. Foto tidak dipotong sebelum kamu memperbesar.</p>
 
         <div
           className="crop-frame"
           style={frameStyle}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onMouseLeave={handlePointerUp}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handlePointerMove}
-          onTouchEnd={handlePointerUp}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
         >
           <img
             ref={imgRef}
@@ -96,7 +169,10 @@ export default function ImageCropModal({ source, aspect = "square", onCancel, on
             draggable={false}
             crossOrigin="anonymous"
             className="crop-frame-img"
+            onLoad={(e) => setNaturalSize({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })}
             style={{
+              width: renderedWidth ? `${renderedWidth}px` : "auto",
+              height: renderedHeight ? `${renderedHeight}px` : "auto",
               transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
             }}
           />
@@ -108,7 +184,7 @@ export default function ImageCropModal({ source, aspect = "square", onCancel, on
           max="3"
           step="0.05"
           value={scale}
-          onChange={(e) => setScale(Number(e.target.value))}
+          onChange={handleZoomChange}
           className="crop-zoom-slider"
           aria-label="Perbesar gambar"
         />
@@ -117,7 +193,7 @@ export default function ImageCropModal({ source, aspect = "square", onCancel, on
           <button className="btn btn-outline" onClick={onCancel} type="button">
             Batal
           </button>
-          <button className="btn btn-primary" onClick={confirmCrop} type="button">
+          <button className="btn btn-primary" onClick={confirmCrop} type="button" disabled={!naturalSize.width}>
             Simpan
           </button>
         </div>
