@@ -12,6 +12,8 @@ import ChatThread from "./pages/ChatThread";
 import RekberList from "./pages/RekberList";
 import RekberRoom from "./pages/RekberRoom";
 import Account from "./pages/Account";
+import ManageCategories from "./pages/ManageCategories";
+import InfoHelp from "./pages/InfoHelp";
 import SimplePage from "./pages/SimplePage";
 
 export default function App() {
@@ -30,10 +32,11 @@ export default function App() {
         <Route path="/rekber" element={<RekberList />} />
         <Route path="/rekber/:groupId" element={<RekberRoom />} />
         <Route path="/akun" element={<Account />} />
+        <Route path="/kelola-kategori" element={<ManageCategories />} />
         <Route path="/favorit" element={<SimplePage title="Favorit" description="Produk favorit kamu akan muncul di sini." />} />
         <Route path="/transaksi" element={<SimplePage title="Transaksi" description="Riwayat transaksi kamu akan muncul di sini." />} />
         <Route path="/cari" element={<SimplePage title="Hasil Pencarian" description="Fitur pencarian sedang disiapkan." />} />
-        <Route path="/bantuan" element={<SimplePage title="Pusat Bantuan" description="Hubungi kami lewat menu Chat untuk bantuan lebih lanjut." />} />
+        <Route path="/bantuan" element={<InfoHelp />} />
       </Routes>
       <Footer />
       <BottomNav />
