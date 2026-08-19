@@ -83,6 +83,7 @@ export default function Navbar() {
           <Link to="/jual/baru" onClick={() => setMenuOpen(false)}>Jual Produk</Link>
           <Link to="/rekber" onClick={() => setMenuOpen(false)}>Grup Rekber</Link>
           <Link to="/chat" onClick={() => setMenuOpen(false)}>Chat</Link>
+          <Link to="/bantuan" onClick={() => setMenuOpen(false)}>Cara Pakai & Bantuan</Link>
           {user && (
             <button className="navbar-drawer-signout" onClick={signOut}>
               Keluar
