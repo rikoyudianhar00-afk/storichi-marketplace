@@ -76,7 +76,9 @@ export default function Navbar() {
 
 
       {menuOpen && (
-        <nav className="navbar-drawer">
+        <>
+          <button type="button" className="navbar-drawer-backdrop" aria-label="Tutup menu" onClick={() => setMenuOpen(false)} />
+          <nav className="navbar-drawer">
           <Link to="/" onClick={() => setMenuOpen(false)}>Beranda</Link>
           {(customLinks.length ? customLinks : [
             { id: "top-up", label: "Top Up Game", href: "/kategori/top-up" },
@@ -87,11 +89,12 @@ export default function Navbar() {
           <Link to="/chat" onClick={() => setMenuOpen(false)}>Chat</Link>
           <Link to="/bantuan" onClick={() => setMenuOpen(false)}>Cara Pakai & Bantuan</Link>
           {user && (
-            <button className="navbar-drawer-signout" onClick={signOut}>
+            <button className="navbar-drawer-signout" onClick={() => { setMenuOpen(false); signOut(); }}>
               Keluar
             </button>
           )}
-        </nav>
+          </nav>
+        </>
       )}
     </header>
   );

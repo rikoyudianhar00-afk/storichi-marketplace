@@ -307,3 +307,6 @@
 .navbar-drawer a, .navbar-drawer button { padding: 14px 16px; border-radius: 12px; font-size: 15px; }
 .navbar-drawer a:hover, .navbar-drawer button:hover { background: #eef2ff; color: var(--blue-600); }
 @media (max-width: 600px) { .navbar-drawer { min-height: calc(100dvh - 60px); width: min(350px, 90vw); } }
+
+.navbar-drawer-backdrop { position: fixed; inset: 0; z-index: 45; width: 100%; height: 100%; padding: 0; border: 0; background: rgba(5, 12, 32, 0.42); backdrop-filter: brightness(.72); cursor: pointer; }
+.navbar-drawer { z-index: 50; }

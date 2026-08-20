@@ -304,3 +304,17 @@
 .ad-banner-track { display: flex; gap: 12px; width: 100%; transition: transform 260ms cubic-bezier(.23,1,.32,1); will-change: transform; }
 .ad-banner-track .ad-banner-link { flex: 0 0 100%; }
 @media (max-width: 600px) { .shop-avatar { width: 52px; height: 52px; flex-basis: 52px; } .shop-hero { padding: 14px; } }
+
+/* ---------- Seller storefront header ---------- */
+.shop-top-header { margin-top: 18px; padding: 14px; border-radius: 20px; background: linear-gradient(135deg, var(--navy-900), var(--navy-950)); color: #fff; box-shadow: 0 14px 32px rgba(8, 18, 48, .14); }
+.shop-search-bar { max-width: none; margin: 0; padding: 7px 8px 7px 14px; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; background: rgba(255,255,255,.98); box-shadow: none; color: var(--ink-700); }
+.shop-search-bar input { min-width: 0; }
+.shop-search-bar .search-submit { min-width: 72px; border-radius: 8px; }
+.shop-top-header .shop-hero { margin: 12px 0 0; padding: 8px 4px 4px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.shop-top-header .shop-identity p { color: rgba(255,255,255,.76); }
+.shop-top-header .shop-identity > span { color: rgba(255,255,255,.58); }
+@media (max-width: 600px) {
+  .shop-top-header { margin-top: 12px; padding: 10px; border-radius: 16px; }
+  .shop-top-header .shop-hero { margin-top: 10px; padding: 6px 2px 2px; }
+  .shop-search-bar { padding-left: 11px; }
+}
