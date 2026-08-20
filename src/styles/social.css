@@ -570,3 +570,27 @@
   .home-selected-product-actions { flex-direction: column; }
   .home-selected-product-actions .link-btn { min-width: 26px; }
 }
+
+/* ---------- Compact checkbox and radio hitboxes ---------- */
+input[type="checkbox"], input[type="radio"] {
+  box-sizing: border-box;
+  width: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 !important;
+  margin: 0;
+  flex: 0 0 20px;
+  accent-color: var(--blue-600);
+  vertical-align: middle;
+}
+.checkbox-row, .home-product-picker-row, .direct-action-modal-card label {
+  align-items: center;
+}
+.checkbox-row input[type="checkbox"], .checkbox-row input[type="radio"] {
+  margin: 0;
+}
+.home-product-picker-row input[type="checkbox"], .home-product-picker-row input[type="radio"] {
+  margin: 0;
+}
