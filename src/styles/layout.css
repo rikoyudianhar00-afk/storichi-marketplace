@@ -372,16 +372,32 @@
 button,
 a,
 select,
-[role="button"] {
+label,
+svg,
+img,
+[role="button"],
+[tabindex] {
   -webkit-tap-highlight-color: transparent;
   tap-highlight-color: transparent;
   -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   touch-action: manipulation;
 }
 
 button:focus:not(:focus-visible),
 a:focus:not(:focus-visible),
 select:focus:not(:focus-visible),
-[role="button"]:focus:not(:focus-visible) {
+[role="button"]:focus:not(:focus-visible),
+[tabindex]:focus:not(:focus-visible) {
   outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent-mint);
+  outline-offset: 2px;
 }
