@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { enableChatPush, isPushSupported } from "../lib/pushNotifications";
 
-const HOLD_DELAY = 260;
+const HOLD_DELAY = 100;
 const SWIPE_THRESHOLD = 92;
 
 function formatChatTime(value) {
@@ -302,7 +302,7 @@ export default function ChatList({ archivedOnly = false }) {
           )}
         </>
       )}
-      {!archivedOnly && <p className="chat-swipe-hint">Tahan sekitar seperempat detik, lalu geser kiri untuk arsip atau kanan untuk hapus.</p>}
+      {!archivedOnly && <p className="chat-swipe-hint">Tahan sekitar 0,1 detik, lalu geser kiri untuk arsip atau kanan untuk hapus.</p>}
       {archivedOnly && selectionMode && <div className="archive-selection-bar"><span>{selectedThreadIds.length} chat dipilih</span><button type="button" className="archive-selection-cancel" onClick={() => { setSelectedThreadIds([]); setSelectionMode(false); }}>Batal</button><button type="button" className="archive-selection-delete" disabled={!selectedThreadIds.length} onClick={deleteSelectedThreads}>Hapus terpilih</button></div>}
       {undoNotice && <div className="chat-undo-bar" role="status"><span>{undoNotice.action === "archive" ? "Chat diarsipkan." : "Chat dihapus dari daftar."}</span><button type="button" onClick={undoThreadAction}>Undo</button></div>}
     </main>
