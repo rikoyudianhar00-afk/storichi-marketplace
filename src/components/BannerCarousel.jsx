@@ -6,6 +6,7 @@ export default function BannerCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [touchStartX, setTouchStartX] = useState(null);
+  const [timerResetKey, setTimerResetKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -34,10 +35,16 @@ export default function BannerCarousel() {
     if (banners.length <= 1) return undefined;
     const timer = window.setInterval(() => setActiveIndex((index) => (index + 1) % banners.length), 5000);
     return () => window.clearInterval(timer);
-  }, [banners.length]);
+  }, [banners.length, timerResetKey]);
 
   if (!loading && !banners.length) return null;
-  function move(delta) { setActiveIndex((index) => (index + delta + banners.length) % banners.length); }
+  function resetAutoAdvanceTimer() {
+    setTimerResetKey((key) => key + 1);
+  }
+  function move(delta) {
+    setActiveIndex((index) => (index + delta + banners.length) % banners.length);
+    resetAutoAdvanceTimer();
+  }
   function finishSwipe(event) {
     if (touchStartX == null) return;
     const distance = event.changedTouches[0].clientX - touchStartX;
@@ -60,13 +67,9 @@ export default function BannerCarousel() {
             ))}
           </div>
           {banners.length > 1 && (
-            <>
-              <button type="button" className="ad-banner-arrow ad-banner-prev" onClick={() => move(-1)} aria-label="Iklan sebelumnya">‹</button>
-              <button type="button" className="ad-banner-arrow ad-banner-next" onClick={() => move(1)} aria-label="Iklan berikutnya">›</button>
-              <div className="ad-banner-dots" aria-label="Pilih iklan">
-                {banners.map((banner, index) => <button key={banner.id} type="button" className={index === activeIndex ? "is-active" : ""} onClick={() => setActiveIndex(index)} aria-label={`Iklan ${index + 1}`} />)}
-              </div>
-            </>
+            <div className="ad-banner-dots" aria-label="Pilih iklan">
+              {banners.map((banner, index) => <button key={banner.id} type="button" className={index === activeIndex ? "is-active" : ""} onClick={() => { setActiveIndex(index); resetAutoAdvanceTimer(); }} aria-label={`Iklan ${index + 1}`} />)}
+            </div>
           )}
         </div>
       )}

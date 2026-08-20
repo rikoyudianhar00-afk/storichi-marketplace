@@ -112,6 +112,7 @@ export default function Navbar() {
         <>
           <button type="button" className="navbar-drawer-backdrop" aria-label="Tutup menu" onClick={() => setMenuOpen(false)} />
           <nav className="navbar-drawer">
+            <Link to="/" onClick={closeMenu}>Beranda</Link>
             {sortedGroups.map((group) => {
               const members = drawerCategories
                 .filter((category) => category.group_id === group.id)
@@ -131,7 +132,6 @@ export default function Navbar() {
               );
             })}
 
-            <Link to="/" onClick={closeMenu}>Beranda</Link>
             {(customLinks.length ? customLinks : [
               { id: "top-up", label: "Top Up Game", href: "/kategori/top-up" },
               { id: "akun", label: "Jual Beli Akun", href: "/kategori/akun" },
