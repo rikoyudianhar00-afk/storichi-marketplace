@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 /**
  * ImageCropModal
  * source: File object (new upload) OR string URL (existing stored image)
- * aspect: "square" for avatars/categories, "free" to preserve the photo ratio
+ * aspect: "square" for avatars/categories, "banner" for horizontal 16:9 ads, "free" to preserve the photo ratio
  * onConfirm: (blob: Blob) => void
  * onError: (message: string) => void
  */
@@ -33,6 +33,11 @@ export default function ImageCropModal({ source, aspect = "square", onCancel, on
       return { width: 260, height: 260 };
     }
 
+    if (aspect === "banner") {
+      const width = 320;
+      return { width, height: Math.round(width * 9 / 16) };
+    }
+
     // For product photos, preserve the original ratio so the initial view never crops it.
     const ratio = naturalSize.width / naturalSize.height;
     const maxWidth = 300;
@@ -43,7 +48,7 @@ export default function ImageCropModal({ source, aspect = "square", onCancel, on
   }, [aspect, naturalSize]);
 
   const baseScale = naturalSize.width && naturalSize.height
-    ? (aspect === "square"
+    ? (aspect === "square" || aspect === "banner"
         ? Math.max(frameStyle.width / naturalSize.width, frameStyle.height / naturalSize.height)
         : Math.min(frameStyle.width / naturalSize.width, frameStyle.height / naturalSize.height))
     : 1;
@@ -108,7 +113,7 @@ export default function ImageCropModal({ source, aspect = "square", onCancel, on
       return;
     }
 
-    const outputScale = aspect === "square" ? 600 / frameStyle.width : Math.min(1600 / frameStyle.width, 1600 / frameStyle.height);
+    const outputScale = aspect === "square" ? 600 / frameStyle.width : Math.min(1600 / frameStyle.width, aspect === "banner" ? 900 / frameStyle.height : 1600 / frameStyle.height);
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(frameStyle.width * outputScale));
     canvas.height = Math.max(1, Math.round(frameStyle.height * outputScale));
@@ -152,7 +157,7 @@ export default function ImageCropModal({ source, aspect = "square", onCancel, on
     <div className="crop-modal-backdrop">
       <div className="crop-modal">
         <p className="crop-modal-title">{isUrlSource ? "Reposisi Gambar" : "Atur Gambar"}</p>
-        <p className="crop-modal-hint">Geser foto untuk mengatur posisi. Foto tidak dipotong sebelum kamu memperbesar.</p>
+        <p className="crop-modal-hint">{aspect === "banner" ? "Geser foto untuk mengatur posisi banner horizontal 16:9." : "Geser foto untuk mengatur posisi. Foto tidak dipotong sebelum kamu memperbesar."}</p>
 
         <div
           className="crop-frame"

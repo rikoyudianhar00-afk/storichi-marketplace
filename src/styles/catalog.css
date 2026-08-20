@@ -258,16 +258,16 @@
 .home-search-area .search-page-bar { max-width: none; }
 
 .ad-banner-section { margin: 14px 0 18px; }
-.ad-banner-frame { position: relative; overflow: hidden; border-radius: 18px; background: var(--navy-950); box-shadow: var(--shadow-md); }
-.ad-banner-link { display: block; position: relative; min-height: 150px; }
-.ad-banner-link img { display: block; width: 100%; height: clamp(150px, 28vw, 260px); object-fit: cover; }
+.ad-banner-frame { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: 18px; background: var(--navy-950); box-shadow: var(--shadow-md); }
+.ad-banner-link { display: block; position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9; }
+.ad-banner-link img { display: block; width: 100%; height: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
 .ad-banner-caption { position: absolute; left: 16px; bottom: 14px; padding: 6px 10px; border-radius: 8px; background: rgba(0,0,0,.52); color: #fff; font-weight: 800; font-size: 13px; }
 .ad-banner-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(0,0,0,.42); color: #fff; font-size: 25px; line-height: 1; z-index: 2; }
 .ad-banner-prev { left: 10px; } .ad-banner-next { right: 10px; }
 .ad-banner-dots { position: absolute; bottom: 11px; right: 14px; display: flex; gap: 5px; }
 .ad-banner-dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.55); }
 .ad-banner-dots button.is-active { width: 20px; border-radius: 8px; background: #fff; }
-.ad-banner-skeleton { width: 100%; height: clamp(150px, 28vw, 260px); border-radius: 18px; }
+.ad-banner-skeleton { width: 100%; aspect-ratio: 16 / 9; border-radius: 18px; }
 .product-share-wrap { position: relative; margin-left: auto; }
 .product-share-button { border: 1px solid var(--border); background: var(--surface); color: var(--ink-700); border-radius: 10px; padding: 6px 9px; font-size: 12px; }
 .product-share-menu { position: absolute; z-index: 10; right: 0; top: calc(100% + 8px); width: 220px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-lg); }
@@ -301,8 +301,8 @@
 .shop-sort-tabs button { flex: 0 0 auto; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-500); padding: 8px 10px; font-size: 13px; font-weight: 700; }
 .shop-sort-tabs button.is-active { color: var(--blue-600); border-bottom-color: var(--blue-600); }
 .ad-banner-frame { touch-action: pan-y; }
-.ad-banner-track { display: flex; gap: 12px; width: 100%; transition: transform 260ms cubic-bezier(.23,1,.32,1); will-change: transform; }
-.ad-banner-track .ad-banner-link { flex: 0 0 100%; }
+.ad-banner-track { display: flex; gap: 12px; width: 100%; height: 100%; transition: transform 260ms cubic-bezier(.23,1,.32,1); will-change: transform; }
+.ad-banner-track .ad-banner-link { flex: 0 0 100%; min-height: 0; }
 @media (max-width: 600px) { .shop-avatar { width: 52px; height: 52px; flex-basis: 52px; } .shop-hero { padding: 14px; } }
 
 /* ---------- Seller storefront header ---------- */
@@ -318,3 +318,8 @@
   .shop-top-header .shop-hero { margin-top: 10px; padding: 6px 2px 2px; }
   .shop-search-bar { padding-left: 11px; }
 }
+
+.file-input-label { display: grid; gap: 8px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 12px; color: var(--ink-500); font-size: 12px; }
+.file-input-label input[type="file"] { width: 100%; }
+.ad-manager-row img { width: 112px; aspect-ratio: 16 / 9; height: auto; object-fit: cover; }
+@media (max-width: 600px) { .ad-manager-row img { width: 86px; } }

@@ -100,7 +100,7 @@ create or replace function public.save_owner_ad_banner(
 ) returns public.ad_banners
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_owner boolean;
@@ -142,7 +142,7 @@ create or replace function public.delete_owner_ad_banner(p_pin text, p_banner_id
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_pin_hash text;
