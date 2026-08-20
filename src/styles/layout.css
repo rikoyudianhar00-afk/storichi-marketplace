@@ -357,3 +357,13 @@
 
 .navbar-drawer-backdrop { position: fixed; inset: 0; z-index: 45; width: 100%; height: 100%; padding: 0; border: 0; background: rgba(5, 12, 32, 0.42); backdrop-filter: brightness(.72); cursor: pointer; }
 .navbar-drawer { z-index: 50; }
+
+.navbar-drawer-group { display: block; }
+.navbar-drawer-group-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left; color: var(--ink-900); background: transparent; }
+.navbar-drawer-group-toggle:hover { background: #eef2ff; color: var(--blue-600); }
+.navbar-drawer-chevron { margin-left: auto; font-size: 22px; line-height: 1; transform: translateY(-2px); transition: transform 160ms ease; }
+.navbar-drawer-chevron.is-open { transform: rotate(180deg) translateY(2px); }
+.navbar-drawer-submenu { display: grid; gap: 3px; margin: 0 8px 6px 14px; padding: 4px 0 4px 12px; border-left: 2px solid var(--blue-200); }
+.navbar-drawer-submenu a { padding: 10px 12px; color: var(--ink-700); font-size: 14px; }
+.navbar-drawer-submenu a:hover { background: var(--blue-50); color: var(--blue-600); }
+.navbar-drawer-empty { padding: 9px 12px; color: var(--ink-500); font-size: 13px; font-style: italic; }

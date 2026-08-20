@@ -11,7 +11,40 @@ export default function Navbar() {
   const isShopPage = location.pathname.startsWith("/toko/");
   const unreadCount = useUnreadChatNotifications(user?.id);
   const [customLinks, setCustomLinks] = useState([]);
-  useEffect(() => { if (!menuOpen) return; supabase.from("navigation_links").select("id, label, href").eq("is_active", true).order("display_order").order("created_at").then(({ data }) => setCustomLinks(data || [])); }, [menuOpen]);
+  const [categoryGroups, setCategoryGroups] = useState([]);
+  const [drawerCategories, setDrawerCategories] = useState([]);
+  const [openGroups, setOpenGroups] = useState({});
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    Promise.all([
+      supabase.from("navigation_links").select("id, label, href").eq("is_active", true).order("display_order").order("created_at"),
+      supabase.from("category_groups").select("id, slug, label, sort_order").order("label", { ascending: true }),
+      supabase.from("categories").select("id, slug, label, group_id, sort_order").order("label", { ascending: true }),
+    ]).then(([navigationResult, groupResult, categoryResult]) => {
+      setCustomLinks(navigationResult.data || []);
+      setCategoryGroups(groupResult.data || []);
+      setDrawerCategories(categoryResult.data || []);
+    });
+  }, [menuOpen]);
+
+  function closeMenu() {
+    setMenuOpen(false);
+  }
+
+  function toggleGroup(groupId) {
+    setOpenGroups((current) => ({ ...current, [groupId]: !current[groupId] }));
+  }
+
+  function categoryHref(category) {
+    return `/kategori/${category.slug || category.id}`;
+  }
+
+  const sortedGroups = [...categoryGroups].sort((a, b) => a.label.localeCompare(b.label, "id", { sensitivity: "base" }));
+  const groupedCategoryIds = new Set(sortedGroups.flatMap((group) => drawerCategories.filter((category) => category.group_id === group.id).map((category) => category.id)));
+  const standaloneCategories = drawerCategories
+    .filter((category) => !groupedCategoryIds.has(category.id))
+    .sort((a, b) => a.label.localeCompare(b.label, "id", { sensitivity: "base" }));
 
   return (
     <header className="navbar">
@@ -79,20 +112,40 @@ export default function Navbar() {
         <>
           <button type="button" className="navbar-drawer-backdrop" aria-label="Tutup menu" onClick={() => setMenuOpen(false)} />
           <nav className="navbar-drawer">
-          <Link to="/" onClick={() => setMenuOpen(false)}>Beranda</Link>
-          {(customLinks.length ? customLinks : [
-            { id: "top-up", label: "Top Up Game", href: "/kategori/top-up" },
-            { id: "akun", label: "Jual Beli Akun", href: "/kategori/akun" },
-            { id: "jual", label: "Jual Produk", href: "/jual/baru" },
-            { id: "rekber", label: "Grup Rekber", href: "/rekber" },
-          ]).map((link) => <a key={link.id} href={link.href} onClick={() => setMenuOpen(false)}>{link.label}</a>)}
-          <Link to="/chat" onClick={() => setMenuOpen(false)}>Chat</Link>
-          <Link to="/bantuan" onClick={() => setMenuOpen(false)}>Cara Pakai & Bantuan</Link>
-          {user && (
-            <button className="navbar-drawer-signout" onClick={() => { setMenuOpen(false); signOut(); }}>
-              Keluar
-            </button>
-          )}
+            {sortedGroups.map((group) => {
+              const members = drawerCategories
+                .filter((category) => category.group_id === group.id)
+                .sort((a, b) => a.label.localeCompare(b.label, "id", { sensitivity: "base" }));
+              return (
+                <div className="navbar-drawer-group" key={group.id}>
+                  <button type="button" className="navbar-drawer-group-toggle" onClick={() => toggleGroup(group.id)} aria-expanded={Boolean(openGroups[group.id])}>
+                    <span>{group.label}</span>
+                    <span className={`navbar-drawer-chevron ${openGroups[group.id] ? "is-open" : ""}`} aria-hidden="true">⌄</span>
+                  </button>
+                  {openGroups[group.id] && (
+                    <div className="navbar-drawer-submenu">
+                      {members.length ? members.map((category) => <Link key={category.id} to={categoryHref(category)} onClick={closeMenu}>{category.label}</Link>) : <span className="navbar-drawer-empty">Belum ada kategori</span>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <Link to="/" onClick={closeMenu}>Beranda</Link>
+            {(customLinks.length ? customLinks : [
+              { id: "top-up", label: "Top Up Game", href: "/kategori/top-up" },
+              { id: "akun", label: "Jual Beli Akun", href: "/kategori/akun" },
+              { id: "jual", label: "Jual Produk", href: "/jual/baru" },
+              { id: "rekber", label: "Grup Rekber", href: "/rekber" },
+            ]).map((link) => <a key={link.id} href={link.href} onClick={closeMenu}>{link.label}</a>)}
+            {standaloneCategories.map((category) => <Link key={category.id} to={categoryHref(category)} onClick={closeMenu}>{category.label}</Link>)}
+            <Link to="/chat" onClick={closeMenu}>Chat</Link>
+            <Link to="/bantuan" onClick={closeMenu}>Cara Pakai & Bantuan</Link>
+            {user && (
+              <button className="navbar-drawer-signout" onClick={() => { closeMenu(); signOut(); }}>
+                Keluar
+              </button>
+            )}
           </nav>
         </>
       )}
