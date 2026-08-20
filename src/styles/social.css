@@ -594,3 +594,23 @@ input[type="checkbox"], input[type="radio"] {
 .home-product-picker-row input[type="checkbox"], .home-product-picker-row input[type="radio"] {
   margin: 0;
 }
+
+/* ---------- QRIS chat flow ---------- */
+.chat-conversation-avatar { display: grid; place-items: center; text-decoration: none; cursor: pointer; }
+.chat-qris-trigger { position: sticky; bottom: 70px; z-index: 7; align-self: center; border: 1px solid rgba(36,84,255,.25); border-radius: 999px; padding: 7px 13px; background: var(--blue-50); color: var(--blue-600); font-size: 12px; font-weight: 800; box-shadow: 0 7px 18px rgba(15,30,76,.12); }
+.chat-message-row.is-qris { justify-content: center; }
+.chat-qris-bubble { max-width: min(88%, 330px); padding: 9px 11px 6px; background: var(--surface); color: var(--ink-900); border: 1px solid rgba(36,84,255,.18); }
+.chat-message-row.is-mine .chat-qris-bubble { background: var(--surface); color: var(--ink-900); border-radius: 15px; }
+.chat-qris-card { display: grid; justify-items: center; gap: 8px; text-align: center; }
+.chat-qris-card strong { color: var(--navy-900); font-size: 13px; }
+.chat-qris-card small { color: var(--ink-500); font-size: 10px; line-height: 1.3; }
+.chat-qris-image-button { display: block; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.chat-qris-image-button .chat-attachment-media { width: min(220px, 70vw); max-width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: #fff; border: 1px solid var(--border); padding: 5px; }
+.qris-upload-modal { display: grid; gap: 10px; }
+.qris-file-picker { min-height: 190px; display: grid; place-items: center; gap: 8px; padding: 12px; border: 1px dashed var(--blue-600); border-radius: 14px; background: var(--blue-50); color: var(--blue-600); font-size: 12px; font-weight: 700; text-align: center; cursor: pointer; }
+.qris-file-picker img { width: min(210px, 70vw); height: min(210px, 70vw); object-fit: contain; border-radius: 10px; background: #fff; }
+.qris-file-picker input { position: absolute; width: 1px !important; height: 1px; opacity: 0; pointer-events: none; }
+@media (max-width: 600px) {
+  .chat-qris-trigger, .chat-rating-trigger, .chat-done-trigger { bottom: 62px; }
+  .chat-qris-bubble { max-width: 92%; }
+}

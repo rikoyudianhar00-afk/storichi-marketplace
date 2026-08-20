@@ -7,6 +7,7 @@ import CategoryPage from "./pages/CategoryPage";
 import GroupPage from "./pages/GroupPage";
 import SearchPage from "./pages/SearchPage";
 import ShopPage from "./pages/ShopPage";
+import PublicProfilePreview from "./pages/PublicProfilePreview";
 import ManageAds from "./pages/ManageAds";
 import ManageHome from "./pages/ManageHome";
 import ManageNavigation from "./pages/ManageNavigation";
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/grup/:slug" element={<GroupPage />} />
         <Route path="/produk/:slug" element={<ProductDetail />} />
         <Route path="/toko/:sellerId" element={<ShopPage />} />
+        <Route path="/pengguna/:userId" element={<PublicProfilePreview />} />
         <Route path="/jual" element={<MyProducts />} />
         <Route path="/jual/baru" element={<SellProduct />} />
         <Route path="/jual/edit/:productId" element={<SellProduct />} />

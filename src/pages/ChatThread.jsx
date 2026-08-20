@@ -5,6 +5,7 @@ import PurchaseRequestCard from "../components/PurchaseRequestCard";
 import AttachmentButton from "../components/AttachmentButton";
 import { markChatThreadRead } from "../lib/chatNotifications";
 import { moderateMessage } from "../lib/moderation";
+import { compressImageForChat, validateImageFile } from "../lib/image";
 import { supabase } from "../lib/supabase";
 
 function formatMessageTime(value) {
@@ -13,7 +14,7 @@ function formatMessageTime(value) {
 
 export default function ChatThread() {
   const { threadId } = useParams();
-  const { user } = useAuth();
+  const { user, profile: currentProfile, refreshProfile } = useAuth();
   const [thread, setThread] = useState(null);
   const [participant, setParticipant] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -32,6 +33,11 @@ export default function ChatThread() {
   const [productCollapsed, setProductCollapsed] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [qrisUploadOpen, setQrisUploadOpen] = useState(false);
+  const [qrisFile, setQrisFile] = useState(null);
+  const [qrisPreviewUrl, setQrisPreviewUrl] = useState("");
+  const [qrisError, setQrisError] = useState("");
+  const [qrisBusy, setQrisBusy] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -52,7 +58,7 @@ export default function ChatThread() {
       const [{ data: msgs }, { data: req }, { data: profile }] = await Promise.all([
         supabase.from("chat_messages").select("*").eq("thread_id", threadId).order("created_at", { ascending: true }),
         supabase.from("purchase_requests").select("*, product:products(id, slug, name, image_url, category, price_from)").eq("thread_id", threadId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-        supabase.from("profiles").select("id, display_name, avatar_url, is_verified, is_owner").eq("id", participantId).maybeSingle(),
+        supabase.from("profiles").select("id, display_name, avatar_url, bio, qris_url, is_verified, is_owner, is_seller").eq("id", participantId).maybeSingle(),
       ]);
       await markChatThreadRead(user.id, threadId);
       if (active) {
@@ -117,7 +123,8 @@ export default function ChatThread() {
   const isSeller = Boolean(request && user?.id === request.seller_id);
   const isDirect = request?.purchase_mode === "direct";
   const waitingForBuyerRating = isDirect && isBuyer && request?.rating_requested_at && !request?.buyer_rating;
-  const sellerCanRequestRating = isDirect && isSeller && request?.status === "approved" && !request?.rating_requested_at && !request?.buyer_rating;
+  const sellerCanSendQris = isDirect && isSeller && request?.status === "approved" && !request?.qris_sent_at && !request?.buyer_rating;
+  const sellerCanRequestRating = isDirect && isSeller && request?.status === "approved" && request?.qris_sent_at && !request?.rating_requested_at && !request?.buyer_rating;
   const sellerCanComplete = isDirect && isSeller && request?.status === "approved" && Boolean(request?.buyer_rating);
   const chatLocked = Boolean(waitingForBuyerRating);
 
@@ -153,6 +160,91 @@ export default function ChatThread() {
     setBusyAction(false);
     if (error) return setChatError(error.message || "Permintaan rating gagal dikirim.");
     setRequest((prev) => ({ ...prev, rating_requested_at: new Date().toISOString() }));
+  }
+
+  function chooseQrisFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const fileError = validateImageFile(file);
+    if (fileError) {
+      setQrisError(fileError);
+      return;
+    }
+    setQrisError("");
+    setQrisFile(file);
+    setQrisPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function resetQrisUpload() {
+    if (qrisPreviewUrl) URL.revokeObjectURL(qrisPreviewUrl);
+    setQrisFile(null);
+    setQrisPreviewUrl("");
+    setQrisError("");
+  }
+
+  async function sendQrisMessage(qrisUrl) {
+    setQrisBusy(true);
+    setBusyAction(true);
+    setChatError("");
+    const { data: qrisMessage, error: qrisErrorResult } = await supabase.rpc("send_direct_purchase_qris", { p_request_id: request.id, p_qris_url: qrisUrl });
+    if (qrisErrorResult) {
+      setQrisBusy(false);
+      setBusyAction(false);
+      setChatError(qrisErrorResult.message || "QRIS gagal diberikan.");
+      return;
+    }
+    const { error: ratingError } = await supabase.rpc("request_direct_rating", { p_request_id: request.id });
+    setQrisBusy(false);
+    setBusyAction(false);
+    if (ratingError) {
+      setChatError(ratingError.message || "QRIS terkirim, tetapi permintaan rating belum aktif.");
+      setRequest((prev) => ({ ...prev, qris_sent_at: new Date().toISOString() }));
+      return;
+    }
+    const sentAt = qrisMessage?.created_at || new Date().toISOString();
+    setRequest((prev) => ({ ...prev, qris_sent_at: sentAt, rating_requested_at: new Date().toISOString() }));
+    setQrisUploadOpen(false);
+    resetQrisUpload();
+  }
+
+  async function handleGiveQris() {
+    if (!request || !isSeller) return;
+    if (!qrisFile && currentProfile?.qris_url) {
+      await sendQrisMessage(currentProfile.qris_url);
+      return;
+    }
+    if (!qrisFile) {
+      setQrisUploadOpen(true);
+      return;
+    }
+    setQrisBusy(true);
+    setQrisError("");
+    try {
+      const uploadFile = await compressImageForChat(qrisFile, 100 * 1024);
+      if (uploadFile.size > 100 * 1024) {
+        setQrisError("QRIS masih terlalu besar setelah dikompres. Pilih gambar lain.");
+        return;
+      }
+      const path = `${user.id}/qris-${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.jpg`;
+      const { error: uploadError } = await supabase.storage.from("chat-attachments").upload(path, uploadFile, { contentType: "image/jpeg", upsert: false });
+      if (uploadError) {
+        setQrisError("QRIS gagal diunggah.");
+        return;
+      }
+      const { data: publicData } = supabase.storage.from("chat-attachments").getPublicUrl(path);
+      const { error: profileError } = await supabase.from("profiles").update({ qris_url: publicData.publicUrl, qris_updated_at: new Date().toISOString() }).eq("id", user.id);
+      if (profileError) {
+        setQrisError("QRIS terunggah, tetapi belum dapat ditetapkan sebagai QR toko.");
+        return;
+      }
+      await refreshProfile?.();
+      await sendQrisMessage(publicData.publicUrl);
+    } catch {
+      setQrisError("QRIS tidak dapat diproses. Pilih gambar yang valid.");
+    } finally {
+      setQrisBusy(false);
+    }
   }
 
   async function submitRating() {
@@ -200,7 +292,7 @@ export default function ChatThread() {
     <main className="chat-thread-page">
       <header className="chat-conversation-header">
         <Link to="/chat" className="chat-back-button" aria-label="Kembali ke daftar chat">←</Link>
-        <div className="chat-conversation-avatar">{participant?.avatar_url ? <img src={participant.avatar_url} alt="" /> : <span>{participant?.display_name?.[0] || "U"}</span>}</div>
+        <Link to={`/toko/${participant?.id || ""}`} className="chat-conversation-avatar" aria-label={`Buka toko ${participant?.display_name || "pengguna"}`} title="Buka toko pengguna">{participant?.avatar_url ? <img src={participant.avatar_url} alt="" /> : <span>{participant?.display_name?.[0] || "U"}</span>}</Link>
         <div className="chat-conversation-info"><strong>{participant?.display_name || "Pengguna"}</strong><span>{thread.product?.name || "Percakapan umum"}</span></div>
         <span className="chat-online-dot" title="Percakapan aman" />
       </header>
@@ -216,9 +308,15 @@ export default function ChatThread() {
       <div className="chat-messages" aria-live="polite">
         <div className="chat-day-label">Percakapan Storichi</div>
         {messages.map((message) => (
-          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"}`}>
-            <div className="chat-bubble">
-              {message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan, ketuk untuk membuka dan memperbesar" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
+          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${message.attachment_type === "qris" ? "is-qris" : ""}`}>
+            <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""}`}>
+              {message.attachment_type === "qris" && message.attachment_url ? (
+                <div className="chat-qris-card">
+                  <strong>QRIS dari {message.sender_id === user.id ? (currentProfile?.display_name || "Penjual") : (participant?.display_name || "Penjual")}</strong>
+                  <button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button>
+                  <small>Scan QRIS ini untuk melanjutkan pembayaran</small>
+                </div>
+              ) : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan, ketuk untuk membuka dan memperbesar" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
               <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}{message.sender_id === user.id && <span className={`chat-message-read-state ${message.read_at ? "is-read" : ""}`} title={message.read_at ? "Telah terbaca" : "Terkirim"}>{message.read_at ? " ✓✓" : " ✓"}</span>}</time>
             </div>
           </div>
@@ -254,9 +352,22 @@ export default function ChatThread() {
         </section>
       )}
 
+      {sellerCanSendQris && <button type="button" className="chat-qris-trigger" disabled={busyAction || qrisBusy} onClick={handleGiveQris} title="Berikan QRIS kepada pembeli">▣ <span>{currentProfile?.qris_url ? "Berikan QRIS" : "Siapkan & berikan QRIS"}</span></button>}
       {sellerCanRequestRating && <button type="button" className="chat-rating-trigger" disabled={busyAction} onClick={requestRating} title="Minta rating pembeli">☆ <span>Minta rating</span></button>}
       {waitingForBuyerRating && !ratingOpen && <button type="button" className="chat-rating-trigger" onClick={() => setRatingOpen(true)}>☆ <span>Beri rating produk</span></button>}
       {sellerCanComplete && <button type="button" className="chat-done-trigger" disabled={busyAction} onClick={openDoneFlow}>DONE</button>}
+
+      {qrisUploadOpen && (
+        <div className="direct-action-modal" role="dialog" aria-modal="true" aria-label="Siapkan QRIS toko">
+          <div className="direct-action-modal-card qris-upload-modal">
+            <h3>Siapkan QRIS toko</h3>
+            <p>Upload QRIS satu kali. Setelah ditetapkan, QRIS ini tersimpan sebagai QR toko dan langsung dikirim ke pembeli.</p>
+            <label className="qris-file-picker">{qrisPreviewUrl ? <img src={qrisPreviewUrl} alt="Pratinjau QRIS" /> : <span>Ketuk untuk memilih gambar QRIS</span>}<input type="file" accept="image/*" onChange={chooseQrisFile} /></label>
+            {qrisError && <p className="form-error" role="alert">{qrisError}</p>}
+            <div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => { setQrisUploadOpen(false); resetQrisUpload(); }}>Batal</button><button type="button" className="btn btn-primary" disabled={!qrisFile || qrisBusy} onClick={handleGiveQris}>{qrisBusy ? "Menyiapkan..." : "Tetapkan QR toko & kirim"}</button></div>
+          </div>
+        </div>
+      )}
 
       {doneConfirmOpen && (
         <div className="direct-action-modal" role="dialog" aria-modal="true">
