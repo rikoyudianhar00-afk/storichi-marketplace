@@ -367,3 +367,21 @@
 .navbar-drawer-submenu a { padding: 10px 12px; color: var(--ink-700); font-size: 14px; }
 .navbar-drawer-submenu a:hover { background: var(--blue-50); color: var(--blue-600); }
 .navbar-drawer-empty { padding: 9px 12px; color: var(--ink-500); font-size: 13px; font-style: italic; }
+
+/* ---------- Cross-device press feedback ---------- */
+button,
+a,
+select,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}
