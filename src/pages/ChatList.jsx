@@ -223,15 +223,14 @@ export default function ChatList() {
           {thread.unreadCount > 0 && <span className="chat-unread-badge">{thread.unreadCount > 99 ? "99+" : thread.unreadCount}</span>}
           {thread.completed && <div className="chat-list-completed-overlay" aria-label="Transaksi selesai dan terkunci"><span className="chat-completed-mark" aria-hidden="true">✓</span><strong>Selesai</strong></div>}
         </Link>
-        {archived && <button type="button" className="chat-restore-button" onClick={() => restoreThread(thread)}>Kembalikan</button>}
+        {archived && !thread.completed && <button type="button" className="chat-restore-button" onClick={() => restoreThread(thread)}>Kembalikan</button>}
       </div>
     );
   }
 
-  const archivedThreads = threads.filter((thread) => thread.archivedByUser).sort(sortByRecent);
+  const archivedThreads = threads.filter((thread) => thread.archivedByUser || thread.completed).sort(sortByRecent);
   const activeThreads = threads.filter((thread) => !thread.archivedByUser && !thread.completed).sort(sortByRecent);
-  const completedThreads = threads.filter((thread) => !thread.archivedByUser && thread.completed).sort(sortByRecent);
-  const hasVisibleThreads = activeThreads.length || completedThreads.length || archivedThreads.length;
+  const hasVisibleThreads = activeThreads.length || archivedThreads.length;
 
   return (
     <main className="container chat-inbox-page">
@@ -242,9 +241,8 @@ export default function ChatList() {
         <div className="empty-state"><p>Belum ada percakapan. Mulai chat dari halaman produk.</p></div>
       ) : (
         <>
+          {archivedThreads.length > 0 && <section className="chat-section chat-archive-section"><div className="chat-archive-heading"><span>Archived</span><small>{archivedThreads.length} chat</small></div><div className="chat-thread-list">{archivedThreads.map((thread) => renderThread(thread, true))}</div></section>}
           {activeThreads.length > 0 && <section className="chat-section"><h2 className="chat-section-title">Chat aktif</h2><div className="chat-thread-list">{activeThreads.map((thread) => renderThread(thread))}</div></section>}
-          {completedThreads.length > 0 && <section className="chat-section chat-completed-section"><h2 className="chat-section-title">Selesai</h2><div className="chat-thread-list">{completedThreads.map((thread) => renderThread(thread))}</div></section>}
-          {archivedThreads.length > 0 && <section className="chat-section chat-archive-section"><div className="chat-archive-heading"><span>Archive</span><small>{archivedThreads.length} chat</small></div><div className="chat-thread-list">{archivedThreads.map((thread) => renderThread(thread, true))}</div></section>}
         </>
       )}
       <p className="chat-swipe-hint">Tahan sekitar seperempat detik, lalu geser kiri untuk arsip atau kanan untuk hapus.</p>

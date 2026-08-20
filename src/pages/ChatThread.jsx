@@ -34,6 +34,9 @@ export default function ChatThread() {
   const [skipDoneConfirm, setSkipDoneConfirm] = useState(false);
   const [productCollapsed, setProductCollapsed] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [completedHistoryRevealed, setCompletedHistoryRevealed] = useState(false);
+  const [historySwipeOffset, setHistorySwipeOffset] = useState(0);
+  const historySwipeRef = useRef(null);
   const [qrisUploadOpen, setQrisUploadOpen] = useState(false);
   const [qrisFile, setQrisFile] = useState(null);
   const [qrisPreviewUrl, setQrisPreviewUrl] = useState("");
@@ -110,6 +113,41 @@ export default function ChatThread() {
   const sellerCanComplete = isDirect && isSeller && request?.status === "approved" && Boolean(request?.buyer_rating);
   const chatCompleted = request?.status === "completed";
   const chatLocked = Boolean(waitingForBuyerRating || chatCompleted);
+
+  useEffect(() => {
+    if (!chatCompleted) {
+      setCompletedHistoryRevealed(false);
+      setHistorySwipeOffset(0);
+    }
+  }, [chatCompleted]);
+
+  function handleHistorySwipeStart(event) {
+    if (!chatCompleted || completedHistoryRevealed) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    historySwipeRef.current = { startX: event.clientX, moved: false };
+  }
+
+  function handleHistorySwipeMove(event) {
+    const gesture = historySwipeRef.current;
+    if (!gesture || completedHistoryRevealed) return;
+    event.preventDefault();
+    const offset = Math.max(0, Math.min(220, event.clientX - gesture.startX));
+    gesture.moved = offset > 4;
+    setHistorySwipeOffset(offset);
+  }
+
+  function handleHistorySwipeEnd() {
+    const gesture = historySwipeRef.current;
+    if (!gesture) return;
+    if (historySwipeOffset >= 118) {
+      setCompletedHistoryRevealed(true);
+      setHistorySwipeOffset(0);
+    } else {
+      setHistorySwipeOffset(0);
+    }
+    historySwipeRef.current = null;
+  }
 
   async function sendMessage(e) {
     e.preventDefault();
@@ -272,7 +310,17 @@ export default function ChatThread() {
 
   return (
     <main className="chat-thread-page">
-      {chatCompleted && <div className="chat-completed-overlay" aria-label="Transaksi selesai dan terkunci"><div className="chat-completed-mark" aria-hidden="true">✓</div><strong>Transaksi selesai</strong><span>Proses ini sudah selesai dan tidak dapat diubah lagi.</span></div>}
+      {chatCompleted && <div className={`chat-completed-overlay ${completedHistoryRevealed ? "is-revealed" : ""}`} aria-label="Transaksi selesai dan terkunci">
+        {!completedHistoryRevealed ? <>
+          <div className="chat-completed-mark" aria-hidden="true">✓</div>
+          <strong>Transaksi selesai</strong>
+          <span>Riwayat chat dan gambar masih dapat dibaca, tetapi proses tidak dapat diubah.</span>
+          <div className="completed-history-slider" aria-label="Geser untuk membuka riwayat chat">
+            <span>Geser untuk lihat riwayat</span>
+            <button type="button" className="completed-history-slider-thumb" style={{ transform: `translateX(${historySwipeOffset}px)` }} onPointerDown={handleHistorySwipeStart} onPointerMove={handleHistorySwipeMove} onPointerUp={handleHistorySwipeEnd} onPointerCancel={handleHistorySwipeEnd} onContextMenu={(event) => event.preventDefault()} aria-label="Geser ke kanan untuk melihat riwayat">→</button>
+          </div>
+        </> : <div className="completed-history-revealed-bar"><span className="chat-completed-mini-mark" aria-hidden="true">✓</span><strong>Transaksi selesai</strong><span>Riwayat dapat dibaca</span></div>}
+      </div>}
 
       <header className="chat-conversation-header">
         <Link to="/chat" className="chat-back-button" aria-label="Kembali ke daftar chat">←</Link>

@@ -719,3 +719,13 @@ input[type="checkbox"], input[type="radio"] {
 .chat-archive-heading small { color: var(--ink-500); font-size: 10px; font-weight: 600; }
 .chat-thread-swipe-shell.is-archived { background: var(--surface); }
 .chat-restore-button { display: block; margin: -1px 12px 8px auto; border: 0; background: transparent; color: var(--blue-600); font-size: 10px; font-weight: 800; }
+
+/* ---------- Completed chat history reveal slider ---------- */
+.chat-completed-overlay:not(.is-revealed) { pointer-events: auto; }
+.completed-history-slider { position: relative; display: flex; align-items: center; width: min(310px, calc(100vw - 48px)); height: 46px; margin-top: 8px; padding: 4px 6px 4px 54px; border: 1px solid rgba(22, 163, 74, .28); border-radius: 999px; background: rgba(187, 247, 208, .72); color: #166534; font-size: 11px; font-weight: 800; overflow: hidden; }
+.completed-history-slider::after { content: "→"; position: absolute; right: 16px; color: rgba(22, 101, 52, .5); font-size: 18px; }
+.completed-history-slider-thumb { position: absolute; left: 5px; top: 5px; z-index: 2; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #22c55e; color: #fff; font-size: 20px; font-weight: 900; box-shadow: 0 4px 10px rgba(22, 101, 52, .25); touch-action: none; transition: transform 100ms ease-out; }
+.chat-completed-overlay.is-revealed { inset: 0 0 auto 0; min-height: 48px; align-items: stretch; justify-content: flex-start; padding: 5px 14px; background: rgba(34, 197, 94, .08); }
+.completed-history-revealed-bar { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; color: #15803d; font-size: 11px; }
+.completed-history-revealed-bar span:last-child { color: #166534; font-size: 10px; }
+.chat-completed-mini-mark { width: 24px; height: 24px; display: grid; place-items: center; background: #22c55e; color: #fff; font-size: 15px; font-weight: 900; clip-path: polygon(50% 0%, 62% 8%, 74% 4%, 82% 16%, 96% 17%, 93% 31%, 100% 42%, 91% 51%, 97% 65%, 83% 70%, 78% 84%, 65% 81%, 54% 100%, 43% 89%, 30% 95%, 23% 81%, 9% 80%, 11% 66%, 0% 56%, 8% 44%, 2% 30%, 16% 25%, 20% 11%, 34% 14%, 41% 1%); }
