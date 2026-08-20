@@ -11,6 +11,7 @@ import PublicProfilePreview from "./pages/PublicProfilePreview";
 import ManageAds from "./pages/ManageAds";
 import ManageHome from "./pages/ManageHome";
 import ManageNavigation from "./pages/ManageNavigation";
+import ManageModeration from "./pages/ManageModeration";
 import ProductDetail from "./pages/ProductDetail";
 import SellProduct from "./pages/SellProduct";
 import MyProducts from "./pages/MyProducts";
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/kelola-iklan" element={<ManageAds />} />
         <Route path="/kelola-beranda" element={<ManageHome />} />
         <Route path="/kelola-menu" element={<ManageNavigation />} />
+        <Route path="/kelola-moderasi" element={<ManageModeration />} />
         <Route path="/favorit" element={<SimplePage title="Favorit" description="Produk favorit kamu akan muncul di sini." />} />
         <Route path="/transaksi" element={<Transactions />} />
         <Route path="/cari" element={<SearchPage />} />

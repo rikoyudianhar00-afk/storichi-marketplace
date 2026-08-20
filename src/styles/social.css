@@ -614,3 +614,35 @@ input[type="checkbox"], input[type="radio"] {
   .chat-qris-trigger, .chat-rating-trigger, .chat-done-trigger { bottom: 62px; }
   .chat-qris-bubble { max-width: 92%; }
 }
+
+/* QRIS image uses its natural ratio so portrait QR screenshots do not sit inside an oversized square. */
+.chat-qris-image-button .chat-attachment-media { width: auto; height: auto; max-width: min(250px, 72vw); max-height: 320px; aspect-ratio: auto; object-fit: contain; padding: 0; background: transparent; border: 0; border-radius: 10px; }
+.chat-qris-card { overflow: hidden; }
+.chat-qris-bubble { padding: 10px 10px 6px; }
+.chat-moderation-warning { position: sticky; bottom: 66px; z-index: 8; margin: 6px auto; max-width: min(94%, 520px); padding: 10px 12px; border: 1px solid #dc2626; border-radius: 12px; background: #fff1f2; color: #991b1b; font-size: 12px; font-weight: 800; line-height: 1.45; box-shadow: 0 8px 22px rgba(153,27,27,.14); }
+
+/* Owner moderation panel */
+.manage-moderation-page { padding-bottom: 80px; }
+.moderation-policy-card { margin: 18px 0; padding: 15px; border: 1px solid #fecaca; border-radius: 15px; background: #fff7ed; color: #7c2d12; }
+.moderation-policy-card strong { font-size: 14px; }
+.moderation-policy-card p { margin: 7px 0 0; font-size: 12px; line-height: 1.5; }
+.moderation-account-list, .moderation-event-list { margin-top: 18px; }
+.moderation-account-list h2, .moderation-event-list h2 { margin: 0 0 10px; font-size: 16px; }
+.moderation-account-card { display: flex; align-items: center; gap: 11px; margin-bottom: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); }
+.moderation-account-avatar { width: 42px; height: 42px; flex: 0 0 42px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--blue-50); color: var(--blue-600); font-weight: 800; }
+.moderation-account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.moderation-account-copy { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.moderation-account-copy strong { font-size: 13px; }
+.moderation-account-copy small, .moderation-account-copy span, .moderation-account-copy em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-500); font-size: 10px; font-style: normal; }
+.moderation-account-copy span { color: #b91c1c; font-weight: 800; }
+.moderation-account-copy em { color: #7c2d12; }
+.moderation-lift-btn { flex: 0 0 auto; padding: 7px 10px; font-size: 11px; }
+.moderation-event-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); font-size: 11px; }
+.moderation-event-row strong { color: #b91c1c; text-transform: capitalize; }
+.moderation-event-row span { color: var(--ink-500); line-height: 1.35; }
+.moderation-event-row time { color: var(--ink-500); font-size: 10px; white-space: nowrap; }
+@media (max-width: 600px) { .moderation-account-card { align-items: flex-start; flex-wrap: wrap; } .moderation-lift-btn { margin-left: 53px; } .moderation-event-row { grid-template-columns: 1fr; gap: 3px; } }
+
+.chat-message-row.is-system { justify-content: center; }
+.chat-system-bubble { max-width: min(92%, 520px); border: 1px solid #fecaca; border-radius: 12px; background: #fff7ed; color: #991b1b; font-size: 11px; font-weight: 800; line-height: 1.45; text-align: center; }
+.chat-system-bubble time { display: block; margin-top: 5px; color: #b45309; font-weight: 600; }

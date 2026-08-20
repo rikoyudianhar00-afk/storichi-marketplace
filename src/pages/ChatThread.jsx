@@ -22,6 +22,7 @@ export default function ChatThread() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [chatError, setChatError] = useState("");
+  const [moderationNotice, setModerationNotice] = useState("");
   const [ratingOpen, setRatingOpen] = useState(true);
   const [selectedRating, setSelectedRating] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
@@ -277,9 +278,10 @@ export default function ChatThread() {
     if (!parsedPrice || parsedPrice <= 0) return setChatError("Masukkan harga item yang valid.");
     setBusyAction(true);
     setChatError("");
-    const { error } = await supabase.rpc("complete_direct_purchase", { p_request_id: request.id, p_final_price: parsedPrice });
+    const { data: moderationNoticeResult, error } = await supabase.rpc("complete_direct_purchase", { p_request_id: request.id, p_final_price: parsedPrice });
     setBusyAction(false);
     if (error) return setChatError(error.message || "Transaksi belum dapat diselesaikan.");
+    if (moderationNoticeResult) setModerationNotice(moderationNoticeResult);
     setRequest((prev) => ({ ...prev, status: "completed", final_price: parsedPrice, completed_at: new Date().toISOString(), seller_done_at: new Date().toISOString() }));
     setPricePromptOpen(false);
   }
@@ -308,8 +310,8 @@ export default function ChatThread() {
       <div className="chat-messages" aria-live="polite">
         <div className="chat-day-label">Percakapan Storichi</div>
         {messages.map((message) => (
-          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${message.attachment_type === "qris" ? "is-qris" : ""}`}>
-            <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""}`}>
+          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
+            <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""} ${message.attachment_type === "system" ? "chat-system-bubble" : ""}`}>
               {message.attachment_type === "qris" && message.attachment_url ? (
                 <div className="chat-qris-card">
                   <strong>QRIS dari {message.sender_id === user.id ? (currentProfile?.display_name || "Penjual") : (participant?.display_name || "Penjual")}</strong>
@@ -380,6 +382,7 @@ export default function ChatThread() {
         </div>
       )}
 
+      {moderationNotice && <div className="chat-moderation-warning" role="alert">{moderationNotice}</div>}
       {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
       <div className={`chat-composer-shell ${chatLocked ? "is-locked" : ""}`}>
         <form className="chat-input-bar" onSubmit={sendMessage}>
