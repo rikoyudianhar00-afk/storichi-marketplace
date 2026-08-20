@@ -651,12 +651,12 @@
 
 /* ---------- Interactive group and product icon surfaces ---------- */
 .category-door { cursor: pointer; }
-.category-door-art, .corridor-hero-icon, .group-category-chip-icon { box-shadow: 0 4px 10px rgba(15, 23, 42, .12); transition: transform 160ms ease, box-shadow 160ms ease; }
+.category-door-art, .corridor-hero-icon, .group-category-chip-icon { box-shadow: 0 8px 18px rgba(33, 72, 135, .34), 0 2px 5px rgba(11, 31, 76, .24); transition: transform 160ms ease, box-shadow 160ms ease; }
 .category-door:active .category-door-art,
 .group-category-chip:active .group-category-chip-icon,
 .corridor-hero:active .corridor-hero-icon { transform: translateY(2px) scale(.97); box-shadow: none; }
 .group-category-chip, .group-category-chip-icon, .product-detail-main-img, .product-detail-thumb { cursor: pointer; }
-.product-detail-main-img, .product-detail-thumb { transition: transform 160ms ease, box-shadow 160ms ease; }
+.product-detail-main-img, .product-detail-thumb { box-shadow: 0 8px 18px rgba(33, 72, 135, .30), 0 2px 5px rgba(11, 31, 76, .20); transition: transform 160ms ease, box-shadow 160ms ease; }
 .product-detail-main-img:active, .product-detail-thumb:active { transform: translateY(2px) scale(.985); box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   .category-door-art, .corridor-hero-icon, .group-category-chip-icon, .product-detail-main-img, .product-detail-thumb { transition: none; }
