@@ -40,7 +40,6 @@ export default function SellProduct() {
   const [error, setError] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(!!productId);
   const [cropTarget, setCropTarget] = useState(null); // { source, replaceIndex? }
-  const [cropQueue, setCropQueue] = useState([]);
 
   useEffect(() => {
     Promise.all([
@@ -83,24 +82,37 @@ export default function SellProduct() {
     const fileError = validateImageFile(file);
     if (fileError) return setError(fileError);
     setError("");
-    setCropQueue([]);
-    setCropTarget({ source: file, replaceIndex: images.length ? 0 : null, aspect: "1:1" });
+    setCropTarget({ source: file, replaceIndex: images.length ? 0 : null, aspect: "square" });
   }
 
-  function pickAdditionalImages(e) {
+  async function pickAdditionalImages(e) {
     const files = Array.from(e.target.files || []);
     e.target.value = "";
     if (!files.length) return;
     const invalidFile = files.map(validateImageFile).find(Boolean);
     if (invalidFile) return setError(invalidFile);
+    if (!user) return signInWithGoogle();
     setError("");
-    const [first, ...rest] = files;
-    setCropQueue(rest);
-    setCropTarget({ source: first, aspect: "free" });
+    setUploading(true);
+    const uploadedUrls = [];
+    for (const file of files) {
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+      const { error: uploadError } = await supabase.storage.from("product-images").upload(path, file, { contentType: file.type || "image/jpeg" });
+      if (uploadError) {
+        setUploading(false);
+        setError("Sebagian gambar informasi tambahan gagal diunggah.");
+        return;
+      }
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      uploadedUrls.push(data.publicUrl);
+    }
+    setImages((prev) => [...prev, ...uploadedUrls]);
+    setUploading(false);
   }
 
   function repositionImage(idx) {
-    setCropTarget({ source: images[idx], replaceIndex: idx, aspect: idx === 0 ? "1:1" : "free" });
+    if (idx !== 0 || !images[0]) return;
+    setCropTarget({ source: images[0], replaceIndex: 0, aspect: "square" });
   }
 
   async function handleCropConfirm(blob) {
@@ -109,7 +121,6 @@ export default function SellProduct() {
     if (blob.size > MAX_IMAGE_SIZE_BYTES) {
       setError("Ukuran foto hasil pengolahan melebihi 5 MB. Kurangi zoom atau pilih foto lain.");
       setCropTarget(null);
-      setCropQueue([]);
       return;
     }
 
@@ -120,7 +131,6 @@ export default function SellProduct() {
     if (uploadError) {
       setUploading(false);
       setCropTarget(null);
-      setCropQueue([]);
       setError("Gambar gagal diunggah.");
       return;
     }
@@ -129,9 +139,7 @@ export default function SellProduct() {
       if (replaceIndex != null && prev.length) return prev.map((img, i) => (i === replaceIndex ? data.publicUrl : img));
       return [...prev, data.publicUrl];
     });
-    const [nextFile, ...remaining] = cropQueue;
-    setCropQueue(remaining);
-    setCropTarget(nextFile ? { source: nextFile, aspect: "free" } : null);
+    setCropTarget(null);
     setUploading(false);
   }
 
@@ -285,11 +293,11 @@ export default function SellProduct() {
         <div className="image-upload-grid">
           {images.slice(1).map((img, offset) => {
             const i = offset + 1;
-            return <div key={i} className="image-upload-item"><img src={img} alt="" /><button type="button" className="image-reposition-btn" onClick={() => repositionImage(i)} aria-label="Reposisi gambar">⤢</button><button type="button" className="image-remove-btn" onClick={() => removeImage(i)} aria-label="Hapus gambar">×</button></div>;
+            return <div key={i} className="image-upload-item"><img src={img} alt="" /><button type="button" className="image-remove-btn" onClick={() => removeImage(i)} aria-label="Hapus gambar">×</button></div>;
           })}
           <label className="image-upload-add">{uploading ? "..." : "+ Pilih banyak foto"}<input type="file" accept="image/*" multiple onChange={pickAdditionalImages} hidden disabled={uploading} /></label>
         </div>
-        <p className="field-hint">Thumbnail digunakan sebagai foto utama. Foto tambahan dapat dipilih sekaligus untuk informasi produk.</p>
+        <p className="field-hint">Thumbnail selalu diproses 1:1. Foto informasi tambahan dapat dipilih sekaligus tanpa crop, reposisi, atau penguncian rasio.</p>
 
         <label className="form-label">Judul Produk</label>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Contoh: 100 Diamond Mobile Legends" required />

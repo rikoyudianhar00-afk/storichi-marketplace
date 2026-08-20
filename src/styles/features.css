@@ -705,3 +705,8 @@ input[type="checkbox"], input[type="radio"] {
   flex: 0 0 20px;
   accent-color: var(--blue-600);
 }
+
+/* Product detail gallery follows each image's natural aspect ratio. */
+.product-detail-main-img { aspect-ratio: auto; width: 100%; min-height: 0; display: grid; place-items: center; }
+.product-detail-main-img img { width: 100%; height: auto; max-height: min(72vh, 680px); object-fit: contain; background: var(--surface-muted, #f5f7fb); }
+.product-detail-thumb img { object-fit: contain; background: var(--surface-muted, #f5f7fb); }

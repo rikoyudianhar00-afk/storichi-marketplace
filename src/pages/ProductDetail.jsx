@@ -15,6 +15,7 @@ export default function ProductDetail() {
   const [productReviews, setProductReviews] = useState([]);
   const [sellerReviews, setSellerReviews] = useState([]);
   const [activeImg, setActiveImg] = useState(0);
+  const [imageRatios, setImageRatios] = useState({});
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
@@ -123,6 +124,7 @@ export default function ProductDetail() {
   if (!product) return <main className="container empty-state"><p>Produk tidak ditemukan.</p></main>;
 
   const images = product.images?.length ? product.images : product.image_url ? [product.image_url] : [];
+  const activeImageRatio = imageRatios[activeImg] || 1;
   const isOwnProduct = user?.id === product.seller_id;
   const isSoldOut = Number(product.stock ?? 1) <= 0;
 
@@ -134,9 +136,16 @@ export default function ProductDetail() {
     <main className="container" style={{ paddingTop: 24, paddingBottom: 40 }}>
       <div className="product-detail-grid">
         <div>
-          <div className="product-detail-main-img">
+          <div className="product-detail-main-img" style={{ aspectRatio: activeImageRatio }}>
             {images.length ? (
-              <img src={images[activeImg]} alt={product.name} />
+              <img
+                src={images[activeImg]}
+                alt={product.name}
+                onLoad={(event) => {
+                  const ratio = event.currentTarget.naturalWidth / event.currentTarget.naturalHeight;
+                  if (Number.isFinite(ratio) && ratio > 0) setImageRatios((current) => ({ ...current, [activeImg]: ratio }));
+                }}
+              />
             ) : (
               <div className="product-card-thumb-fallback" style={{ fontSize: 40 }}>
                 {product.name[0]}
@@ -151,7 +160,14 @@ export default function ProductDetail() {
                   className={"product-detail-thumb" + (i === activeImg ? " active" : "")}
                   onClick={() => setActiveImg(i)}
                 >
-                  <img src={img} alt="" />
+                  <img
+                    src={img}
+                    alt=""
+                    onLoad={(event) => {
+                      const ratio = event.currentTarget.naturalWidth / event.currentTarget.naturalHeight;
+                      if (Number.isFinite(ratio) && ratio > 0) setImageRatios((current) => ({ ...current, [i]: ratio }));
+                    }}
+                  />
                 </button>
               ))}
             </div>
