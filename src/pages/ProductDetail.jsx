@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
@@ -21,6 +21,10 @@ export default function ProductDetail() {
   const [wishlisted, setWishlisted] = useState(false);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [soldOutPopup, setSoldOutPopup] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const zoomPointersRef = useRef(new Map());
+  const pinchStartRef = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -53,12 +57,69 @@ export default function ProductDetail() {
     load();
   }, [slug]);
 
+  useEffect(() => {
+    if (!zoomOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setZoomOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = "";
+    };
+  }, [zoomOpen]);
+
   const productAvgRating = productReviews.length
     ? productReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / productReviews.length
     : 0;
   const sellerAvgRating = sellerReviews.length
     ? sellerReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / sellerReviews.length
     : 0;
+
+  function openZoom() {
+    if (!images.length) return;
+    setZoomScale(1);
+    setZoomOpen(true);
+  }
+
+  function closeZoom() {
+    zoomPointersRef.current.clear();
+    pinchStartRef.current = null;
+    setZoomOpen(false);
+    setZoomScale(1);
+  }
+
+  function distanceBetweenPointers() {
+    const points = [...zoomPointersRef.current.values()];
+    if (points.length < 2) return 0;
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+  }
+
+  function handleZoomPointerDown(event) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    zoomPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (zoomPointersRef.current.size === 2) {
+      pinchStartRef.current = { distance: distanceBetweenPointers(), scale: zoomScale };
+    }
+  }
+
+  function handleZoomPointerMove(event) {
+    if (!zoomPointersRef.current.has(event.pointerId)) return;
+    event.preventDefault();
+    zoomPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (zoomPointersRef.current.size < 2 || !pinchStartRef.current) return;
+    const nextDistance = distanceBetweenPointers();
+    if (!nextDistance || !pinchStartRef.current.distance) return;
+    const nextScale = pinchStartRef.current.scale * (nextDistance / pinchStartRef.current.distance);
+    setZoomScale(Math.min(4, Math.max(1, Number(nextScale.toFixed(2)))));
+  }
+
+  function handleZoomPointerUp(event) {
+    zoomPointersRef.current.delete(event.pointerId);
+    if (zoomPointersRef.current.size < 2) pinchStartRef.current = null;
+  }
 
   async function toggleWishlist() {
     if (!user) return signInWithGoogle();
@@ -133,14 +194,26 @@ export default function ProductDetail() {
   }
 
   return (
-    <main className="container" style={{ paddingTop: 24, paddingBottom: 40 }}>
+    <>
+      <main className="container" style={{ paddingTop: 24, paddingBottom: 40 }}>
       <div className="product-detail-grid">
         <div className="product-detail-media">
-          <div className="product-detail-main-img" style={{ aspectRatio: activeImageRatio }}>
+          <div
+            className="product-detail-main-img"
+            style={{ aspectRatio: activeImageRatio }}
+            role="button"
+            tabIndex={0}
+            aria-label="Perbesar gambar produk"
+            onClick={openZoom}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") openZoom();
+            }}
+          >
             {images.length ? (
               <img
                 src={images[activeImg]}
                 alt={product.name}
+                draggable={false}
                 onLoad={(event) => {
                   const ratio = event.currentTarget.naturalWidth / event.currentTarget.naturalHeight;
                   if (Number.isFinite(ratio) && ratio > 0) setImageRatios((current) => ({ ...current, [activeImg]: ratio }));
@@ -266,6 +339,38 @@ export default function ProductDetail() {
           </div>
         )}
       </section>
-    </main>
+      </main>
+      {zoomOpen && (
+        <div className="product-image-viewer" role="dialog" aria-modal="true" aria-label="Perbesar gambar produk" onClick={closeZoom}>
+          <div className="product-image-viewer-card" onClick={(event) => event.stopPropagation()}>
+            <div className="product-image-viewer-toolbar">
+              <span>Gambar {activeImg + 1} dari {images.length}</span>
+              <div className="product-image-viewer-actions">
+                <button type="button" onClick={() => setZoomScale((scale) => Math.max(1, Number((scale - 0.25).toFixed(2))))} aria-label="Perkecil gambar">−</button>
+                <button type="button" onClick={() => setZoomScale(1)} aria-label="Reset zoom">{Math.round(zoomScale * 100)}%</button>
+                <button type="button" onClick={() => setZoomScale((scale) => Math.min(4, Number((scale + 0.25).toFixed(2))))} aria-label="Perbesar gambar">+</button>
+                <button type="button" className="product-image-viewer-close" onClick={closeZoom} aria-label="Tutup gambar">×</button>
+              </div>
+            </div>
+            <div
+              className="product-image-viewer-stage"
+              onPointerDown={handleZoomPointerDown}
+              onPointerMove={handleZoomPointerMove}
+              onPointerUp={handleZoomPointerUp}
+              onPointerCancel={handleZoomPointerUp}
+              onDoubleClick={() => setZoomScale((scale) => (scale > 1 ? 1 : 2))}
+            >
+              <img
+                src={images[activeImg]}
+                alt={`${product.name} - gambar ${activeImg + 1}`}
+                draggable={false}
+                style={{ transform: `scale(${zoomScale})` }}
+              />
+            </div>
+            <p className="product-image-viewer-hint">Cubit dengan dua jari untuk memperbesar atau memperkecil. Ketuk dua kali untuk reset cepat.</p>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
