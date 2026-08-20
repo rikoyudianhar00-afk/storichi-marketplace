@@ -419,6 +419,9 @@
 .transaction-stars { color: #cbd1dd; font-size: 14px; white-space: nowrap; }
 .transaction-stars .is-filled { color: var(--accent-amber); }
 .transaction-stars b { color: var(--ink-700); font-size: 11px; }
+.transaction-seller-meta { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 3px; color: var(--ink-700); font-size: 11px; }
+.transaction-seller-meta strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.transaction-seller-meta .role-badge-row { flex: 0 0 auto; }
 @media (max-width: 600px) {
   .transaction-bottom-grid { grid-template-columns: 1fr; }
   .transaction-bottom-grid > div { grid-template-columns: 110px 1fr; align-items: center; }
@@ -690,3 +693,22 @@ input[type="checkbox"], input[type="radio"] {
 .bottom-nav-icon-wrap { position: relative; display: inline-grid; place-items: center; line-height: 1; }
 .wishlist-count-badge { position: absolute; top: -8px; right: -11px; min-width: 15px; height: 15px; padding: 0 3px; display: grid; place-items: center; border-radius: 999px; background: var(--accent-coral); color: #fff; font-size: 8px; line-height: 1; }
 .navbar-notification-link .navbar-notification-badge { top: -4px; right: -4px; }
+
+/* ---------- Completed chat state and swipe actions ---------- */
+.chat-thread-page { position: relative; }
+.chat-completed-overlay { position: absolute; inset: 0; z-index: 12; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; background: rgba(34, 197, 94, .16); color: #15803d; text-align: center; pointer-events: none; }
+.chat-completed-overlay strong { font-size: 17px; }
+.chat-completed-overlay span { max-width: 260px; color: #166534; font-size: 12px; }
+.chat-completed-mark { width: 76px; height: 76px; display: grid; place-items: center; flex: 0 0 auto; background: #22c55e; color: #fff; font-size: 44px; font-weight: 900; line-height: 1; clip-path: polygon(50% 0%, 59% 7%, 69% 3%, 76% 13%, 88% 12%, 90% 25%, 100% 33%, 94% 45%, 100% 56%, 91% 65%, 93% 78%, 80% 81%, 72% 93%, 61% 88%, 50% 100%, 40% 91%, 28% 96%, 22% 84%, 9% 81%, 10% 68%, 0% 59%, 6% 48%, 1% 36%, 12% 28%, 11% 15%, 24% 14%, 32% 4%, 42% 8%); filter: drop-shadow(0 8px 16px rgba(22, 101, 52, .25)); }
+.chat-thread-swipe-shell { position: relative; overflow: hidden; background: #edfdf2; border-bottom: 1px solid var(--border); }
+.chat-thread-swipe-shell .chat-thread-row { position: relative; z-index: 1; touch-action: pan-y; user-select: none; -webkit-user-select: none; transition: transform 140ms ease-out; }
+.chat-swipe-action { position: absolute; inset-block: 0; width: 92px; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 800; }
+.chat-swipe-archive { left: 0; background: #64748b; }
+.chat-swipe-delete { right: 0; background: #dc2626; }
+.chat-list-completed-overlay { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(34, 197, 94, .18); color: #15803d; pointer-events: none; }
+.chat-list-completed-overlay .chat-completed-mark { width: 38px; height: 38px; font-size: 23px; }
+.chat-list-completed-overlay strong { font-size: 12px; }
+.chat-swipe-hint { margin: 10px 2px 0; color: var(--ink-500); font-size: 11px; text-align: center; }
+.chat-undo-bar { position: fixed; left: 50%; bottom: 82px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(420px, calc(100vw - 24px)); padding: 11px 13px; transform: translateX(-50%); border: 1px solid rgba(36, 84, 255, .16); border-radius: 14px; background: rgba(255, 255, 255, .98); box-shadow: 0 12px 32px rgba(18, 35, 91, .2); color: var(--ink-700); font-size: 12px; }
+.chat-undo-bar button { border: 0; background: transparent; color: var(--blue-600); font-size: 12px; font-weight: 800; }
+@media (max-width: 600px) { .chat-undo-bar { bottom: 72px; } }

@@ -108,10 +108,15 @@ export default function ChatThread() {
   const sellerCanSendQris = isDirect && isSeller && request?.status === "approved" && !request?.qris_sent_at && !request?.buyer_rating;
   const sellerCanRequestRating = isDirect && isSeller && request?.status === "approved" && request?.qris_sent_at && !request?.rating_requested_at && !request?.buyer_rating;
   const sellerCanComplete = isDirect && isSeller && request?.status === "approved" && Boolean(request?.buyer_rating);
-  const chatLocked = Boolean(waitingForBuyerRating);
+  const chatCompleted = request?.status === "completed";
+  const chatLocked = Boolean(waitingForBuyerRating || chatCompleted);
 
   async function sendMessage(e) {
     e.preventDefault();
+    if (chatCompleted) {
+      setChatError("Transaksi ini sudah selesai dan tidak dapat diubah lagi.");
+      return;
+    }
     if (chatLocked) {
       setChatError("Berikan rating produk terlebih dahulu untuk melanjutkan chat.");
       return;
@@ -267,6 +272,8 @@ export default function ChatThread() {
 
   return (
     <main className="chat-thread-page">
+      {chatCompleted && <div className="chat-completed-overlay" aria-label="Transaksi selesai dan terkunci"><div className="chat-completed-mark" aria-hidden="true">✓</div><strong>Transaksi selesai</strong><span>Proses ini sudah selesai dan tidak dapat diubah lagi.</span></div>}
+
       <header className="chat-conversation-header">
         <Link to="/chat" className="chat-back-button" aria-label="Kembali ke daftar chat">←</Link>
         <Link to={`/toko/${participant?.id || ""}`} className="chat-conversation-avatar" aria-label={`Buka toko ${participant?.display_name || "pengguna"}`} title="Buka toko pengguna">{participant?.avatar_url ? <img src={participant.avatar_url} alt="" /> : <span>{participant?.display_name?.[0] || "U"}</span>}</Link>
