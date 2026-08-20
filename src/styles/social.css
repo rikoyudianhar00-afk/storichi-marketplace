@@ -709,3 +709,13 @@ input[type="checkbox"], input[type="radio"] {
 .chat-undo-bar { position: fixed; left: 50%; bottom: 82px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(420px, calc(100vw - 24px)); padding: 11px 13px; transform: translateX(-50%); border: 1px solid rgba(36, 84, 255, .16); border-radius: 14px; background: rgba(255, 255, 255, .98); box-shadow: 0 12px 32px rgba(18, 35, 91, .2); color: var(--ink-700); font-size: 12px; }
 .chat-undo-bar button { border: 0; background: transparent; color: var(--blue-600); font-size: 12px; font-weight: 800; }
 @media (max-width: 600px) { .chat-undo-bar { bottom: 72px; } }
+
+/* ---------- Chat sections and Archive ---------- */
+.chat-section { margin-top: 14px; }
+.chat-section-title { margin: 0 0 7px 2px; color: var(--ink-700); font-size: 12px; font-weight: 800; }
+.chat-completed-section { margin-top: 20px; }
+.chat-archive-section { margin-top: 24px; }
+.chat-archive-heading { display: flex; align-items: center; justify-content: space-between; min-height: 30px; padding: 0 3px; color: var(--ink-600, #64748b); font-size: 11px; font-weight: 800; letter-spacing: .02em; }
+.chat-archive-heading small { color: var(--ink-500); font-size: 10px; font-weight: 600; }
+.chat-thread-swipe-shell.is-archived { background: var(--surface); }
+.chat-restore-button { display: block; margin: -1px 12px 8px auto; border: 0; background: transparent; color: var(--blue-600); font-size: 10px; font-weight: 800; }

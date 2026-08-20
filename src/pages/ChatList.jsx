@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { enableChatPush, isPushSupported } from "../lib/pushNotifications";
 
-const HOLD_DELAY = 420;
+const HOLD_DELAY = 260;
 const SWIPE_THRESHOLD = 92;
 
 function formatChatTime(value) {
@@ -15,6 +15,10 @@ function formatChatTime(value) {
     return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
   }
   return date.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+}
+
+function sortByRecent(first, second) {
+  return new Date(second.latest?.created_at || second.created_at) - new Date(first.latest?.created_at || first.created_at);
 }
 
 export default function ChatList() {
@@ -64,6 +68,8 @@ export default function ChatList() {
         const latest = latestMap.get(thread.id);
         const purchaseRequest = requestMap.get(thread.id);
         const isUserA = thread.user_a === user.id;
+        const archivedByUser = isUserA ? Boolean(thread.archived_by_user_a) : Boolean(thread.archived_by_user_b);
+        const deletedByUser = isUserA ? Boolean(thread.deleted_by_user_a) : Boolean(thread.deleted_by_user_b);
         return {
           ...thread,
           participant: profileMap.get(participantId),
@@ -71,17 +77,20 @@ export default function ChatList() {
           purchaseRequest,
           completed: purchaseRequest?.status === "completed",
           unreadCount: unreadMap.get(thread.id) || 0,
-          hiddenByUser: isUserA ? Boolean(thread.archived_by_user_a || thread.deleted_by_user_a) : Boolean(thread.archived_by_user_b || thread.deleted_by_user_b),
+          archivedByUser,
+          deletedByUser,
         };
-      }).filter((thread) => !thread.hiddenByUser).sort((a, b) => new Date(b.latest?.created_at || b.created_at) - new Date(a.latest?.created_at || a.created_at));
+      }).filter((thread) => !thread.deletedByUser).sort(sortByRecent);
       if (active) { setThreads(next); setLoading(false); }
     }
 
     load();
     const channel = supabase.channel(`chat_inbox_${user.id}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, load).subscribe();
+    const requestChannel = supabase.channel(`chat_request_inbox_${user.id}`).on("postgres_changes", { event: "UPDATE", schema: "public", table: "purchase_requests" }, load).subscribe();
     return () => {
       active = false;
       supabase.removeChannel(channel);
+      supabase.removeChannel(requestChannel);
       if (gestureRef.current?.timer) clearTimeout(gestureRef.current.timer);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     };
@@ -136,7 +145,11 @@ export default function ChatList() {
       setSwipeOffsets((current) => ({ ...current, [thread.id]: 0 }));
       return;
     }
-    setThreads((current) => current.filter((item) => item.id !== thread.id));
+    if (action === "archive") {
+      setThreads((current) => current.map((item) => item.id === thread.id ? { ...item, archivedByUser: true } : item));
+    } else {
+      setThreads((current) => current.filter((item) => item.id !== thread.id));
+    }
     setSwipeOffsets((current) => { const next = { ...current }; delete next[thread.id]; return next; });
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setUndoNotice({ thread, action });
@@ -164,6 +177,15 @@ export default function ChatList() {
     }
   }
 
+  async function restoreThread(thread) {
+    const { error } = await supabase.rpc("set_chat_thread_state", { p_thread_id: thread.id, p_action: "restore" });
+    if (error) {
+      setPushMessage("Chat tidak dapat dipulihkan.");
+      return;
+    }
+    setThreads((current) => current.map((item) => item.id === thread.id ? { ...item, archivedByUser: false, deletedByUser: false } : item).sort(sortByRecent));
+  }
+
   async function undoThreadAction() {
     if (!undoNotice) return;
     const { thread } = undoNotice;
@@ -172,50 +194,60 @@ export default function ChatList() {
       setPushMessage("Chat tidak dapat dipulihkan.");
       return;
     }
-    setThreads((current) => [...current, { ...thread, hiddenByUser: false }].sort((a, b) => new Date(b.latest?.created_at || b.created_at) - new Date(a.latest?.created_at || a.created_at)));
+    setThreads((current) => [...current.filter((item) => item.id !== thread.id), { ...thread, archivedByUser: false, deletedByUser: false }].sort(sortByRecent));
     setUndoNotice(null);
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }
+
+  function renderThread(thread, archived = false) {
+    const offset = swipeOffsets[thread.id] || 0;
+    return (
+      <div className={`chat-thread-swipe-shell ${archived ? "is-archived" : ""}`} key={thread.id}>
+        <Link
+          to={`/chat/${thread.id}`}
+          className="chat-thread-row"
+          style={{ transform: archived ? undefined : `translate3d(${offset}px, 0, 0)` }}
+          onPointerDown={archived ? undefined : (event) => handlePointerDown(event, thread.id)}
+          onPointerMove={archived ? undefined : (event) => handlePointerMove(event, thread.id)}
+          onPointerUp={archived ? undefined : (event) => handlePointerUp(event, thread)}
+          onPointerCancel={archived ? undefined : clearGesture}
+          onClick={archived ? undefined : handleRowClick}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          <div className="chat-thread-avatar">{thread.participant?.avatar_url ? <img src={thread.participant.avatar_url} alt="" /> : <span>{thread.participant?.display_name?.[0] || "U"}</span>}</div>
+          <div className="chat-thread-main">
+            <div className="chat-thread-title-row"><strong>{thread.participant?.display_name || "Pengguna"}</strong><time>{formatChatTime(thread.latest?.created_at || thread.created_at)}</time></div>
+            <div className="chat-thread-product">{thread.product?.name || "Percakapan umum"}</div>
+            <p>{thread.latest?.attachment_type === "image" ? "Gambar" : thread.latest?.attachment_type === "video" ? "Video" : thread.latest?.content || "Belum ada pesan"}</p>
+          </div>
+          {thread.unreadCount > 0 && <span className="chat-unread-badge">{thread.unreadCount > 99 ? "99+" : thread.unreadCount}</span>}
+          {thread.completed && <div className="chat-list-completed-overlay" aria-label="Transaksi selesai dan terkunci"><span className="chat-completed-mark" aria-hidden="true">✓</span><strong>Selesai</strong></div>}
+        </Link>
+        {archived && <button type="button" className="chat-restore-button" onClick={() => restoreThread(thread)}>Kembalikan</button>}
+      </div>
+    );
+  }
+
+  const archivedThreads = threads.filter((thread) => thread.archivedByUser).sort(sortByRecent);
+  const activeThreads = threads.filter((thread) => !thread.archivedByUser && !thread.completed).sort(sortByRecent);
+  const completedThreads = threads.filter((thread) => !thread.archivedByUser && thread.completed).sort(sortByRecent);
+  const hasVisibleThreads = activeThreads.length || completedThreads.length || archivedThreads.length;
 
   return (
     <main className="container chat-inbox-page">
       <div className="chat-list-heading"><div><span className="section-kicker">Percakapan</span><h1 className="page-title">Chat</h1></div><span className="chat-list-status">Aman dan langsung</span></div>
       {isPushSupported() && <div className="push-notification-panel"><div><strong>Jangan lewatkan pesan masuk</strong><p>Aktifkan notifikasi agar pesan tetap terlihat saat Storichi ditutup.</p></div><button type="button" className="btn btn-outline" onClick={enablePush} disabled={pushBusy}>{pushBusy ? "Mengaktifkan..." : "Aktifkan notifikasi"}</button></div>}
       {pushMessage && <p className="thread-item-sub push-notification-message">{pushMessage}</p>}
-      {loading ? <div className="skeleton" style={{ height: 260 }} /> : !threads.length ? (
+      {loading ? <div className="skeleton" style={{ height: 260 }} /> : !hasVisibleThreads ? (
         <div className="empty-state"><p>Belum ada percakapan. Mulai chat dari halaman produk.</p></div>
       ) : (
-        <div className="chat-thread-list">
-          {threads.map((thread) => {
-            const offset = swipeOffsets[thread.id] || 0;
-            return (
-              <div className={`chat-thread-swipe-shell ${offset < 0 ? "show-archive" : offset > 0 ? "show-delete" : ""}`} key={thread.id}>
-                <Link
-                  to={`/chat/${thread.id}`}
-                  className="chat-thread-row"
-                  style={{ transform: `translate3d(${offset}px, 0, 0)` }}
-                  onPointerDown={(event) => handlePointerDown(event, thread.id)}
-                  onPointerMove={(event) => handlePointerMove(event, thread.id)}
-                  onPointerUp={(event) => handlePointerUp(event, thread)}
-                  onPointerCancel={clearGesture}
-                  onClick={handleRowClick}
-                  onContextMenu={(event) => event.preventDefault()}
-                >
-                  <div className="chat-thread-avatar">{thread.participant?.avatar_url ? <img src={thread.participant.avatar_url} alt="" /> : <span>{thread.participant?.display_name?.[0] || "U"}</span>}</div>
-                  <div className="chat-thread-main">
-                    <div className="chat-thread-title-row"><strong>{thread.participant?.display_name || "Pengguna"}</strong><time>{formatChatTime(thread.latest?.created_at || thread.created_at)}</time></div>
-                    <div className="chat-thread-product">{thread.product?.name || "Percakapan umum"}</div>
-                    <p>{thread.latest?.attachment_type === "image" ? "Gambar" : thread.latest?.attachment_type === "video" ? "Video" : thread.latest?.content || "Belum ada pesan"}</p>
-                  </div>
-                  {thread.unreadCount > 0 && <span className="chat-unread-badge">{thread.unreadCount > 99 ? "99+" : thread.unreadCount}</span>}
-                  {thread.completed && <div className="chat-list-completed-overlay" aria-label="Transaksi selesai dan terkunci"><span className="chat-completed-mark" aria-hidden="true">✓</span><strong>Selesai</strong></div>}
-                </Link>
-              </div>
-            );
-          })}
-        </div>
+        <>
+          {activeThreads.length > 0 && <section className="chat-section"><h2 className="chat-section-title">Chat aktif</h2><div className="chat-thread-list">{activeThreads.map((thread) => renderThread(thread))}</div></section>}
+          {completedThreads.length > 0 && <section className="chat-section chat-completed-section"><h2 className="chat-section-title">Selesai</h2><div className="chat-thread-list">{completedThreads.map((thread) => renderThread(thread))}</div></section>}
+          {archivedThreads.length > 0 && <section className="chat-section chat-archive-section"><div className="chat-archive-heading"><span>Archive</span><small>{archivedThreads.length} chat</small></div><div className="chat-thread-list">{archivedThreads.map((thread) => renderThread(thread, true))}</div></section>}
+        </>
       )}
-      <p className="chat-swipe-hint">Tahan sedikit lebih lama, lalu geser kiri untuk arsip atau kanan untuk hapus.</p>
+      <p className="chat-swipe-hint">Tahan sekitar seperempat detik, lalu geser kiri untuk arsip atau kanan untuk hapus.</p>
       {undoNotice && <div className="chat-undo-bar" role="status"><span>{undoNotice.action === "archive" ? "Chat diarsipkan." : "Chat dihapus dari daftar."}</span><button type="button" onClick={undoThreadAction}>Undo</button></div>}
     </main>
   );
