@@ -8,8 +8,6 @@ import { enrichProducts, topProducts } from "../lib/catalog";
 import { supabase } from "../lib/supabase";
 
 export default function Home() {
-  const [topUp, setTopUp] = useState([]);
-  const [akun, setAkun] = useState([]);
   const [trending, setTrending] = useState([]);
   const [discover, setDiscover] = useState([]);
   const [homeSections, setHomeSections] = useState([]);
@@ -19,9 +17,7 @@ export default function Home() {
   useEffect(() => {
     let active = true;
     async function load() {
-      const [{ data: topUpData }, { data: akunData }, { data: trendingData }, { data: follows }, { data: managedSections, error: managedSectionsError }] = await Promise.all([
-        supabase.from("products").select("*").eq("category", "top-up").eq("is_active", true).gt("stock", 0).limit(8),
-        supabase.from("products").select("*").eq("category", "akun").eq("is_active", true).gt("stock", 0).limit(8),
+      const [{ data: trendingData }, { data: follows }, { data: managedSections, error: managedSectionsError }] = await Promise.all([
         supabase.from("products").select("*").eq("is_active", true).gt("stock", 0).order("like_count", { ascending: false }).order("view_count", { ascending: false }).limit(10),
         user ? supabase.from("seller_follows").select("seller_id").eq("follower_id", user.id) : Promise.resolve({ data: [] }),
         supabase.from("home_sections").select("*, home_section_products(*, product:products(*))").eq("is_active", true).order("display_order", { ascending: true }).order("created_at", { ascending: true }),
@@ -30,9 +26,7 @@ export default function Home() {
       const { data: followedProducts } = followedSellerIds.length
         ? await supabase.from("products").select("*").in("seller_id", followedSellerIds).eq("is_active", true).gt("stock", 0).order("created_at", { ascending: false }).limit(10)
         : { data: [] };
-      const [topUpProducts, akunProducts, trendingProducts, discoverProducts] = await Promise.all([
-        enrichProducts(topUpData || []),
-        enrichProducts(akunData || []),
+      const [trendingProducts, discoverProducts] = await Promise.all([
         enrichProducts(trendingData || []),
         enrichProducts(followedProducts || []),
       ]);
@@ -52,8 +46,6 @@ export default function Home() {
           .filter(Boolean),
       })).filter((section) => section.items.length);
       if (!active) return;
-      setTopUp(topUpProducts);
-      setAkun(akunProducts);
       setTrending(topProducts(trendingProducts, 10));
       setDiscover(discoverProducts.length ? discoverProducts : topProducts(trendingProducts, 10));
       setHomeSections(nextHomeSections);
@@ -72,8 +64,6 @@ export default function Home() {
 
         {homeSections.length ? homeSections.map((section) => <ProductSection key={section.id} title={section.title} icon={section.icon || "✦"} categoryLabel={section.category_label} items={section.items} loading={loading} viewAllHref={section.view_all_href || undefined} limit={10} />) : <>
           <ProductSection title="Trending & paling disukai" icon="♥" items={trending} loading={loading} limit={10} />
-          <ProductSection title="Top Up Game" icon="◇" items={topUp} loading={loading} viewAllHref="/kategori/top-up" />
-          <ProductSection title="Jual Beli Akun" icon="◈" items={akun} loading={loading} viewAllHref="/kategori/akun" />
           <ProductSection title={user ? "Discover untuk kamu" : "Discover populer"} icon="✦" items={discover} loading={loading} limit={10} />
         </>}
 
