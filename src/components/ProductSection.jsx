@@ -16,6 +16,7 @@ export function ProductCard({ product }) {
   const rating = Number(product.rating || 0);
   const categoryLabel = formatCategoryLabel(product.category);
   const gameTags = Array.isArray(product.game_tags) ? product.game_tags.slice(0, 2) : [];
+  const soldOut = product.is_active === false || Number(product.stock || 0) <= 0 || Boolean(product.sold_out_at);
 
   return (
     <Link to={`/produk/${product.slug}`} className="product-list-card">
@@ -26,6 +27,7 @@ export function ProductCard({ product }) {
           ) : (
             <div className="product-card-thumb-fallback">{product.name?.[0] || "P"}</div>
           )}
+          {soldOut && <span className="sold-diagonal-ribbon" aria-label="Produk habis"><b>HABIS</b></span>}
         </div>
       </div>
       <div className="product-list-content">

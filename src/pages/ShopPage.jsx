@@ -13,6 +13,7 @@ export default function ShopPage() {
   const { user, profile, signInWithGoogle } = useAuth();
   const [seller, setSeller] = useState(null);
   const [products, setProducts] = useState([]);
+  const [soldProducts, setSoldProducts] = useState([]);
   const [following, setFollowing] = useState(false);
   const [followers, setFollowers] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -32,11 +33,13 @@ export default function ShopPage() {
     async function load() {
       const [{ data: profileData }, { data: rawProducts }, { count: followerCount }, { data: reviewData }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", sellerId).maybeSingle(),
-        supabase.from("products").select("*").eq("seller_id", sellerId).eq("is_active", true).gt("stock", 0).order("created_at", { ascending: false }),
+        supabase.from("products").select("*").eq("seller_id", sellerId).order("created_at", { ascending: false }),
         supabase.from("seller_follows").select("follower_id", { count: "exact", head: true }).eq("seller_id", sellerId),
         supabase.from("seller_reviews").select("id, rating, comment, purchase_request_id, created_at, reviewer:reviewer_id(display_name, avatar_url)").eq("seller_id", sellerId).order("created_at", { ascending: false }),
       ]);
-      const nextProducts = await enrichProducts(rawProducts || []);
+      const activeRawProducts = (rawProducts || []).filter((product) => product.is_active !== false && Number(product.stock || 0) > 0 && !product.sold_out_at);
+      const soldRawProducts = (rawProducts || []).filter((product) => product.is_active === false || Number(product.stock || 0) <= 0 || Boolean(product.sold_out_at));
+      const [nextProducts, nextSoldProducts] = await Promise.all([enrichProducts(activeRawProducts), enrichProducts(soldRawProducts)]);
       let isFollowing = false;
       let nextEligiblePurchases = [];
       if (user) {
@@ -55,6 +58,7 @@ export default function ShopPage() {
       if (active) {
         setSeller(profileData);
         setProducts(nextProducts);
+        setSoldProducts(nextSoldProducts);
         setFollowers(followerCount || 0);
         setFollowing(isFollowing);
         setSellerReviews(reviewData || []);
@@ -67,12 +71,16 @@ export default function ShopPage() {
     return () => { active = false; };
   }, [sellerId, user]);
 
-  const sortedProducts = sortProducts(products, sort === "newest" ? "newest" : sort === "best" ? PRODUCT_SORTS.TOP_SALES : sort === "price" ? (priceAscending ? PRODUCT_SORTS.PRICE_LOW : PRODUCT_SORTS.PRICE_HIGH) : "popular");
+  const productSort = sort === "newest" ? "newest" : sort === "best" ? PRODUCT_SORTS.TOP_SALES : sort === "price" ? (priceAscending ? PRODUCT_SORTS.PRICE_LOW : PRODUCT_SORTS.PRICE_HIGH) : "popular";
+  const sortedProducts = sortProducts(products, productSort);
+  const sortedSoldProducts = sortProducts(soldProducts, productSort);
   const normalizedSearch = searchTerm.toLocaleLowerCase("id");
-  const visibleProducts = sortedProducts.filter((product) => {
+  const matchesSearch = (product) => {
     if (!normalizedSearch) return true;
     return [product.name, product.description, product.category, product.game_name].filter(Boolean).some((value) => String(value).toLocaleLowerCase("id").includes(normalizedSearch));
-  });
+  };
+  const visibleProducts = sortedProducts.filter(matchesSearch);
+  const visibleSoldProducts = sortedSoldProducts.filter(matchesSearch);
   const sellerRating = sellerReviews.length ? sellerReviews.reduce((total, review) => total + Number(review.rating || 0), 0) / sellerReviews.length : 0;
 
   async function toggleFollow() {
@@ -131,6 +139,11 @@ export default function ShopPage() {
         <button type="button" className={sort === "price" ? "is-active" : ""} onClick={() => { setSort("price"); setPriceAscending((value) => !value); }}>Harga {sort === "price" ? (priceAscending ? "↑" : "↓") : "↕"}</button>
       </div>
       <ProductList items={visibleProducts} emptyText={searchTerm ? "Tidak ada produk toko yang cocok dengan pencarian." : "Seller ini belum memiliki produk aktif."} />
+
+      <section className="shop-sold-products" aria-labelledby="shop-sold-title">
+        <div className="shop-toolbar shop-sold-toolbar"><div><h2 id="shop-sold-title">Habis / Terjual</h2><span>{searchTerm ? `${visibleSoldProducts.length} produk habis cocok dengan pencarian` : "Etalase barang yang sudah habis atau terjual"}</span></div></div>
+        <ProductList items={visibleSoldProducts} emptyText={searchTerm ? "Tidak ada produk habis yang cocok dengan pencarian." : "Belum ada barang habis atau terjual."} />
+      </section>
 
       <section className="shop-store-review-form" aria-labelledby="store-review-title">
         <span className="section-kicker">Penilaian terpisah dari rating produk</span>

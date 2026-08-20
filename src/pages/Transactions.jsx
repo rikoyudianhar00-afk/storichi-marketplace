@@ -28,7 +28,7 @@ export default function Transactions() {
     async function load() {
       const { data: requests } = await supabase
         .from("purchase_requests")
-        .select("*, product:products(id, slug, name, image_url, category), buyer:profiles!purchase_requests_buyer_id_fkey(display_name), seller:profiles!purchase_requests_seller_id_fkey(display_name, is_seller, is_verified, is_midman, is_owner)")
+        .select("*, product:products(id, slug, name, image_url, category), buyer:profiles!purchase_requests_buyer_id_fkey(display_name), seller:profiles!purchase_requests_seller_id_fkey(id, display_name, is_seller, is_verified, is_midman, is_owner)")
         .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
         .eq("status", "completed")
         .order("completed_at", { ascending: false });
@@ -72,7 +72,7 @@ export default function Transactions() {
                 </Link>
                 <div className="transaction-summary"><span className="status-pill status-completed">Selesai</span><strong>{isBuyer ? "Kamu membeli" : "Terjual ke pembeli"}</strong></div>
                 <details className="transaction-chat-history"><summary>Riwayat chat ({messages.length} pesan)</summary><div className="transaction-chat-lines">{messages.length ? messages.map((message) => <div key={message.id} className={message.sender_id === user.id ? "is-mine" : "is-theirs"}><span>{message.content || (message.attachment_type === "image" ? "Gambar" : "Video")}</span><time>{formatDate(message.created_at)}</time></div>) : <p>Tidak ada teks chat.</p>}</div></details>
-                <div className="transaction-bottom-grid"><div><small>Harga : jumlah</small><strong>Rp{Number(item.final_price || 0).toLocaleString("id-ID")} : {itemQuantity}</strong><span className="transaction-unit-price">Rp{unitPrice.toLocaleString("id-ID", { maximumFractionDigits: 2 })} / barang</span></div><div><small>{isBuyer ? "Tanggal dibeli" : "Tanggal terjual"}</small><strong>{formatDate(item.completed_at || item.seller_done_at)}</strong></div><div><small>Rating produk</small><span className="transaction-stars">{stars(item.buyer_rating)} <b>{item.buyer_rating || 0}/5</b></span><span className="transaction-seller-meta"><strong>{item.seller?.display_name || "Penjual"}</strong><RoleBadge profile={item.seller} size={14} /></span></div></div>
+                <div className="transaction-bottom-grid"><div><small>Harga : jumlah</small><strong>Rp{Number(item.final_price || 0).toLocaleString("id-ID")} : {itemQuantity}</strong><span className="transaction-unit-price">Rp{unitPrice.toLocaleString("id-ID", { maximumFractionDigits: 2 })} / barang</span></div><div><small>{isBuyer ? "Tanggal dibeli" : "Tanggal terjual"}</small><strong>{formatDate(item.completed_at || item.seller_done_at)}</strong></div><div><small>Rating produk</small><span className="transaction-stars">{stars(item.buyer_rating)} <b>{item.buyer_rating || 0}/5</b></span><Link to={`/toko/${item.seller?.id || item.seller_id}`} className="transaction-seller-meta transaction-seller-link" aria-label={`Buka toko ${item.seller?.display_name || "Penjual"}`}><strong>{item.seller?.display_name || "Penjual"}</strong><RoleBadge profile={item.seller} size={14} /></Link></div></div>
               </article>
             );
           })}
