@@ -30,6 +30,8 @@ export default function ChatThread() {
   const [finalPrice, setFinalPrice] = useState("");
   const [skipDoneConfirm, setSkipDoneConfirm] = useState(false);
   const [productCollapsed, setProductCollapsed] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -83,6 +85,33 @@ export default function ChatThread() {
   }, [threadId, user]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  useEffect(() => {
+    if (!lightboxUrl) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setLightboxUrl(null);
+      if (event.key === "+" || event.key === "=") setLightboxZoom((value) => Math.min(3, Number((value + 0.25).toFixed(2))));
+      if (event.key === "-" || event.key === "_") setLightboxZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))));
+      if (event.key === "0") setLightboxZoom(1);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [lightboxUrl]);
+
+  function openLightbox(url) {
+    setLightboxUrl(url);
+    setLightboxZoom(1);
+  }
+
+  function closeLightbox() {
+    setLightboxUrl(null);
+    setLightboxZoom(1);
+  }
 
   const isBuyer = Boolean(request && user?.id === request.buyer_id);
   const isSeller = Boolean(request && user?.id === request.seller_id);
@@ -189,13 +218,30 @@ export default function ChatThread() {
         {messages.map((message) => (
           <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"}`}>
             <div className="chat-bubble">
-              {message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <img src={message.attachment_url} alt="Lampiran pesan" className="chat-attachment-media" />) : <span>{message.content}</span>}
+              {message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan, ketuk untuk membuka dan memperbesar" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
               <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}{message.sender_id === user.id && <span className={`chat-message-read-state ${message.read_at ? "is-read" : ""}`} title={message.read_at ? "Telah terbaca" : "Terkirim"}>{message.read_at ? " ✓✓" : " ✓"}</span>}</time>
             </div>
           </div>
         ))}
         <div ref={bottomRef} />
       </div>
+
+      {lightboxUrl && (
+        <div className="chat-image-lightbox" role="dialog" aria-modal="true" aria-label="Pratinjau gambar chat" onMouseDown={(event) => { if (event.target === event.currentTarget) closeLightbox(); }}>
+          <div className="chat-image-lightbox-toolbar">
+            <span>Zoom {Math.round(lightboxZoom * 100)}%</span>
+            <button type="button" onClick={closeLightbox} aria-label="Tutup pratinjau gambar">×</button>
+          </div>
+          <div className="chat-image-lightbox-stage" onWheel={(event) => { event.preventDefault(); setLightboxZoom((value) => Math.max(1, Math.min(3, Number((value + (event.deltaY < 0 ? 0.1 : -0.1)).toFixed(2))))); }}>
+            <img src={lightboxUrl} alt="Lampiran gambar chat ukuran besar" style={{ transform: `scale(${lightboxZoom})` }} draggable="false" />
+          </div>
+          <div className="chat-image-lightbox-controls" aria-label="Kontrol zoom gambar">
+            <button type="button" onClick={() => setLightboxZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))))} aria-label="Perkecil gambar">−</button>
+            <button type="button" onClick={() => setLightboxZoom(1)}>Reset</button>
+            <button type="button" onClick={() => setLightboxZoom((value) => Math.min(3, Number((value + 0.25).toFixed(2))))} aria-label="Perbesar gambar">+</button>
+          </div>
+        </div>
+      )}
 
       {waitingForBuyerRating && ratingOpen && (
         <section className="direct-rating-popup" aria-label="Beri rating produk">

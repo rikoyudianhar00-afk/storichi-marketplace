@@ -216,6 +216,7 @@ export default function SellProduct() {
       category,
       price_from: Number(price),
       stock: Number(stock) || 1,
+      is_active: Number(stock) > 0,
       description: description.trim(),
       images,
       image_url: images[0] || null,
