@@ -1,14 +1,20 @@
 import { Link } from "react-router-dom";
 import { StarDisplay } from "./Stars";
-import RoleBadge from "./RoleBadge";
 
 function formatPrice(value) {
   return value ? `Rp${Number(value).toLocaleString("id-ID")}` : "Harga belum ditentukan";
 }
 
+function formatCategoryLabel(value) {
+  if (!value) return "Game";
+  return String(value)
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export function ProductCard({ product }) {
   const rating = Number(product.rating || 0);
-  const description = product.description?.trim() || "Lihat detail produk untuk informasi selengkapnya.";
+  const categoryLabel = formatCategoryLabel(product.category);
 
   return (
     <Link to={`/produk/${product.slug}`} className="product-list-card">
@@ -19,19 +25,17 @@ export function ProductCard({ product }) {
           ) : (
             <div className="product-card-thumb-fallback">{product.name?.[0] || "P"}</div>
           )}
+          <span className="product-card-ribbon">{categoryLabel}</span>
         </div>
       </div>
       <div className="product-list-content">
-        <div className="product-list-title-row">
-          <h3 className="product-card-name">{product.name}</h3>
-        </div>
-        <div className="product-list-seller-row">
-          {product.seller?.display_name && <span className="product-list-seller">{product.seller.display_name}</span>}
-          {product.seller && <RoleBadge profile={product.seller} size={16} />}
+        <h3 className="product-card-name">{product.name}</h3>
+        <span className="product-card-category">{categoryLabel}</span>
+        <strong className="product-card-price">{formatPrice(product.price_from)}</strong>
+        <div className="product-card-meta">
+          <span>{Number(product.sales_count || 0).toLocaleString("id-ID")} terjual</span>
           <StarDisplay rating={rating} count={product.rating_count || 0} />
-          <strong className="product-card-price">{formatPrice(product.price_from)}</strong>
         </div>
-        <p className="product-list-description">{description}</p>
       </div>
     </Link>
   );
