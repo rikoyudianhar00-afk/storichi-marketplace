@@ -759,3 +759,13 @@ input[type="checkbox"], input[type="radio"] {
 /* Opaque chat card: swipe visuals stay behind the card and never show through it. */
 .chat-thread-swipe-shell .chat-thread-row { background: #fff !important; opacity: 1; isolation: isolate; }
 .chat-thread-swipe-shell.is-archived .chat-thread-row { background: #fff !important; }
+
+/* Quantity and unit-price summary in the DONE confirmation modal. */
+.done-price-field { display: grid; gap: 6px; margin-top: 10px; color: var(--ink-700); font-size: 12px; font-weight: 800; }
+.done-price-field input { width: 100%; box-sizing: border-box; padding: 10px 11px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--ink-900); font-size: 14px; }
+.done-price-ratio { display: grid; gap: 3px; margin-top: 12px; padding: 10px 11px; border: 1px solid rgba(36,84,255,.15); border-radius: 10px; background: #f4f7ff; color: var(--ink-700); font-size: 11px; }
+.done-price-ratio strong { color: var(--blue-600); font-size: 11px; }
+.done-price-ratio span { font-weight: 800; }
+.done-price-ratio small { color: var(--ink-500); font-size: 10px; line-height: 1.35; }
+
+.transaction-unit-price { display: block; margin-top: 3px; color: var(--ink-500); font-size: 10px; }

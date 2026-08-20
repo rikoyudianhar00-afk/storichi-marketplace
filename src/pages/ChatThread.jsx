@@ -31,6 +31,7 @@ export default function ChatThread() {
   const [doneConfirmOpen, setDoneConfirmOpen] = useState(false);
   const [pricePromptOpen, setPricePromptOpen] = useState(false);
   const [finalPrice, setFinalPrice] = useState("");
+  const [itemQuantity, setItemQuantity] = useState("1");
   const [skipDoneConfirm, setSkipDoneConfirm] = useState(false);
   const [productCollapsed, setProductCollapsed] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
@@ -71,6 +72,7 @@ export default function ChatThread() {
         setMessages(msgs || []);
         setRequest(req || null);
         setFinalPrice(req?.final_price || req?.product?.price_from || "");
+        setItemQuantity(String(req?.item_quantity || 1));
         setLoading(false);
       }
     }
@@ -293,14 +295,16 @@ export default function ChatThread() {
 
   async function completePurchase() {
     const parsedPrice = Number(finalPrice);
-    if (!parsedPrice || parsedPrice <= 0) return setChatError("Masukkan harga item yang valid.");
+    const parsedQuantity = Number(itemQuantity);
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) return setChatError("Jumlah barang harus berupa bilangan bulat minimal 1.");
+    if (!parsedPrice || parsedPrice <= 0) return setChatError("Masukkan harga total item yang valid.");
     setBusyAction(true);
     setChatError("");
-    const { data: moderationNoticeResult, error } = await supabase.rpc("complete_direct_purchase", { p_request_id: request.id, p_final_price: parsedPrice });
+    const { data: moderationNoticeResult, error } = await supabase.rpc("complete_direct_purchase", { p_request_id: request.id, p_final_price: parsedPrice, p_item_quantity: parsedQuantity });
     setBusyAction(false);
     if (error) return setChatError(error.message || "Transaksi belum dapat diselesaikan.");
     if (moderationNoticeResult) setModerationNotice(moderationNoticeResult);
-    setRequest((prev) => ({ ...prev, status: "completed", final_price: parsedPrice, completed_at: new Date().toISOString(), seller_done_at: new Date().toISOString() }));
+    setRequest((prev) => ({ ...prev, status: "completed", final_price: parsedPrice, item_quantity: parsedQuantity, completed_at: new Date().toISOString(), seller_done_at: new Date().toISOString() }));
     setPricePromptOpen(false);
   }
 
@@ -398,7 +402,14 @@ export default function ChatThread() {
       )}
       {pricePromptOpen && (
         <div className="direct-action-modal" role="dialog" aria-modal="true">
-          <div className="direct-action-modal-card"><h3>Harga item terjual</h3><p>Masukkan harga final yang akan dicatat untuk pembeli dan penjual.</p><input type="number" min="1" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value)} placeholder="Contoh: 100000" /><div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => setPricePromptOpen(false)}>Batal</button><button type="button" className="btn btn-primary" disabled={busyAction} onClick={completePurchase}>{busyAction ? "Menyimpan..." : "Selesaikan"}</button></div></div>
+          <div className="direct-action-modal-card">
+            <h3>Harga dan jumlah barang</h3>
+            <p>Masukkan jumlah barang dan harga total yang akan dicatat untuk pembeli serta penjual.</p>
+            <label className="done-price-field">Jumlah barang<input type="number" min="1" step="1" inputMode="numeric" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} placeholder="Contoh: 2" /></label>
+            <label className="done-price-field">Harga total<input type="number" min="1" inputMode="numeric" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value)} placeholder="Contoh: 100000" /></label>
+            {Number(itemQuantity) > 0 && Number(finalPrice) > 0 && <div className="done-price-ratio"><strong>Harga : jumlah</strong><span>{Number(finalPrice).toLocaleString("id-ID")} : {Number(itemQuantity).toLocaleString("id-ID")} = {(Number(finalPrice) / Number(itemQuantity)).toLocaleString("id-ID", { maximumFractionDigits: 2 })} per barang</span><small>Rasio dasar 1:1 — harga per barang dihitung dari harga total dibagi jumlah barang.</small></div>}
+            <div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => setPricePromptOpen(false)}>Batal</button><button type="button" className="btn btn-primary" disabled={busyAction} onClick={completePurchase}>{busyAction ? "Menyimpan..." : "Selesaikan"}</button></div>
+          </div>
         </div>
       )}
 
