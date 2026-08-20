@@ -30,13 +30,13 @@ begin
     create policy "Game tags public select" on public.game_tags for select using (is_active = true or auth.uid() = seller_id);
   end if;
   if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'game_tags' and policyname = 'Seller inserts own game tags') then
-    create policy "Seller inserts own game tags" on public.game_tags for insert with check (auth.uid() = seller_id);
+    create policy "Seller inserts own game tags" on public.game_tags for insert with check (auth.uid() = seller_id and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_owner = true));
   end if;
   if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'game_tags' and policyname = 'Seller updates own game tags') then
-    create policy "Seller updates own game tags" on public.game_tags for update using (auth.uid() = seller_id) with check (auth.uid() = seller_id);
+    create policy "Seller updates own game tags" on public.game_tags for update using (auth.uid() = seller_id and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_owner = true)) with check (auth.uid() = seller_id and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_owner = true));
   end if;
   if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'game_tags' and policyname = 'Seller deletes own game tags') then
-    create policy "Seller deletes own game tags" on public.game_tags for delete using (auth.uid() = seller_id);
+    create policy "Seller deletes own game tags" on public.game_tags for delete using (auth.uid() = seller_id and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_owner = true));
   end if;
   if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'product_game_tags' and policyname = 'Product game tags public select') then
     create policy "Product game tags public select" on public.product_game_tags for select using (true);
@@ -47,7 +47,7 @@ begin
         exists (select 1 from public.products p where p.id = product_id and p.seller_id = auth.uid())
       ) with check (
         exists (select 1 from public.products p where p.id = product_id and p.seller_id = auth.uid())
-        and exists (select 1 from public.game_tags g where g.id = tag_id and g.seller_id = auth.uid())
+        and exists (select 1 from public.game_tags g where g.id = tag_id and g.is_active = true and exists (select 1 from public.profiles owner_profile where owner_profile.id = g.seller_id and owner_profile.is_owner = true))
       );
   end if;
 end $$;
@@ -62,12 +62,12 @@ begin
     create policy "Public read game tag images" on storage.objects for select using (bucket_id = 'game-tag-images');
   end if;
   if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'Users upload own game tag images') then
-    create policy "Users upload own game tag images" on storage.objects for insert to authenticated with check (bucket_id = 'game-tag-images' and (storage.foldername(name))[1] = auth.uid()::text);
+    create policy "Users upload own game tag images" on storage.objects for insert to authenticated with check (bucket_id = 'game-tag-images' and (storage.foldername(name))[1] = auth.uid()::text and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_owner = true));
   end if;
   if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'Users update own game tag images') then
-    create policy "Users update own game tag images" on storage.objects for update to authenticated using (bucket_id = 'game-tag-images' and (storage.foldername(name))[1] = auth.uid()::text) with check (bucket_id = 'game-tag-images' and (storage.foldername(name))[1] = auth.uid()::text);
+    create policy "Users update own game tag images" on storage.objects for update to authenticated using (bucket_id = 'game-tag-images' and (storage.foldername(name))[1] = auth.uid()::text and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_owner = true)) with check (bucket_id = 'game-tag-images' and (storage.foldername(name))[1] = auth.uid()::text and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_owner = true));
   end if;
   if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'Users delete own game tag images') then
-    create policy "Users delete own game tag images" on storage.objects for delete to authenticated using (bucket_id = 'game-tag-images' and (storage.foldername(name))[1] = auth.uid()::text);
+    create policy "Users delete own game tag images" on storage.objects for delete to authenticated using (bucket_id = 'game-tag-images' and (storage.foldername(name))[1] = auth.uid()::text and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_owner = true));
   end if;
 end $$;

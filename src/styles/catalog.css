@@ -398,3 +398,14 @@
   .product-card-game-tag { gap: 4px; padding: 2px 5px 2px 2px; border-radius: 7px; font-size: 8px; }
   .product-card-game-tag img { width: 18px; height: 18px; flex-basis: 18px; border-radius: 5px; }
 }
+
+/* ---------- Larger flush-left square product card ---------- */
+.product-list-card { min-height: 156px; height: 156px; }
+.product-list-thumb-wrap { width: 156px; flex-basis: 156px; height: 156px; align-self: stretch; }
+.product-list-thumb { width: 156px; height: 156px; min-height: 0; aspect-ratio: 1 / 1; }
+.product-list-content { min-height: 0; overflow: hidden; }
+@media (max-width: 600px) {
+  .product-list-card { min-height: 116px; height: 116px; }
+  .product-list-thumb-wrap { width: 116px; flex-basis: 116px; height: 116px; }
+  .product-list-thumb { width: 116px; height: 116px; }
+}

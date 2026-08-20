@@ -19,7 +19,8 @@ function slugify(text) {
 
 export default function SellProduct() {
   const { productId } = useParams(); // present when editing
-  const { user, signInWithGoogle } = useAuth();
+  const { user, profile, signInWithGoogle } = useAuth();
+  const isOwner = Boolean(profile?.is_owner);
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
@@ -137,6 +138,10 @@ export default function SellProduct() {
 
   async function createGameTag() {
     if (!user) return signInWithGoogle();
+    if (!isOwner) {
+      setError("Hanya Owner yang dapat membuat tag game.");
+      return;
+    }
     if (!tagName.trim() || !tagImageFile) {
       setError("Nama tag dan gambar tag wajib diisi.");
       return;
@@ -305,16 +310,20 @@ export default function SellProduct() {
               </button>
             ))}
           </div>
-          <div className="product-tag-create-row">
-            <input value={tagName} onChange={(e) => setTagName(e.target.value)} placeholder="Nama tag, contoh Mobile Legends" />
-            <label className="product-tag-file-btn">
-              {tagImageFile ? "Gambar siap" : "Pilih gambar"}
-              <input type="file" accept="image/*" onChange={pickTagImage} hidden />
-            </label>
-            <button type="button" className="btn btn-outline" onClick={createGameTag} disabled={tagUploading}>
-              {tagUploading ? "..." : "Tambah tag"}
-            </button>
-          </div>
+          {isOwner ? (
+            <div className="product-tag-create-row">
+              <input value={tagName} onChange={(e) => setTagName(e.target.value)} placeholder="Nama tag, contoh Mobile Legends" />
+              <label className="product-tag-file-btn">
+                {tagImageFile ? "Gambar siap" : "Pilih gambar"}
+                <input type="file" accept="image/*" onChange={pickTagImage} hidden />
+              </label>
+              <button type="button" className="btn btn-outline" onClick={createGameTag} disabled={tagUploading}>
+                {tagUploading ? "..." : "Tambah tag"}
+              </button>
+            </div>
+          ) : (
+            <p className="field-hint">Seller hanya dapat memilih tag yang sudah dibuat Owner.</p>
+          )}
         </div>
 
         <div className="form-row-2">
