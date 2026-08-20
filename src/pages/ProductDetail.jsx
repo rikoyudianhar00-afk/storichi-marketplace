@@ -16,7 +16,6 @@ export default function ProductDetail() {
   const [productReviews, setProductReviews] = useState([]);
   const [sellerReviews, setSellerReviews] = useState([]);
   const [activeImg, setActiveImg] = useState(0);
-  const [imageRatios, setImageRatios] = useState({});
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
@@ -25,20 +24,28 @@ export default function ProductDetail() {
   const [zoomOpen, setZoomOpen] = useState(false);
 
   useEffect(() => {
+    let active = true;
     async function load() {
       const { data: p } = await supabase.from("products").select("*").eq("slug", slug).single();
+      if (!active) return;
       setProduct(p);
       if (p?.id) {
-        const [{ count: wishlistTotal }, { data: existingWishlist }] = await Promise.all([
-          supabase.from("product_wishlists").select("id", { count: "exact", head: true }).eq("product_id", p.id),
+        const [{ data: wishlistTotal, error: wishlistCountError }, { data: existingWishlist }] = await Promise.all([
+          supabase.rpc("get_product_wishlist_count", { product_uuid: p.id }),
           user ? supabase.from("product_wishlists").select("id").eq("product_id", p.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
         ]);
-        setWishlistCount(wishlistTotal || 0);
+        if (wishlistCountError) {
+          console.warn("Wishlist count RPC belum tersedia. Jalankan schema_v22.sql di Supabase.", wishlistCountError.message);
+        }
+        setWishlistCount(Number(wishlistTotal || 0));
         setWishlisted(Boolean(existingWishlist));
       }
       if (p && Number(p.stock ?? 1) <= 0) setSoldOutPopup(true);
-      if (p?.id && user) {
-        supabase.rpc("record_product_view", { product_uuid: p.id });
+      if (p?.id && user && user.id !== p.seller_id) {
+        const { data: recorded, error: viewError } = await supabase.rpc("record_product_view", { product_uuid: p.id });
+        if (!viewError && recorded && active) {
+          setProduct((current) => current ? { ...current, view_count: Number(current.view_count || 0) + 1 } : current);
+        }
       }
       if (p?.seller_id) {
         const { data: s } = await supabase.from("profiles").select("*").eq("id", p.seller_id).single();
@@ -53,7 +60,8 @@ export default function ProductDetail() {
       setLoading(false);
     }
     load();
-  }, [slug]);
+    return () => { active = false; };
+  }, [slug, user?.id]);
 
   const productAvgRating = productReviews.length
     ? productReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / productReviews.length
@@ -71,21 +79,26 @@ export default function ProductDetail() {
     setZoomOpen(false);
   }
 
+  async function refreshWishlistCount(productId) {
+    const { data, error } = await supabase.rpc("get_product_wishlist_count", { product_uuid: productId });
+    if (!error) setWishlistCount(Number(data || 0));
+  }
+
   async function toggleWishlist() {
     if (!user) return signInWithGoogle();
-    if (!product?.id) return;
+    if (!product?.id || user.id === product.seller_id) return;
     if (wishlisted) {
       const { error } = await supabase.from("product_wishlists").delete().eq("product_id", product.id).eq("user_id", user.id);
       if (!error) {
         setWishlisted(false);
-        setWishlistCount((count) => Math.max(0, count - 1));
+        await refreshWishlistCount(product.id);
       }
       return;
     }
     const { error } = await supabase.from("product_wishlists").insert({ product_id: product.id, user_id: user.id });
     if (!error) {
       setWishlisted(true);
-      setWishlistCount((count) => count + 1);
+      await refreshWishlistCount(product.id);
     }
   }
 
@@ -135,7 +148,6 @@ export default function ProductDetail() {
   if (!product) return <main className="container empty-state"><p>Produk tidak ditemukan.</p></main>;
 
   const images = product.images?.length ? product.images : product.image_url ? [product.image_url] : [];
-  const activeImageRatio = imageRatios[activeImg] || 1;
   const isOwnProduct = user?.id === product.seller_id;
   const isSoldOut = Number(product.stock ?? 1) <= 0;
 
@@ -150,7 +162,6 @@ export default function ProductDetail() {
         <div className="product-detail-media">
           <div
             className="product-detail-main-img"
-            style={{ aspectRatio: activeImageRatio }}
             role="button"
             tabIndex={0}
             aria-label="Perbesar gambar produk"
@@ -164,10 +175,6 @@ export default function ProductDetail() {
                 src={images[activeImg]}
                 alt={product.name}
                 draggable={false}
-                onLoad={(event) => {
-                  const ratio = event.currentTarget.naturalWidth / event.currentTarget.naturalHeight;
-                  if (Number.isFinite(ratio) && ratio > 0) setImageRatios((current) => ({ ...current, [activeImg]: ratio }));
-                }}
               />
             ) : (
               <div className="product-card-thumb-fallback" style={{ fontSize: 40 }}>
@@ -188,10 +195,6 @@ export default function ProductDetail() {
                   <img
                     src={img}
                     alt=""
-                    onLoad={(event) => {
-                      const ratio = event.currentTarget.naturalWidth / event.currentTarget.naturalHeight;
-                      if (Number.isFinite(ratio) && ratio > 0) setImageRatios((current) => ({ ...current, [i]: ratio }));
-                    }}
                   />
                 </button>
               ))}
