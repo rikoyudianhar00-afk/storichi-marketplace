@@ -19,7 +19,7 @@ export default function CategoryPage() {
       setLoading(true);
       const { data: cat } = await supabase.from("categories").select("*").eq("slug", slug).maybeSingle();
       const [{ data: products }, { data: groupData }] = await Promise.all([
-        supabase.from("products").select("*").eq("category", slug).eq("is_active", true),
+        supabase.from("products").select("*").eq("category", slug).eq("is_active", true).gt("stock", 0),
         cat?.group_id ? supabase.from("category_groups").select("*").eq("id", cat.group_id).maybeSingle() : Promise.resolve({ data: null }),
       ]);
       const enriched = await enrichProducts(products || []);

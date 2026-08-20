@@ -26,6 +26,7 @@ export default function SearchPage() {
         .from("products")
         .select("*")
         .eq("is_active", true)
+        .gt("stock", 0)
         .or(`name.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%`)
         .limit(50);
       const enriched = await enrichProducts(data || []);

@@ -51,14 +51,17 @@ export function useUnreadChatNotifications(userId) {
 
 export async function markChatThreadRead(userId, threadId) {
   if (!userId || !threadId) return 0;
-  const { data, error } = await supabase
-    .from("chat_notifications")
-    .update({ read_at: new Date().toISOString() })
-    .eq("recipient_id", userId)
-    .eq("thread_id", threadId)
-    .is("read_at", null)
-    .select("id");
-  if (!error) window.dispatchEvent(new Event("chat-notifications-updated"));
+  const [{ data, error }, { error: messageReadError }] = await Promise.all([
+    supabase
+      .from("chat_notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("recipient_id", userId)
+      .eq("thread_id", threadId)
+      .is("read_at", null)
+      .select("id"),
+    supabase.rpc("mark_chat_thread_messages_read", { p_thread_id: threadId }),
+  ]);
+  if (!error && !messageReadError) window.dispatchEvent(new Event("chat-notifications-updated"));
   return data?.length || 0;
 }
 

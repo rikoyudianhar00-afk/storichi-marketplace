@@ -19,14 +19,14 @@ export default function Home() {
     let active = true;
     async function load() {
       const [{ data: topUpData }, { data: akunData }, { data: trendingData }, { data: follows }] = await Promise.all([
-        supabase.from("products").select("*").eq("category", "top-up").eq("is_active", true).limit(8),
-        supabase.from("products").select("*").eq("category", "akun").eq("is_active", true).limit(8),
-        supabase.from("products").select("*").eq("is_active", true).order("like_count", { ascending: false }).order("view_count", { ascending: false }).limit(10),
+        supabase.from("products").select("*").eq("category", "top-up").eq("is_active", true).gt("stock", 0).limit(8),
+        supabase.from("products").select("*").eq("category", "akun").eq("is_active", true).gt("stock", 0).limit(8),
+        supabase.from("products").select("*").eq("is_active", true).gt("stock", 0).order("like_count", { ascending: false }).order("view_count", { ascending: false }).limit(10),
         user ? supabase.from("seller_follows").select("seller_id").eq("follower_id", user.id) : Promise.resolve({ data: [] }),
       ]);
       const followedSellerIds = (follows || []).map((follow) => follow.seller_id);
       const { data: followedProducts } = followedSellerIds.length
-        ? await supabase.from("products").select("*").in("seller_id", followedSellerIds).eq("is_active", true).order("created_at", { ascending: false }).limit(10)
+        ? await supabase.from("products").select("*").in("seller_id", followedSellerIds).eq("is_active", true).gt("stock", 0).order("created_at", { ascending: false }).limit(10)
         : { data: [] };
       const [topUpProducts, akunProducts, trendingProducts, discoverProducts] = await Promise.all([
         enrichProducts(topUpData || []),

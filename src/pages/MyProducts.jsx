@@ -7,6 +7,7 @@ export default function MyProducts() {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [soldTab, setSoldTab] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -37,6 +38,10 @@ export default function MyProducts() {
     );
   }
 
+  const soldProducts = products.filter((product) => Number(product.stock ?? 1) <= 0 || product.is_active === false);
+  const activeProducts = products.filter((product) => !soldProducts.some((sold) => sold.id === product.id));
+  const visibleProducts = soldTab ? soldProducts : activeProducts;
+
   return (
     <main className="container">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -46,15 +51,18 @@ export default function MyProducts() {
         </Link>
       </div>
 
+      <div className="product-inventory-tabs" role="tablist" aria-label="Produk aktif dan terjual"><button type="button" className={!soldTab ? "is-active" : ""} onClick={() => setSoldTab(false)}>Produk aktif ({activeProducts.length})</button><button type="button" className={soldTab ? "is-active" : ""} onClick={() => setSoldTab(true)}>Terjual / habis ({soldProducts.length})</button></div>
       {loading ? (
         <div className="skeleton" style={{ height: 160 }} />
       ) : products.length === 0 ? (
         <div className="empty-state">
           <p>Kamu belum menjual produk apapun.</p>
         </div>
+      ) : !visibleProducts.length ? (
+        <div className="empty-state"><p>{soldTab ? "Belum ada produk terjual atau habis." : "Tidak ada produk aktif saat ini."}</p></div>
       ) : (
         <div className="thread-list">
-          {products.map((p) => (
+          {visibleProducts.map((p) => (
             <div key={p.id} className="thread-item">
               <div className="thread-item-avatar" style={{ overflow: "hidden" }}>
                 {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "📦"}
@@ -62,7 +70,7 @@ export default function MyProducts() {
               <div style={{ flex: 1 }}>
                 <div className="thread-item-title">{p.name}</div>
                 <div className="thread-item-sub">
-                  Rp{Number(p.price_from).toLocaleString("id-ID")} · Stok {p.stock ?? 1}
+                  Rp{Number(p.price_from).toLocaleString("id-ID")} · {Number(p.stock ?? 1) <= 0 ? "Habis" : `Stok ${p.stock ?? 1}`}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>

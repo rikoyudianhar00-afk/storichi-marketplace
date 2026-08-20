@@ -24,7 +24,7 @@ export default function ShopPage() {
     async function load() {
       const [{ data: profile }, { data: rawProducts }, { count: followerCount }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", sellerId).maybeSingle(),
-        supabase.from("products").select("*").eq("seller_id", sellerId).eq("is_active", true).order("created_at", { ascending: false }),
+        supabase.from("products").select("*").eq("seller_id", sellerId).eq("is_active", true).gt("stock", 0).order("created_at", { ascending: false }),
         supabase.from("seller_follows").select("follower_id", { count: "exact", head: true }).eq("seller_id", sellerId),
       ]);
       const nextProducts = await enrichProducts(rawProducts || []);

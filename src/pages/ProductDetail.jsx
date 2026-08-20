@@ -18,12 +18,14 @@ export default function ProductDetail() {
   const [requesting, setRequesting] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [soldOutPopup, setSoldOutPopup] = useState(false);
 
   useEffect(() => {
     async function load() {
       const { data: p } = await supabase.from("products").select("*").eq("slug", slug).single();
       setProduct(p);
       setLikeCount(p?.like_count || 0);
+      if (p && Number(p.stock ?? 1) <= 0) setSoldOutPopup(true);
       if (p?.id) {
         supabase.rpc("increment_product_view", { product_uuid: p.id });
         if (user) {
@@ -70,7 +72,10 @@ export default function ProductDetail() {
 
   async function requestToBuy() {
     if (!user) return signInWithGoogle();
-    if (!product?.seller_id || product.seller_id === user.id) return;
+    if (!product?.seller_id || product.seller_id === user.id || Number(product.stock ?? 1) <= 0) {
+      if (Number(product?.stock ?? 1) <= 0) setSoldOutPopup(true);
+      return;
+    }
     setRequesting(true);
 
     let { data: thread } = await supabase
@@ -112,6 +117,11 @@ export default function ProductDetail() {
 
   const images = product.images?.length ? product.images : product.image_url ? [product.image_url] : [];
   const isOwnProduct = user?.id === product.seller_id;
+  const isSoldOut = Number(product.stock ?? 1) <= 0;
+
+  if (isSoldOut && !isOwnProduct) {
+    return <main className="container empty-state"><div className="sold-out-modal-card sold-out-public-card"><span className="sold-out-icon">!</span><h3>Item telah habis</h3><p>Produk ini sudah dibeli dan tidak tersedia lagi untuk publik.</p><button type="button" className="btn btn-primary" onClick={() => navigate(-1)}>Kembali</button></div></main>;
+  }
 
   return (
     <main className="container" style={{ paddingTop: 24, paddingBottom: 40 }}>
@@ -179,10 +189,10 @@ export default function ProductDetail() {
 
           {!isOwnProduct ? (
             <button className="btn btn-primary btn-full" onClick={requestToBuy} disabled={requesting} style={{ marginTop: 16 }}>
-              {requesting ? "Memproses..." : "Saya Mau Beli"}
+              {requesting ? "Memproses..." : Number(product.stock ?? 1) <= 0 ? "Item telah habis" : "Saya Mau Beli"}
             </button>
           ) : (
-            <p style={{ color: "var(--ink-500)", marginTop: 16 }}>Ini produk kamu sendiri.</p>
+            <p style={{ color: "var(--ink-500)", marginTop: 16 }}>{Number(product.stock ?? 1) <= 0 ? "Item ini telah habis dan hanya terlihat di menu produk terjual." : "Ini produk kamu sendiri."}</p>
           )}
 
           {product.description && (
@@ -195,6 +205,12 @@ export default function ProductDetail() {
           )}
         </div>
       </div>
+
+      {soldOutPopup && (
+        <div className="sold-out-modal" role="dialog" aria-modal="true">
+          <div className="sold-out-modal-card"><span className="sold-out-icon">!</span><h3>Item telah habis</h3><p>Produk ini sudah selesai dibeli dan tidak tersedia untuk pembelian publik.</p><button type="button" className="btn btn-primary btn-full" onClick={() => setSoldOutPopup(false)}>Mengerti</button></div>
+        </div>
+      )}
 
       <section style={{ marginTop: 40 }}>
         <h3 style={{ fontSize: 17, marginBottom: 14 }}>

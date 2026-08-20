@@ -424,3 +424,32 @@
   .transaction-bottom-grid > div { grid-template-columns: 110px 1fr; align-items: center; }
   .transaction-chat-lines div { display: grid; gap: 2px; }
 }
+
+/* ---------- Chat product collapse and read receipts ---------- */
+.chat-request-wrap { position: relative; }
+.chat-product-collapse { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 11px; border: 0; border-radius: 12px 12px 0 0; background: #eef3ff; color: var(--blue-600); font-size: 11px; font-weight: 800; }
+.chat-request-wrap:not(.is-collapsed) .chat-product-collapse { border-bottom: 1px solid rgba(36,84,255,.12); }
+.chat-request-wrap.is-collapsed { display: flex; align-items: center; gap: 8px; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.chat-request-wrap.is-collapsed .chat-product-collapse { width: auto; flex: 0 0 auto; border-radius: 10px; }
+.chat-product-collapsed-title { min-width: 0; overflow: hidden; color: var(--ink-700); font-size: 12px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+.chat-message-read-state { color: rgba(255,255,255,.66); font-weight: 800; letter-spacing: -2px; }
+.chat-message-read-state.is-read { color: #a9e8ff; }
+.chat-message-row.is-theirs .chat-message-read-state { color: var(--ink-500); }
+
+.transaction-chat-lines { display: flex; flex-direction: column; gap: 7px; }
+.transaction-chat-lines > div { width: fit-content; max-width: 82%; padding: 7px 9px; border-radius: 11px; background: #f1f4f9; }
+.transaction-chat-lines > div.is-mine { align-self: flex-end; border-radius: 11px 11px 3px 11px; background: var(--blue-600); color: #fff; }
+.transaction-chat-lines > div.is-theirs { align-self: flex-start; border-radius: 11px 11px 11px 3px; }
+.transaction-chat-lines > div time { display: block; margin-top: 3px; color: var(--ink-500); font-size: 9px; text-align: right; }
+.transaction-chat-lines > div.is-mine time { color: rgba(255,255,255,.72); }
+
+/* ---------- Sold-out inventory ---------- */
+.product-inventory-tabs { display: flex; gap: 8px; margin: 16px 0; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.product-inventory-tabs button { padding: 8px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-500); font-size: 12px; font-weight: 800; }
+.product-inventory-tabs button.is-active { background: var(--blue-600); color: #fff; }
+.sold-out-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: rgba(10,20,48,.45); animation: direct-modal-in 160ms ease-out; }
+.sold-out-modal-card { width: min(360px, 100%); padding: 20px; border-radius: 18px; background: #fff; text-align: center; box-shadow: 0 20px 54px rgba(10,20,48,.25); }
+.sold-out-icon { display: grid; place-items: center; width: 42px; height: 42px; margin: 0 auto 10px; border-radius: 50%; background: #fff2f0; color: var(--accent-coral); font-size: 24px; font-weight: 900; }
+.sold-out-modal-card h3 { margin: 0 0 7px; }
+.sold-out-modal-card p { margin: 0 0 14px; color: var(--ink-500); font-size: 12.5px; line-height: 1.5; }
+@media (max-width: 600px) { .product-inventory-tabs { overflow-x: auto; } .product-inventory-tabs button { white-space: nowrap; } }

@@ -29,6 +29,7 @@ export default function ChatThread() {
   const [pricePromptOpen, setPricePromptOpen] = useState(false);
   const [finalPrice, setFinalPrice] = useState("");
   const [skipDoneConfirm, setSkipDoneConfirm] = useState(false);
+  const [productCollapsed, setProductCollapsed] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -63,9 +64,13 @@ export default function ChatThread() {
     }
 
     load();
-    const messageChannel = supabase.channel(`chat_thread_${threadId}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `thread_id=eq.${threadId}` }, (payload) => {
-      setMessages((prev) => (prev.some((message) => message.id === payload.new.id) ? prev : [...prev, payload.new]));
-      if (payload.new.sender_id !== user.id) markChatThreadRead(user.id, threadId);
+    const messageChannel = supabase.channel(`chat_thread_${threadId}`).on("postgres_changes", { event: "*", schema: "public", table: "chat_messages", filter: `thread_id=eq.${threadId}` }, (payload) => {
+      if (payload.eventType === "INSERT") {
+        setMessages((prev) => (prev.some((message) => message.id === payload.new.id) ? prev : [...prev, payload.new]));
+        if (payload.new.sender_id !== user.id) markChatThreadRead(user.id, threadId);
+      } else if (payload.eventType === "UPDATE") {
+        setMessages((prev) => prev.map((message) => (message.id === payload.new.id ? { ...message, ...payload.new } : message)));
+      }
     }).subscribe();
     const requestChannel = supabase.channel(`purchase_request_${threadId}`).on("postgres_changes", { event: "UPDATE", schema: "public", table: "purchase_requests", filter: `thread_id=eq.${threadId}` }, (payload) => {
       setRequest((prev) => ({ ...(prev || {}), ...payload.new }));
@@ -171,7 +176,13 @@ export default function ChatThread() {
         <span className="chat-online-dot" title="Percakapan aman" />
       </header>
 
-      {request && <div className="chat-request-wrap"><PurchaseRequestCard request={{ ...request, product: request.product || thread.product }} isSeller={isSeller} currentUserId={user.id} onUpdate={setRequest} /></div>}
+      {request && <div className={`chat-request-wrap ${productCollapsed ? "is-collapsed" : ""}`}>
+        <button type="button" className="chat-product-collapse" onClick={() => setProductCollapsed((value) => !value)} aria-expanded={!productCollapsed}>
+          <span>{productCollapsed ? "Produk yang dibeli" : "Perkecil kartu produk"}</span><span aria-hidden="true">{productCollapsed ? "⌄" : "⌃"}</span>
+        </button>
+        {!productCollapsed && <PurchaseRequestCard request={{ ...request, product: request.product || thread.product }} isSeller={isSeller} currentUserId={user.id} onUpdate={setRequest} />}
+        {productCollapsed && <Link to={`/produk/${request.product?.slug || thread.product?.slug || ""}`} className="chat-product-collapsed-title">{request.product?.name || thread.product?.name || "Produk"}</Link>}
+      </div>}
 
       <div className="chat-messages" aria-live="polite">
         <div className="chat-day-label">Percakapan Storichi</div>
@@ -179,7 +190,7 @@ export default function ChatThread() {
           <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"}`}>
             <div className="chat-bubble">
               {message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <img src={message.attachment_url} alt="Lampiran pesan" className="chat-attachment-media" />) : <span>{message.content}</span>}
-              <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>
+              <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}{message.sender_id === user.id && <span className={`chat-message-read-state ${message.read_at ? "is-read" : ""}`} title={message.read_at ? "Telah terbaca" : "Terkirim"}>{message.read_at ? " ✓✓" : " ✓"}</span>}</time>
             </div>
           </div>
         ))}

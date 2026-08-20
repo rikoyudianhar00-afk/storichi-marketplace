@@ -21,7 +21,7 @@ export default function GroupPage() {
       const { data: categories } = await supabase.from("categories").select("*").eq("group_id", groupData.id).order("sort_order", { ascending: true });
       const slugs = (categories || []).map((category) => category.slug);
       const { data: productData } = slugs.length
-        ? await supabase.from("products").select("*").in("category", slugs).eq("is_active", true)
+        ? await supabase.from("products").select("*").in("category", slugs).eq("is_active", true).gt("stock", 0)
         : { data: [] };
       const enriched = await enrichProducts(productData || []);
       const nextCorridors = (categories || []).map((category) => ({
