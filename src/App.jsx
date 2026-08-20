@@ -71,6 +71,7 @@ export default function App() {
         <Route path="/jual/baru" element={<SellProduct />} />
         <Route path="/jual/edit/:productId" element={<SellProduct />} />
         <Route path="/chat" element={<ChatList />} />
+        <Route path="/chat/archived" element={<ChatList archivedOnly />} />
         <Route path="/chat/:threadId" element={<ChatThread />} />
         <Route path="/rekber" element={<RekberList />} />
         <Route path="/rekber/:groupId" element={<RekberRoom />} />

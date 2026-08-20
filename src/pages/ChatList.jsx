@@ -21,7 +21,7 @@ function sortByRecent(first, second) {
   return new Date(second.latest?.created_at || second.created_at) - new Date(first.latest?.created_at || first.created_at);
 }
 
-export default function ChatList() {
+export default function ChatList({ archivedOnly = false }) {
   const { user } = useAuth();
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +29,9 @@ export default function ChatList() {
   const [pushBusy, setPushBusy] = useState(false);
   const [swipeOffsets, setSwipeOffsets] = useState({});
   const [undoNotice, setUndoNotice] = useState(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedThreadIds, setSelectedThreadIds] = useState([]);
+  const archiveHoldRef = useRef(null);
   const gestureRef = useRef(null);
   const undoTimerRef = useRef(null);
   const suppressClickRef = useRef(false);
@@ -93,6 +96,7 @@ export default function ChatList() {
       supabase.removeChannel(requestChannel);
       if (gestureRef.current?.timer) clearTimeout(gestureRef.current.timer);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      if (archiveHoldRef.current) clearTimeout(archiveHoldRef.current);
     };
   }, [user]);
 
@@ -177,6 +181,50 @@ export default function ChatList() {
     }
   }
 
+  function startArchiveHold(event, threadId) {
+    if (!archivedOnly || selectionMode) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (archiveHoldRef.current) clearTimeout(archiveHoldRef.current);
+    archiveHoldRef.current = window.setTimeout(() => {
+      setSelectionMode(true);
+      setSelectedThreadIds([threadId]);
+      suppressClickRef.current = true;
+    }, 520);
+  }
+
+  function cancelArchiveHold() {
+    if (archiveHoldRef.current) clearTimeout(archiveHoldRef.current);
+    archiveHoldRef.current = null;
+  }
+
+  function toggleSelectedThread(event, threadId) {
+    if (!selectionMode) return;
+    event.preventDefault();
+    setSelectedThreadIds((current) => current.includes(threadId) ? current.filter((id) => id !== threadId) : [...current, threadId]);
+  }
+
+  function handleArchivedClick(event, threadId) {
+    if (suppressClickRef.current) {
+      event.preventDefault();
+      suppressClickRef.current = false;
+      return;
+    }
+    if (selectionMode) toggleSelectedThread(event, threadId);
+  }
+
+  async function deleteSelectedThreads() {
+    if (!selectedThreadIds.length) return;
+    const results = await Promise.all(selectedThreadIds.map((threadId) => supabase.rpc("set_chat_thread_state", { p_thread_id: threadId, p_action: "delete" })));
+    const failed = results.some(({ error }) => error);
+    if (failed) {
+      setPushMessage("Sebagian chat tidak dapat dihapus. Pastikan schema_v23.sql sudah dijalankan.");
+      return;
+    }
+    setThreads((current) => current.filter((thread) => !selectedThreadIds.includes(thread.id)));
+    setSelectedThreadIds([]);
+    setSelectionMode(false);
+  }
+
   async function restoreThread(thread) {
     const { error } = await supabase.rpc("set_chat_thread_state", { p_thread_id: thread.id, p_action: "restore" });
     if (error) {
@@ -201,17 +249,19 @@ export default function ChatList() {
 
   function renderThread(thread, archived = false) {
     const offset = swipeOffsets[thread.id] || 0;
+    const selected = selectedThreadIds.includes(thread.id);
     return (
-      <div className={`chat-thread-swipe-shell ${archived ? "is-archived" : ""}`} key={thread.id}>
+      <div className={`chat-thread-swipe-shell ${archived ? "is-archived" : ""} ${selected ? "is-selected" : ""}`} key={thread.id}>
+        {!archived && <><span className="chat-swipe-action chat-swipe-delete" aria-hidden="true">Hapus</span><span className="chat-swipe-action chat-swipe-archive" aria-hidden="true">Archive</span></>}
         <Link
           to={`/chat/${thread.id}`}
           className="chat-thread-row"
           style={{ transform: archived ? undefined : `translate3d(${offset}px, 0, 0)` }}
-          onPointerDown={archived ? undefined : (event) => handlePointerDown(event, thread.id)}
+          onPointerDown={archived ? (event) => startArchiveHold(event, thread.id) : (event) => handlePointerDown(event, thread.id)}
           onPointerMove={archived ? undefined : (event) => handlePointerMove(event, thread.id)}
-          onPointerUp={archived ? undefined : (event) => handlePointerUp(event, thread)}
-          onPointerCancel={archived ? undefined : clearGesture}
-          onClick={archived ? undefined : handleRowClick}
+          onPointerUp={archived ? cancelArchiveHold : (event) => handlePointerUp(event, thread)}
+          onPointerCancel={archived ? cancelArchiveHold : clearGesture}
+          onClick={archived ? (event) => handleArchivedClick(event, thread.id) : (selectionMode ? (event) => toggleSelectedThread(event, thread.id) : handleRowClick)}
           onContextMenu={(event) => event.preventDefault()}
         >
           <div className="chat-thread-avatar">{thread.participant?.avatar_url ? <img src={thread.participant.avatar_url} alt="" /> : <span>{thread.participant?.display_name?.[0] || "U"}</span>}</div>
@@ -222,6 +272,7 @@ export default function ChatList() {
           </div>
           {thread.unreadCount > 0 && <span className="chat-unread-badge">{thread.unreadCount > 99 ? "99+" : thread.unreadCount}</span>}
           {thread.completed && <div className="chat-list-completed-overlay" aria-label="Transaksi selesai dan terkunci"><span className="chat-completed-mark" aria-hidden="true">✓</span><strong>Selesai</strong></div>}
+          {selectionMode && archived && <span className="chat-selection-check" aria-hidden="true">{selected ? "✓" : ""}</span>}
         </Link>
         {archived && !thread.completed && <button type="button" className="chat-restore-button" onClick={() => restoreThread(thread)}>Kembalikan</button>}
       </div>
@@ -230,22 +281,29 @@ export default function ChatList() {
 
   const archivedThreads = threads.filter((thread) => thread.archivedByUser || thread.completed).sort(sortByRecent);
   const activeThreads = threads.filter((thread) => !thread.archivedByUser && !thread.completed).sort(sortByRecent);
-  const hasVisibleThreads = activeThreads.length || archivedThreads.length;
+  const hasVisibleThreads = archivedOnly ? archivedThreads.length : activeThreads.length || archivedThreads.length;
 
   return (
-    <main className="container chat-inbox-page">
-      <div className="chat-list-heading"><div><span className="section-kicker">Percakapan</span><h1 className="page-title">Chat</h1></div><span className="chat-list-status">Aman dan langsung</span></div>
+    <main className={`container chat-inbox-page ${archivedOnly ? "archived-chat-page" : ""}`}>
+      <div className="chat-list-heading"><div>{archivedOnly && <Link to="/chat" className="archived-back-link">← Kembali ke Chat</Link>}<span className="section-kicker">{archivedOnly ? "Riwayat tersimpan" : "Percakapan"}</span><h1 className="page-title">{archivedOnly ? "Archived" : "Chat"}</h1></div><span className="chat-list-status">Aman dan langsung</span></div>
       {isPushSupported() && <div className="push-notification-panel"><div><strong>Jangan lewatkan pesan masuk</strong><p>Aktifkan notifikasi agar pesan tetap terlihat saat Storichi ditutup.</p></div><button type="button" className="btn btn-outline" onClick={enablePush} disabled={pushBusy}>{pushBusy ? "Mengaktifkan..." : "Aktifkan notifikasi"}</button></div>}
       {pushMessage && <p className="thread-item-sub push-notification-message">{pushMessage}</p>}
       {loading ? <div className="skeleton" style={{ height: 260 }} /> : !hasVisibleThreads ? (
-        <div className="empty-state"><p>Belum ada percakapan. Mulai chat dari halaman produk.</p></div>
+        <div className="empty-state"><p>{archivedOnly ? "Belum ada chat yang diarsipkan." : "Belum ada percakapan. Mulai chat dari halaman produk."}</p></div>
       ) : (
         <>
-          {archivedThreads.length > 0 && <section className="chat-section chat-archive-section"><div className="chat-archive-heading"><span>Archived</span><small>{archivedThreads.length} chat</small></div><div className="chat-thread-list">{archivedThreads.map((thread) => renderThread(thread, true))}</div></section>}
-          {activeThreads.length > 0 && <section className="chat-section"><h2 className="chat-section-title">Chat aktif</h2><div className="chat-thread-list">{activeThreads.map((thread) => renderThread(thread))}</div></section>}
+          {archivedOnly ? (
+            <section className="chat-section chat-archive-section archived-chat-list-section"><div className="chat-archive-heading"><span>Archived</span><small>{archivedThreads.length} chat</small></div><div className="chat-thread-list">{archivedThreads.map((thread) => renderThread(thread, true))}</div></section>
+          ) : (
+            <>
+              {archivedThreads.length > 0 && <Link to="/chat/archived" className="chat-archive-entry"><span className="chat-archive-entry-icon">▣</span><span><strong>Archived</strong><small>{archivedThreads.length} chat selesai atau tersimpan</small></span><span aria-hidden="true">›</span></Link>}
+              {activeThreads.length > 0 && <section className="chat-section"><h2 className="chat-section-title">Chat aktif</h2><div className="chat-thread-list">{activeThreads.map((thread) => renderThread(thread))}</div></section>}
+            </>
+          )}
         </>
       )}
-      <p className="chat-swipe-hint">Tahan sekitar seperempat detik, lalu geser kiri untuk arsip atau kanan untuk hapus.</p>
+      {!archivedOnly && <p className="chat-swipe-hint">Tahan sekitar seperempat detik, lalu geser kiri untuk arsip atau kanan untuk hapus.</p>}
+      {archivedOnly && selectionMode && <div className="archive-selection-bar"><span>{selectedThreadIds.length} chat dipilih</span><button type="button" className="archive-selection-cancel" onClick={() => { setSelectedThreadIds([]); setSelectionMode(false); }}>Batal</button><button type="button" className="archive-selection-delete" disabled={!selectedThreadIds.length} onClick={deleteSelectedThreads}>Hapus terpilih</button></div>}
       {undoNotice && <div className="chat-undo-bar" role="status"><span>{undoNotice.action === "archive" ? "Chat diarsipkan." : "Chat dihapus dari daftar."}</span><button type="button" onClick={undoThreadAction}>Undo</button></div>}
     </main>
   );

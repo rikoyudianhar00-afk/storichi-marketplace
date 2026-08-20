@@ -729,3 +729,29 @@ input[type="checkbox"], input[type="radio"] {
 .completed-history-revealed-bar { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; color: #15803d; font-size: 11px; }
 .completed-history-revealed-bar span:last-child { color: #166534; font-size: 10px; }
 .chat-completed-mini-mark { width: 24px; height: 24px; display: grid; place-items: center; background: #22c55e; color: #fff; font-size: 15px; font-weight: 900; clip-path: polygon(50% 0%, 62% 8%, 74% 4%, 82% 16%, 96% 17%, 93% 31%, 100% 42%, 91% 51%, 97% 65%, 83% 70%, 78% 84%, 65% 81%, 54% 100%, 43% 89%, 30% 95%, 23% 81%, 9% 80%, 11% 66%, 0% 56%, 8% 44%, 2% 30%, 16% 25%, 20% 11%, 34% 14%, 41% 1%); }
+
+/* ---------- Archived chat entry and multi-select ---------- */
+.archived-back-link { display: inline-block; margin-bottom: 3px; color: var(--blue-600); font-size: 11px; font-weight: 800; text-decoration: none; }
+.chat-archive-entry { display: flex; align-items: center; gap: 10px; min-height: 48px; margin: 12px 0 16px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: inherit; text-decoration: none; box-shadow: 0 3px 12px rgba(18,35,91,.04); }
+.chat-archive-entry-icon { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 28px; border-radius: 8px; background: #eef3f2; color: #64748b; font-size: 16px; }
+.chat-archive-entry > span:nth-child(2) { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.chat-archive-entry strong { color: var(--ink-700); font-size: 12px; }
+.chat-archive-entry small { color: var(--ink-500); font-size: 10px; }
+.chat-archive-entry > span:last-child { color: var(--ink-500); font-size: 22px; line-height: 1; }
+.archived-chat-page { padding-bottom: 100px; }
+.archived-chat-list-section { margin-top: 5px; }
+.chat-thread-swipe-shell.is-selected { outline: 2px solid rgba(36,84,255,.55); outline-offset: -2px; }
+.chat-selection-check { position: absolute; right: 12px; bottom: 10px; z-index: 5; width: 23px; height: 23px; display: grid; place-items: center; border: 2px solid var(--blue-600); border-radius: 50%; background: #fff; color: var(--blue-600); font-size: 15px; font-weight: 900; pointer-events: none; }
+.chat-thread-swipe-shell.is-selected .chat-selection-check { background: var(--blue-600); color: #fff; }
+.archive-selection-bar { position: fixed; left: 50%; bottom: 78px; z-index: 35; display: flex; align-items: center; gap: 9px; width: min(560px, calc(100vw - 20px)); padding: 10px 11px; transform: translateX(-50%); border: 1px solid rgba(36,84,255,.18); border-radius: 14px; background: rgba(255,255,255,.98); box-shadow: 0 12px 30px rgba(18,35,91,.18); font-size: 12px; }
+.archive-selection-bar > span { min-width: 0; flex: 1; color: var(--ink-700); font-weight: 800; }
+.archive-selection-cancel, .archive-selection-delete { border: 0; border-radius: 9px; padding: 8px 10px; font-size: 11px; font-weight: 800; }
+.archive-selection-cancel { background: var(--surface-muted, #f3f5f9); color: var(--ink-700); }
+.archive-selection-delete { background: #dc2626; color: #fff; }
+.archive-selection-delete:disabled { opacity: .45; }
+@media (max-width: 600px) { .archive-selection-bar { bottom: 70px; } }
+
+/* Swipe visuals: both actions stay green; left reveals Hapus on the left, right reveals Archive. */
+.chat-swipe-action { position: absolute; inset-block: 0; width: 92px; display: grid; place-items: center; color: #166534; font-size: 11px; font-weight: 800; }
+.chat-swipe-delete { left: 0; background: #86efac; }
+.chat-swipe-archive { right: 0; background: #bbf7d0; }
