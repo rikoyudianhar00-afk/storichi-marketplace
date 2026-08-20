@@ -20,18 +20,18 @@ export function ProductCard({ product }) {
             <div className="product-card-thumb-fallback">{product.name?.[0] || "P"}</div>
           )}
         </div>
-        <StarDisplay rating={rating} count={product.rating_count || 0} />
       </div>
       <div className="product-list-content">
         <div className="product-list-title-row">
           <h3 className="product-card-name">{product.name}</h3>
+        </div>
+        <div className="product-list-seller-row">
+          {product.seller?.display_name && <span className="product-list-seller">{product.seller.display_name}</span>}
           {product.seller && <RoleBadge profile={product.seller} size={16} />}
+          <StarDisplay rating={rating} count={product.rating_count || 0} />
+          <strong className="product-card-price">{formatPrice(product.price_from)}</strong>
         </div>
         <p className="product-list-description">{description}</p>
-        <div className="product-list-footer">
-          <strong className="product-card-price">{formatPrice(product.price_from)}</strong>
-          {product.seller?.display_name && <span className="product-list-seller">{product.seller.display_name}</span>}
-        </div>
       </div>
     </Link>
   );
