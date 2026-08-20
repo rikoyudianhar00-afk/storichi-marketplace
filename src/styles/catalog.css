@@ -421,3 +421,6 @@
   .product-list-thumb { width: 132px; height: 132px; }
   .product-card-game-tags { top: 6px; right: 6px; }
 }
+
+.product-section-category-label { display: inline-block; margin-left: 7px; padding: 3px 7px; border-radius: 999px; background: var(--blue-50); color: var(--blue-600); font-family: var(--font-body); font-size: 10px; font-weight: 700; vertical-align: middle; }
+@media (max-width: 600px) { .product-section-category-label { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; } }

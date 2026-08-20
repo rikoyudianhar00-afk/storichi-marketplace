@@ -173,6 +173,9 @@ export default function Account() {
           <Link to="/kelola-iklan" className="thread-item" style={{ marginBottom: 14 }}>
             <span>📣 Kelola Iklan Beranda</span>
           </Link>
+          <Link to="/kelola-beranda" className="thread-item" style={{ marginBottom: 14 }}>
+            <span>🧩 Kelola Box Produk Beranda</span>
+          </Link>
           <Link to="/kelola-menu" className="thread-item" style={{ marginBottom: 14 }}>
             <span>☰ Kelola Menu Drawer</span>
           </Link>

@@ -73,12 +73,12 @@ export function ProductList({ items = [], loading = false, emptyText = "Belum ad
   return <div className="product-list">{items.map((product) => <ProductCard key={product.id} product={product} />)}</div>;
 }
 
-export default function ProductSection({ title, icon, items, viewAllHref, loading, limit }) {
+export default function ProductSection({ title, icon, categoryLabel, items, viewAllHref, loading, limit }) {
   const visibleItems = limit ? items.slice(0, limit) : items;
   return (
     <section className="product-section">
       <div className="product-section-head">
-        <h2><span aria-hidden="true">{icon}</span> {title}</h2>
+        <h2><span aria-hidden="true">{icon}</span> {title}{categoryLabel && <small className="product-section-category-label">{categoryLabel}</small>}</h2>
         {viewAllHref && <Link to={viewAllHref} className="see-all">Lihat Semua <span aria-hidden="true">→</span></Link>}
       </div>
       <div className="product-section-panel">

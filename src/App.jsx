@@ -8,6 +8,7 @@ import GroupPage from "./pages/GroupPage";
 import SearchPage from "./pages/SearchPage";
 import ShopPage from "./pages/ShopPage";
 import ManageAds from "./pages/ManageAds";
+import ManageHome from "./pages/ManageHome";
 import ManageNavigation from "./pages/ManageNavigation";
 import ProductDetail from "./pages/ProductDetail";
 import SellProduct from "./pages/SellProduct";
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/akun" element={<Account />} />
         <Route path="/kelola-kategori" element={<ManageCategories />} />
         <Route path="/kelola-iklan" element={<ManageAds />} />
+        <Route path="/kelola-beranda" element={<ManageHome />} />
         <Route path="/kelola-menu" element={<ManageNavigation />} />
         <Route path="/favorit" element={<SimplePage title="Favorit" description="Produk favorit kamu akan muncul di sini." />} />
         <Route path="/transaksi" element={<Transactions />} />
