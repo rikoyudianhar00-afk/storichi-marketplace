@@ -323,3 +323,14 @@
 .file-input-label input[type="file"] { width: 100%; }
 .ad-manager-row img { width: 112px; aspect-ratio: 16 / 9; height: auto; object-fit: cover; }
 @media (max-width: 600px) { .ad-manager-row img { width: 86px; } }
+
+/* ---------- Interactive icon surfaces ---------- */
+.category-tile { cursor: pointer; }
+.category-tile-icon { cursor: pointer; box-shadow: 0 4px 10px rgba(15, 23, 42, .12); transition: transform 160ms ease, box-shadow 160ms ease; }
+.category-tile:active .category-tile-icon { transform: translateY(2px) scale(.97); box-shadow: none; }
+.product-list-card { cursor: pointer; }
+.product-list-thumb { cursor: pointer; box-shadow: 0 4px 10px rgba(15, 23, 42, .12); transition: transform 160ms ease, box-shadow 160ms ease; }
+.product-list-card:active .product-list-thumb { transform: translateY(2px) scale(.985); box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .category-tile-icon, .product-list-thumb { transition: none; }
+}
