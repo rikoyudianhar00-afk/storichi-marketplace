@@ -190,8 +190,6 @@ export default function ChatList() {
             const offset = swipeOffsets[thread.id] || 0;
             return (
               <div className={`chat-thread-swipe-shell ${offset < 0 ? "show-archive" : offset > 0 ? "show-delete" : ""}`} key={thread.id}>
-                <span className="chat-swipe-action chat-swipe-archive" aria-hidden="true">Arsip</span>
-                <span className="chat-swipe-action chat-swipe-delete" aria-hidden="true">Hapus</span>
                 <Link
                   to={`/chat/${thread.id}`}
                   className="chat-thread-row"
@@ -201,6 +199,7 @@ export default function ChatList() {
                   onPointerUp={(event) => handlePointerUp(event, thread)}
                   onPointerCancel={clearGesture}
                   onClick={handleRowClick}
+                  onContextMenu={(event) => event.preventDefault()}
                 >
                   <div className="chat-thread-avatar">{thread.participant?.avatar_url ? <img src={thread.participant.avatar_url} alt="" /> : <span>{thread.participant?.display_name?.[0] || "U"}</span>}</div>
                   <div className="chat-thread-main">

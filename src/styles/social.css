@@ -700,11 +700,8 @@ input[type="checkbox"], input[type="radio"] {
 .chat-completed-overlay strong { font-size: 17px; }
 .chat-completed-overlay span { max-width: 260px; color: #166534; font-size: 12px; }
 .chat-completed-mark { width: 76px; height: 76px; display: grid; place-items: center; flex: 0 0 auto; background: #22c55e; color: #fff; font-size: 44px; font-weight: 900; line-height: 1; clip-path: polygon(50% 0%, 59% 7%, 69% 3%, 76% 13%, 88% 12%, 90% 25%, 100% 33%, 94% 45%, 100% 56%, 91% 65%, 93% 78%, 80% 81%, 72% 93%, 61% 88%, 50% 100%, 40% 91%, 28% 96%, 22% 84%, 9% 81%, 10% 68%, 0% 59%, 6% 48%, 1% 36%, 12% 28%, 11% 15%, 24% 14%, 32% 4%, 42% 8%); filter: drop-shadow(0 8px 16px rgba(22, 101, 52, .25)); }
-.chat-thread-swipe-shell { position: relative; overflow: hidden; background: #edfdf2; border-bottom: 1px solid var(--border); }
-.chat-thread-swipe-shell .chat-thread-row { position: relative; z-index: 1; touch-action: pan-y; user-select: none; -webkit-user-select: none; transition: transform 140ms ease-out; }
-.chat-swipe-action { position: absolute; inset-block: 0; width: 92px; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 800; }
-.chat-swipe-archive { left: 0; background: #64748b; }
-.chat-swipe-delete { right: 0; background: #dc2626; }
+.chat-thread-swipe-shell { position: relative; overflow: hidden; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chat-thread-swipe-shell .chat-thread-row { position: relative; z-index: 1; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: transform 140ms ease-out; }
 .chat-list-completed-overlay { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(34, 197, 94, .18); color: #15803d; pointer-events: none; }
 .chat-list-completed-overlay .chat-completed-mark { width: 38px; height: 38px; font-size: 23px; }
 .chat-list-completed-overlay strong { font-size: 12px; }
