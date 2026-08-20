@@ -14,9 +14,17 @@ export default function Navbar() {
   const [categoryGroups, setCategoryGroups] = useState([]);
   const [drawerCategories, setDrawerCategories] = useState([]);
   const [openGroups, setOpenGroups] = useState({});
+  const [drawerReady, setDrawerReady] = useState(false);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen) {
+      setDrawerReady(false);
+      return;
+    }
+    setDrawerReady(false);
+    setCustomLinks([]);
+    setCategoryGroups([]);
+    setDrawerCategories([]);
     Promise.all([
       supabase.from("navigation_links").select("id, label, href").eq("is_active", true).order("display_order").order("created_at"),
       supabase.from("category_groups").select("id, slug, label, sort_order").order("label", { ascending: true }),
@@ -25,7 +33,7 @@ export default function Navbar() {
       setCustomLinks(navigationResult.data || []);
       setCategoryGroups(groupResult.data || []);
       setDrawerCategories(categoryResult.data || []);
-    });
+    }).finally(() => setDrawerReady(true));
   }, [menuOpen]);
 
   function closeMenu() {
@@ -113,7 +121,7 @@ export default function Navbar() {
           <button type="button" className="navbar-drawer-backdrop" aria-label="Tutup menu" onClick={() => setMenuOpen(false)} />
           <nav className="navbar-drawer">
             <Link to="/" onClick={closeMenu}>Beranda</Link>
-            {sortedGroups.map((group) => {
+            {drawerReady && sortedGroups.map((group) => {
               const members = drawerCategories
                 .filter((category) => category.group_id === group.id)
                 .sort((a, b) => a.label.localeCompare(b.label, "id", { sensitivity: "base" }));
@@ -132,13 +140,8 @@ export default function Navbar() {
               );
             })}
 
-            {(customLinks.length ? customLinks : [
-              { id: "top-up", label: "Top Up Game", href: "/kategori/top-up" },
-              { id: "akun", label: "Jual Beli Akun", href: "/kategori/akun" },
-              { id: "jual", label: "Jual Produk", href: "/jual/baru" },
-              { id: "rekber", label: "Grup Rekber", href: "/rekber" },
-            ]).map((link) => <a key={link.id} href={link.href} onClick={closeMenu}>{link.label}</a>)}
-            {standaloneCategories.map((category) => <Link key={category.id} to={categoryHref(category)} onClick={closeMenu}>{category.label}</Link>)}
+            {drawerReady && customLinks.map((link) => <Link key={link.id} to={link.href} onClick={closeMenu}>{link.label}</Link>)}
+            {drawerReady && standaloneCategories.map((category) => <Link key={category.id} to={categoryHref(category)} onClick={closeMenu}>{category.label}</Link>)}
             <Link to="/chat" onClick={closeMenu}>Chat</Link>
             <Link to="/bantuan" onClick={closeMenu}>Cara Pakai & Bantuan</Link>
             {user && (

@@ -646,3 +646,13 @@ input[type="checkbox"], input[type="radio"] {
 .chat-message-row.is-system { justify-content: center; }
 .chat-system-bubble { max-width: min(92%, 520px); border: 1px solid #fecaca; border-radius: 12px; background: #fff7ed; color: #991b1b; font-size: 11px; font-weight: 800; line-height: 1.45; text-align: center; }
 .chat-system-bubble time { display: block; margin-top: 5px; color: #b45309; font-weight: 600; }
+
+/* ---------- Stable mobile browser viewport ---------- */
+.chat-thread-page { min-height: calc(var(--storichi-viewport-height, 100dvh) - 74px); height: calc(var(--storichi-viewport-height, 100dvh) - 74px); overscroll-behavior: none; }
+.chat-thread-page .chat-messages { min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-gutter: stable; }
+@media (max-width: 860px) {
+  .chat-thread-page { min-height: calc(var(--storichi-viewport-height, 100dvh) - 74px - 72px); height: calc(var(--storichi-viewport-height, 100dvh) - 74px - 72px); }
+}
+@media (max-width: 600px) {
+  .chat-thread-page { min-height: calc(var(--storichi-viewport-height, 100dvh) - 58px - 72px); height: calc(var(--storichi-viewport-height, 100dvh) - 58px - 72px); }
+}

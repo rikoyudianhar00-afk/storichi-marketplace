@@ -1,4 +1,5 @@
 import { Route, Routes, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import BottomNav from "./components/BottomNav";
@@ -29,6 +30,28 @@ import { useAuth } from "./context/AuthContext";
 
 export default function App() {
   const { user } = useAuth();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    let frame = 0;
+    const updateViewport = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const height = window.visualViewport?.height || window.innerHeight;
+        root.style.setProperty("--storichi-viewport-height", `${Math.round(height)}px`);
+      });
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport, { passive: true });
+    window.addEventListener("orientationchange", updateViewport, { passive: true });
+    window.visualViewport?.addEventListener("resize", updateViewport, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updateViewport);
+      window.removeEventListener("orientationchange", updateViewport);
+      window.visualViewport?.removeEventListener("resize", updateViewport);
+    };
+  }, []);
   const location = useLocation();
   const footerPaths = ["/", "/favorit", "/transaksi", "/rekber", "/akun"];
   const showFooter = footerPaths.includes(location.pathname) || location.pathname.startsWith("/rekber/");

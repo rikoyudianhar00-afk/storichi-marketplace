@@ -195,16 +195,10 @@ export default function ChatThread() {
       setChatError(qrisErrorResult.message || "QRIS gagal diberikan.");
       return;
     }
-    const { error: ratingError } = await supabase.rpc("request_direct_rating", { p_request_id: request.id });
     setQrisBusy(false);
     setBusyAction(false);
-    if (ratingError) {
-      setChatError(ratingError.message || "QRIS terkirim, tetapi permintaan rating belum aktif.");
-      setRequest((prev) => ({ ...prev, qris_sent_at: new Date().toISOString() }));
-      return;
-    }
     const sentAt = qrisMessage?.created_at || new Date().toISOString();
-    setRequest((prev) => ({ ...prev, qris_sent_at: sentAt, rating_requested_at: new Date().toISOString() }));
+    setRequest((prev) => ({ ...prev, qris_sent_at: sentAt }));
     setQrisUploadOpen(false);
     resetQrisUpload();
   }
@@ -363,7 +357,7 @@ export default function ChatThread() {
         <div className="direct-action-modal" role="dialog" aria-modal="true" aria-label="Siapkan QRIS toko">
           <div className="direct-action-modal-card qris-upload-modal">
             <h3>Siapkan QRIS toko</h3>
-            <p>Upload QRIS satu kali. Setelah ditetapkan, QRIS ini tersimpan sebagai QR toko dan langsung dikirim ke pembeli.</p>
+            <p>Upload QRIS satu kali. Setelah ditetapkan, QRIS ini tersimpan sebagai QR toko dan langsung dikirim ke pembeli. Permintaan rating dilakukan seller melalui tombol terpisah setelah QRIS terkirim.</p>
             <label className="qris-file-picker">{qrisPreviewUrl ? <img src={qrisPreviewUrl} alt="Pratinjau QRIS" /> : <span>Ketuk untuk memilih gambar QRIS</span>}<input type="file" accept="image/*" onChange={chooseQrisFile} /></label>
             {qrisError && <p className="form-error" role="alert">{qrisError}</p>}
             <div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => { setQrisUploadOpen(false); resetQrisUpload(); }}>Batal</button><button type="button" className="btn btn-primary" disabled={!qrisFile || qrisBusy} onClick={handleGiveQris}>{qrisBusy ? "Menyiapkan..." : "Tetapkan QR toko & kirim"}</button></div>
