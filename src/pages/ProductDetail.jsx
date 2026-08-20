@@ -12,7 +12,8 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [seller, setSeller] = useState(null);
-  const [reviews, setReviews] = useState([]);
+  const [productReviews, setProductReviews] = useState([]);
+  const [sellerReviews, setSellerReviews] = useState([]);
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
@@ -36,20 +37,23 @@ export default function ProductDetail() {
       if (p?.seller_id) {
         const { data: s } = await supabase.from("profiles").select("*").eq("id", p.seller_id).single();
         setSeller(s);
-        const { data: r } = await supabase
-          .from("seller_reviews")
-          .select("id, rating, comment, created_at, reviewer:reviewer_id(display_name, avatar_url)")
-          .eq("seller_id", p.seller_id)
-          .order("created_at", { ascending: false });
-        setReviews(r || []);
+        const [{ data: productReviewData }, { data: sellerReviewData }] = await Promise.all([
+          supabase.from("product_reviews").select("id, rating, comment, created_at, reviewer:buyer_id(display_name, avatar_url)").eq("product_id", p.id).order("created_at", { ascending: false }),
+          supabase.from("seller_reviews").select("id, rating, comment, created_at, reviewer:reviewer_id(display_name, avatar_url)").eq("seller_id", p.seller_id).order("created_at", { ascending: false }),
+        ]);
+        setProductReviews(productReviewData || []);
+        setSellerReviews(sellerReviewData || []);
       }
       setLoading(false);
     }
     load();
   }, [slug]);
 
-  const avgRating = reviews.length
-    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+  const productAvgRating = productReviews.length
+    ? productReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / productReviews.length
+    : 0;
+  const sellerAvgRating = sellerReviews.length
+    ? sellerReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / sellerReviews.length
     : 0;
 
   async function toggleLike() {
@@ -181,7 +185,7 @@ export default function ProductDetail() {
                     <Link to={`/toko/${seller.id}`} style={{ fontSize: 13.5, fontWeight: 800 }}>{seller.display_name}</Link>
                   <RoleBadge profile={seller} />
                 </div>
-                <StarDisplay rating={avgRating} count={reviews.length} />
+                <span className="product-detail-seller-rating"><small>Rating toko</small> <StarDisplay rating={sellerAvgRating} count={sellerReviews.length} /></span>
                 {seller.bio && <p className="seller-bio-snippet">{seller.bio}</p>}
               </div>
             </div>
@@ -214,13 +218,13 @@ export default function ProductDetail() {
 
       <section style={{ marginTop: 40 }}>
         <h3 style={{ fontSize: 17, marginBottom: 14 }}>
-          Penilaian Penjual {reviews.length > 0 && <StarDisplay rating={avgRating} count={reviews.length} />}
+          Penilaian Produk {productReviews.length > 0 && <StarDisplay rating={productAvgRating} count={productReviews.length} />}
         </h3>
-        {reviews.length === 0 ? (
-          <p style={{ color: "var(--ink-500)" }}>Belum ada penilaian untuk penjual ini.</p>
+        {productReviews.length === 0 ? (
+          <p style={{ color: "var(--ink-500)" }}>Belum ada penilaian untuk produk ini.</p>
         ) : (
           <div className="review-list">
-            {reviews.map((r) => (
+            {productReviews.map((r) => (
               <div key={r.id} className="review-item">
                 <div className="account-avatar" style={{ width: 34, height: 34, fontSize: 13 }}>
                   {r.reviewer?.avatar_url ? (
