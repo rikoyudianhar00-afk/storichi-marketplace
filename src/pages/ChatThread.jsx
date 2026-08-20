@@ -6,6 +6,7 @@ import AttachmentButton from "../components/AttachmentButton";
 import { markChatThreadRead } from "../lib/chatNotifications";
 import { moderateMessage } from "../lib/moderation";
 import { compressImageForChat, validateImageFile } from "../lib/image";
+import ImageLightbox from "../components/ImageLightbox";
 import { supabase } from "../lib/supabase";
 
 function formatMessageTime(value) {
@@ -33,7 +34,6 @@ export default function ChatThread() {
   const [skipDoneConfirm, setSkipDoneConfirm] = useState(false);
   const [productCollapsed, setProductCollapsed] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
-  const [lightboxZoom, setLightboxZoom] = useState(1);
   const [qrisUploadOpen, setQrisUploadOpen] = useState(false);
   const [qrisFile, setQrisFile] = useState(null);
   const [qrisPreviewUrl, setQrisPreviewUrl] = useState("");
@@ -93,31 +93,12 @@ export default function ChatThread() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  useEffect(() => {
-    if (!lightboxUrl) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    function handleKeyDown(event) {
-      if (event.key === "Escape") setLightboxUrl(null);
-      if (event.key === "+" || event.key === "=") setLightboxZoom((value) => Math.min(3, Number((value + 0.25).toFixed(2))));
-      if (event.key === "-" || event.key === "_") setLightboxZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))));
-      if (event.key === "0") setLightboxZoom(1);
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [lightboxUrl]);
-
   function openLightbox(url) {
     setLightboxUrl(url);
-    setLightboxZoom(1);
   }
 
   function closeLightbox() {
     setLightboxUrl(null);
-    setLightboxZoom(1);
   }
 
   const isBuyer = Boolean(request && user?.id === request.buyer_id);
@@ -320,22 +301,12 @@ export default function ChatThread() {
         <div ref={bottomRef} />
       </div>
 
-      {lightboxUrl && (
-        <div className="chat-image-lightbox" role="dialog" aria-modal="true" aria-label="Pratinjau gambar chat" onMouseDown={(event) => { if (event.target === event.currentTarget) closeLightbox(); }}>
-          <div className="chat-image-lightbox-toolbar">
-            <span>Zoom {Math.round(lightboxZoom * 100)}%</span>
-            <button type="button" onClick={closeLightbox} aria-label="Tutup pratinjau gambar">×</button>
-          </div>
-          <div className="chat-image-lightbox-stage" onWheel={(event) => { event.preventDefault(); setLightboxZoom((value) => Math.max(1, Math.min(3, Number((value + (event.deltaY < 0 ? 0.1 : -0.1)).toFixed(2))))); }}>
-            <img src={lightboxUrl} alt="Lampiran gambar chat ukuran besar" style={{ transform: `scale(${lightboxZoom})` }} draggable="false" />
-          </div>
-          <div className="chat-image-lightbox-controls" aria-label="Kontrol zoom gambar">
-            <button type="button" onClick={() => setLightboxZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))))} aria-label="Perkecil gambar">−</button>
-            <button type="button" onClick={() => setLightboxZoom(1)}>Reset</button>
-            <button type="button" onClick={() => setLightboxZoom((value) => Math.min(3, Number((value + 0.25).toFixed(2))))} aria-label="Perbesar gambar">+</button>
-          </div>
-        </div>
-      )}
+      <ImageLightbox
+        src={lightboxUrl}
+        alt="Lampiran gambar chat ukuran besar"
+        open={Boolean(lightboxUrl)}
+        onClose={closeLightbox}
+      />
 
       {waitingForBuyerRating && ratingOpen && (
         <section className="direct-rating-popup" aria-label="Beri rating produk">
