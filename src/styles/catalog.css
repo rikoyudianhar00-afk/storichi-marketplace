@@ -293,3 +293,14 @@
 .ad-manager-row > div { min-width: 0; flex: 1; display: grid; gap: 3px; } .ad-manager-row span { color: var(--ink-500); font-size: 11px; }
 .danger-text { color: var(--accent-coral); }
 @media (max-width: 600px) { .shop-hero { align-items: flex-start; flex-wrap: wrap; } .shop-hero .btn { width: 100%; } .shop-name-row h1 { font-size: 18px; } .shop-toolbar { align-items: flex-start; flex-direction: column; gap: 4px; } .ad-form-row { grid-template-columns: 1fr; } .ad-manager-row { flex-wrap: wrap; } .ad-manager-row img { width: 74px; height: 48px; } }
+
+.shop-hero { padding: 16px; gap: 12px; }
+.shop-avatar { width: 56px; height: 56px; flex-basis: 56px; }
+.shop-identity p { max-width: 520px; }
+.shop-sort-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.shop-sort-tabs button { flex: 0 0 auto; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-500); padding: 8px 10px; font-size: 13px; font-weight: 700; }
+.shop-sort-tabs button.is-active { color: var(--blue-600); border-bottom-color: var(--blue-600); }
+.ad-banner-frame { touch-action: pan-y; }
+.ad-banner-track { display: flex; gap: 12px; width: 100%; transition: transform 260ms cubic-bezier(.23,1,.32,1); will-change: transform; }
+.ad-banner-track .ad-banner-link { flex: 0 0 100%; }
+@media (max-width: 600px) { .shop-avatar { width: 52px; height: 52px; flex-basis: 52px; } .shop-hero { padding: 14px; } }

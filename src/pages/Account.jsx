@@ -173,6 +173,9 @@ export default function Account() {
           <Link to="/kelola-iklan" className="thread-item" style={{ marginBottom: 14 }}>
             <span>📣 Kelola Iklan Beranda</span>
           </Link>
+          <Link to="/kelola-menu" className="thread-item" style={{ marginBottom: 14 }}>
+            <span>☰ Kelola Menu Drawer</span>
+          </Link>
           <h4 style={{ fontSize: 13.5, marginBottom: 8 }}>Kelola Tag Pengguna</h4>
           <form onSubmit={assignTag} className="card-form" style={{ padding: 16 }}>
             <input

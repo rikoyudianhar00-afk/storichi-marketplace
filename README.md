@@ -7,7 +7,7 @@ Marketplace top up game & akun dengan login Google, chat realtime, dan grup rekb
 2. `npm install`
 3. `npm run dev` untuk lokal, `npm run build` untuk production.
 
-Skema database dijalankan berurutan di Supabase SQL Editor: `schema.sql`, lalu migrasi `schema_v2.sql` sampai `schema_v9.sql`. `schema_v6.sql` mengaktifkan grup kategori, metrik like/view/top sales, dan notifikasi chat. `schema_v7.sql` menambahkan bio seller, lobby Rekber 3 pihak, workflow custody dana/item oleh midman, serta moderasi pesan di database. `schema_v8.sql` menambahkan penyimpanan subscription Web Push. `schema_v9.sql` menambahkan banner iklan Owner dengan PIN, bucket gambar iklan, tabel follow seller, halaman toko seller, dan fondasi Discover personal.
+Skema database dijalankan berurutan di Supabase SQL Editor: `schema.sql`, lalu migrasi `schema_v2.sql` sampai `schema_v10.sql`. `schema_v6.sql` mengaktifkan grup kategori, metrik like/view/top sales, dan notifikasi chat. `schema_v7.sql` menambahkan bio seller, lobby Rekber 3 pihak, workflow custody dana/item oleh midman, serta moderasi pesan di database. `schema_v8.sql` menambahkan penyimpanan subscription Web Push. `schema_v9.sql` menambahkan banner iklan Owner dengan PIN, bucket gambar iklan, tabel follow seller, halaman toko seller, dan fondasi Discover personal. `schema_v10.sql` menambahkan menu drawer hyperlink yang dapat dikelola Owner.
 
 ## Notifikasi saat web ditutup
 1. Buat pasangan VAPID key untuk Web Push dan isi `VITE_WEB_PUSH_PUBLIC_KEY` pada environment frontend.

@@ -1,6 +1,8 @@
 import { supabase } from "./supabase";
 
 export const PRODUCT_SORTS = {
+  POPULAR: "popular",
+  NEWEST: "newest",
   AZ: "az",
   PRICE_LOW: "price-low",
   PRICE_HIGH: "price-high",
@@ -39,6 +41,12 @@ export async function enrichProducts(products = []) {
 
 export function sortProducts(products, sort) {
   const result = [...(products || [])];
+  if (sort === PRODUCT_SORTS.NEWEST) {
+    return result.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  }
+  if (sort === PRODUCT_SORTS.POPULAR) {
+    return result.sort((a, b) => Number(b.like_count || 0) - Number(a.like_count || 0) || Number(b.view_count || 0) - Number(a.view_count || 0));
+  }
   if (sort === PRODUCT_SORTS.AZ) {
     return result.sort((a, b) => a.name.localeCompare(b.name, "id", { sensitivity: "base" }));
   }

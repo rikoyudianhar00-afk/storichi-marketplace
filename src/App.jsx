@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import BottomNav from "./components/BottomNav";
@@ -8,6 +8,7 @@ import GroupPage from "./pages/GroupPage";
 import SearchPage from "./pages/SearchPage";
 import ShopPage from "./pages/ShopPage";
 import ManageAds from "./pages/ManageAds";
+import ManageNavigation from "./pages/ManageNavigation";
 import ProductDetail from "./pages/ProductDetail";
 import SellProduct from "./pages/SellProduct";
 import MyProducts from "./pages/MyProducts";
@@ -24,6 +25,9 @@ import { useAuth } from "./context/AuthContext";
 
 export default function App() {
   const { user } = useAuth();
+  const location = useLocation();
+  const footerPaths = ["/", "/favorit", "/transaksi", "/rekber", "/akun"];
+  const showFooter = footerPaths.includes(location.pathname) || location.pathname.startsWith("/rekber/");
   return (
     <>
       <Navbar />
@@ -44,12 +48,13 @@ export default function App() {
         <Route path="/akun" element={<Account />} />
         <Route path="/kelola-kategori" element={<ManageCategories />} />
         <Route path="/kelola-iklan" element={<ManageAds />} />
+        <Route path="/kelola-menu" element={<ManageNavigation />} />
         <Route path="/favorit" element={<SimplePage title="Favorit" description="Produk favorit kamu akan muncul di sini." />} />
         <Route path="/transaksi" element={<SimplePage title="Transaksi" description="Riwayat transaksi kamu akan muncul di sini." />} />
         <Route path="/cari" element={<SearchPage />} />
         <Route path="/bantuan" element={<InfoHelp />} />
       </Routes>
-      <Footer />
+      {showFooter && <Footer />}
       <BottomNav />
     </>
   );

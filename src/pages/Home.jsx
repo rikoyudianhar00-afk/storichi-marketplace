@@ -52,10 +52,10 @@ export default function Home() {
         <div className="home-search-area"><SearchBar /></div>
         <CategoryGrid />
 
-        <ProductSection title={user ? "Discover untuk kamu" : "Discover populer"} icon="✦" items={discover} loading={loading} limit={10} />
         <ProductSection title="Trending & paling disukai" icon="♥" items={trending} loading={loading} limit={10} />
         <ProductSection title="Top Up Game" icon="◇" items={topUp} loading={loading} viewAllHref="/kategori/top-up" />
         <ProductSection title="Jual Beli Akun" icon="◈" items={akun} loading={loading} viewAllHref="/kategori/akun" />
+        <ProductSection title={user ? "Discover untuk kamu" : "Discover populer"} icon="✦" items={discover} loading={loading} limit={10} />
 
         <section className="rekber-promo">
           <div>

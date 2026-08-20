@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
-import { enrichProducts } from "../lib/catalog";
+import { enrichProducts, PRODUCT_SORTS, sortProducts } from "../lib/catalog";
 import { ProductList } from "../components/ProductSection";
 import RoleBadge from "../components/RoleBadge";
 
@@ -14,6 +14,8 @@ export default function ShopPage() {
   const [following, setFollowing] = useState(false);
   const [followers, setFollowers] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [sort, setSort] = useState("popular");
+  const [priceAscending, setPriceAscending] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -34,6 +36,8 @@ export default function ShopPage() {
     load();
     return () => { active = false; };
   }, [sellerId, user]);
+
+  const sortedProducts = sortProducts(products, sort === "newest" ? "newest" : sort === "best" ? PRODUCT_SORTS.TOP_SALES : sort === "price" ? (priceAscending ? PRODUCT_SORTS.PRICE_LOW : PRODUCT_SORTS.PRICE_HIGH) : "popular");
 
   async function toggleFollow() {
     if (!user) return signInWithGoogle();
@@ -56,8 +60,14 @@ export default function ShopPage() {
         <div className="shop-identity"><div className="shop-name-row"><h1>{seller.display_name}</h1><RoleBadge profile={seller} /></div><p>{seller.bio || "Selamat datang di toko saya."}</p><span>{followers} pengikut · {products.length} produk</span></div>
         <button type="button" className={`btn ${following ? "btn-outline" : "btn-primary"}`} onClick={toggleFollow}>{following ? "Mengikuti" : "Ikuti toko"}</button>
       </section>
-      <div className="shop-toolbar"><h2>Produk toko</h2><span>Temukan item pilihan seller</span></div>
-      <ProductList items={products} emptyText="Seller ini belum memiliki produk aktif." />
+      <div className="shop-toolbar"><div><h2>Produk toko</h2><span>Temukan item pilihan seller</span></div></div>
+      <div className="shop-sort-tabs" role="tablist" aria-label="Urutkan produk toko">
+        <button type="button" className={sort === "popular" ? "is-active" : ""} onClick={() => setSort("popular")}>Populer</button>
+        <button type="button" className={sort === "newest" ? "is-active" : ""} onClick={() => setSort("newest")}>Terbaru</button>
+        <button type="button" className={sort === "best" ? "is-active" : ""} onClick={() => setSort("best")}>Terlaris</button>
+        <button type="button" className={sort === "price" ? "is-active" : ""} onClick={() => { setSort("price"); setPriceAscending((value) => !value); }}>Harga {sort === "price" ? (priceAscending ? "↑" : "↓") : "↕"}</button>
+      </div>
+      <ProductList items={sortedProducts} emptyText="Seller ini belum memiliki produk aktif." />
     </main>
   );
 }
