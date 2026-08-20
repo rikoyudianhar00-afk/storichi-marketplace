@@ -20,6 +20,7 @@ import Account from "./pages/Account";
 import ManageCategories from "./pages/ManageCategories";
 import InfoHelp from "./pages/InfoHelp";
 import SimplePage from "./pages/SimplePage";
+import Transactions from "./pages/Transactions";
 import ChatNotificationToast from "./components/ChatNotificationToast";
 import { useAuth } from "./context/AuthContext";
 
@@ -50,7 +51,7 @@ export default function App() {
         <Route path="/kelola-iklan" element={<ManageAds />} />
         <Route path="/kelola-menu" element={<ManageNavigation />} />
         <Route path="/favorit" element={<SimplePage title="Favorit" description="Produk favorit kamu akan muncul di sini." />} />
-        <Route path="/transaksi" element={<SimplePage title="Transaksi" description="Riwayat transaksi kamu akan muncul di sini." />} />
+        <Route path="/transaksi" element={<Transactions />} />
         <Route path="/cari" element={<SearchPage />} />
         <Route path="/bantuan" element={<InfoHelp />} />
       </Routes>

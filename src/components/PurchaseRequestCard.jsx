@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function PurchaseRequestCard({ request, isSeller, currentUserId, onUpdate }) {
@@ -32,6 +32,15 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
     onUpdate?.({ ...request, status });
   }
 
+  async function chooseDirect() {
+    setBusy(true);
+    setError("");
+    const { error: directError } = await supabase.rpc("choose_direct_purchase", { p_request_id: request.id });
+    setBusy(false);
+    if (directError) return setError(directError.message || "Pembelian langsung gagal diaktifkan.");
+    onUpdate?.({ ...request, purchase_mode: "direct" });
+  }
+
   async function createRekber() {
     if (!selectedMidman) {
       setError("Pilih midman terlebih dahulu.");
@@ -54,7 +63,10 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
   return (
     <div className="purchase-request-card">
       <p className="purchase-request-title">Permintaan Beli</p>
-      <p className="purchase-request-product">{request.product?.name}</p>
+      <Link to={`/produk/${request.product?.slug || ""}`} className="direct-product-preview">
+        {request.product?.image_url ? <img src={request.product.image_url} alt="" /> : <span className="direct-product-preview-fallback">P</span>}
+        <span><strong>{request.product?.name || "Produk"}</strong><small>{request.product?.category || "Detail produk"} · Lihat detail produk</small></span>
+      </Link>
 
       {request.status === "pending" && isSeller && (
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -67,8 +79,13 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
       {request.status === "approved" && !request.rekber_group_id && (
         <div style={{ marginTop: 10 }}>
           <p className="thread-item-sub" style={{ marginBottom: 8, color: "#0f9d68" }}>✓ Disetujui penjual</p>
-          {!showMidmanPicker ? (
-            <button className="btn btn-primary btn-full" disabled={busy} onClick={() => setShowMidmanPicker(true)}>Pilih Midman & Buat Lobby</button>
+          {request.purchase_mode === "direct" ? (
+            <p className="direct-mode-confirmed">✓ Pembelian langsung tanpa Rekber aktif</p>
+          ) : !showMidmanPicker ? (
+            <div className="purchase-mode-actions">
+              <button className="btn btn-primary" style={{ flex: 1 }} disabled={busy} onClick={chooseDirect}>Lanjut tanpa Rekber</button>
+              <button className="btn btn-outline" style={{ flex: 1 }} disabled={busy} onClick={() => setShowMidmanPicker(true)}>Pilih Midman</button>
+            </div>
           ) : (
             <div className="midman-picker">
               <label className="form-label" htmlFor="midman-select">Pilih midman</label>

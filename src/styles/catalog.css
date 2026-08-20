@@ -409,3 +409,15 @@
   .product-list-thumb-wrap { width: 116px; flex-basis: 116px; height: 116px; }
   .product-list-thumb { width: 116px; height: 116px; }
 }
+
+/* ---------- Final product card scale and top-right game tags ---------- */
+.product-list-card { min-height: 190px; height: 190px; }
+.product-list-thumb-wrap { width: 190px; flex-basis: 190px; height: 190px; }
+.product-list-thumb { width: 190px; height: 190px; }
+.product-card-game-tags { top: 8px; right: 8px; bottom: auto; align-items: flex-end; }
+@media (max-width: 600px) {
+  .product-list-card { min-height: 132px; height: 132px; }
+  .product-list-thumb-wrap { width: 132px; flex-basis: 132px; height: 132px; }
+  .product-list-thumb { width: 132px; height: 132px; }
+  .product-card-game-tags { top: 6px; right: 6px; }
+}

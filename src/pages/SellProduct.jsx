@@ -40,6 +40,7 @@ export default function SellProduct() {
   const [error, setError] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(!!productId);
   const [cropTarget, setCropTarget] = useState(null); // { source, replaceIndex? }
+  const [cropQueue, setCropQueue] = useState([]);
 
   useEffect(() => {
     Promise.all([
@@ -75,47 +76,62 @@ export default function SellProduct() {
       });
   }, [productId]);
 
-  function pickImage(e) {
+  function pickThumbnail(e) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-
     const fileError = validateImageFile(file);
-    if (fileError) {
-      setError(fileError);
-      return;
-    }
+    if (fileError) return setError(fileError);
     setError("");
-    setCropTarget({ source: file });
+    setCropQueue([]);
+    setCropTarget({ source: file, replaceIndex: images.length ? 0 : null, aspect: "1:1" });
+  }
+
+  function pickAdditionalImages(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    const invalidFile = files.map(validateImageFile).find(Boolean);
+    if (invalidFile) return setError(invalidFile);
+    setError("");
+    const [first, ...rest] = files;
+    setCropQueue(rest);
+    setCropTarget({ source: first, aspect: "free" });
   }
 
   function repositionImage(idx) {
-    setCropTarget({ source: images[idx], replaceIndex: idx });
+    setCropTarget({ source: images[idx], replaceIndex: idx, aspect: idx === 0 ? "1:1" : "free" });
   }
 
   async function handleCropConfirm(blob) {
-    const { replaceIndex } = cropTarget;
-    setCropTarget(null);
+    const { replaceIndex } = cropTarget || {};
     if (!user) return;
     if (blob.size > MAX_IMAGE_SIZE_BYTES) {
       setError("Ukuran foto hasil pengolahan melebihi 5 MB. Kurangi zoom atau pilih foto lain.");
+      setCropTarget(null);
+      setCropQueue([]);
       return;
     }
 
     setError("");
     setUploading(true);
-    const path = `${user.id}/${Date.now()}.jpg`;
-    const { error: uploadError } = await supabase.storage
-      .from("product-images")
-      .upload(path, blob, { contentType: "image/jpeg" });
-    if (!uploadError) {
-      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-      if (replaceIndex != null) {
-        setImages((prev) => prev.map((img, i) => (i === replaceIndex ? data.publicUrl : img)));
-      } else {
-        setImages((prev) => [...prev, data.publicUrl]);
-      }
+    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+    const { error: uploadError } = await supabase.storage.from("product-images").upload(path, blob, { contentType: "image/jpeg" });
+    if (uploadError) {
+      setUploading(false);
+      setCropTarget(null);
+      setCropQueue([]);
+      setError("Gambar gagal diunggah.");
+      return;
     }
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    setImages((prev) => {
+      if (replaceIndex != null && prev.length) return prev.map((img, i) => (i === replaceIndex ? data.publicUrl : img));
+      return [...prev, data.publicUrl];
+    });
+    const [nextFile, ...remaining] = cropQueue;
+    setCropQueue(remaining);
+    setCropTarget(nextFile ? { source: nextFile, aspect: "free" } : null);
     setUploading(false);
   }
 
@@ -243,7 +259,7 @@ export default function SellProduct() {
       {cropTarget && (
         <ImageCropModal
           source={cropTarget.source}
-          aspect="free"
+          aspect={cropTarget.aspect || "free"}
           onCancel={() => setCropTarget(null)}
           onConfirm={handleCropConfirm}
           onError={(message) => {
@@ -256,24 +272,23 @@ export default function SellProduct() {
       <h1 className="page-title">{productId ? "Edit Produk" : "Jual Produk Baru"}</h1>
 
       <form className="sell-form" onSubmit={handleSubmit}>
-        <label className="form-label">Gambar Produk</label>
-        <div className="image-upload-grid">
-          {images.map((img, i) => (
-            <div key={i} className="image-upload-item">
-              <img src={img} alt="" />
-              <button type="button" className="image-reposition-btn" onClick={() => repositionImage(i)} aria-label="Reposisi gambar">
-                ⤢
-              </button>
-              <button type="button" className="image-remove-btn" onClick={() => removeImage(i)} aria-label="Hapus gambar">
-                ×
-              </button>
-            </div>
-          ))}
-          <label className="image-upload-add">
-            {uploading ? "..." : "+ Tambah"}
-            <input type="file" accept="image/*" onChange={pickImage} hidden disabled={uploading} />
-          </label>
+        <label className="form-label">Thumbnail Produk</label>
+        <div className="product-thumbnail-upload">
+          {images[0] ? <img src={images[0]} alt="Thumbnail produk" /> : <span>Belum ada thumbnail</span>}
+          {images[0] && <button type="button" className="image-reposition-btn" onClick={() => repositionImage(0)} aria-label="Reposisi thumbnail">⤢</button>}
+          {images[0] && <button type="button" className="image-remove-btn" onClick={() => removeImage(0)} aria-label="Hapus thumbnail">×</button>}
+          <label className="image-upload-add">{uploading ? "..." : images[0] ? "Ganti thumbnail" : "+ Pilih thumbnail"}<input type="file" accept="image/*" onChange={pickThumbnail} hidden disabled={uploading} /></label>
         </div>
+
+        <label className="form-label">Foto Informasi Tambahan</label>
+        <div className="image-upload-grid">
+          {images.slice(1).map((img, offset) => {
+            const i = offset + 1;
+            return <div key={i} className="image-upload-item"><img src={img} alt="" /><button type="button" className="image-reposition-btn" onClick={() => repositionImage(i)} aria-label="Reposisi gambar">⤢</button><button type="button" className="image-remove-btn" onClick={() => removeImage(i)} aria-label="Hapus gambar">×</button></div>;
+          })}
+          <label className="image-upload-add">{uploading ? "..." : "+ Pilih banyak foto"}<input type="file" accept="image/*" multiple onChange={pickAdditionalImages} hidden disabled={uploading} /></label>
+        </div>
+        <p className="field-hint">Thumbnail digunakan sebagai foto utama. Foto tambahan dapat dipilih sekaligus untuk informasi produk.</p>
 
         <label className="form-label">Judul Produk</label>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Contoh: 100 Diamond Mobile Legends" required />

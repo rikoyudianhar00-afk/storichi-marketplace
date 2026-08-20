@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-import { validateImageFile } from "../lib/image";
+import { compressImageForChat, validateImageFile } from "../lib/image";
 
 export default function AttachmentButton({ userId, onUploaded, disabled }) {
   const [uploading, setUploading] = useState(false);
@@ -18,16 +18,29 @@ export default function AttachmentButton({ userId, onUploaded, disabled }) {
       }
     }
     setError("");
-
     setUploading(true);
-    const path = `${userId}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("chat-attachments").upload(path, file);
-    if (!error) {
+
+    try {
+      const isImage = file.type.startsWith("image/");
+      const uploadFile = isImage ? await compressImageForChat(file, 100 * 1024) : file;
+      if (isImage && uploadFile.size > 100 * 1024) {
+        setError("Foto masih terlalu besar setelah dikompres. Pilih foto lain atau kurangi resolusinya.");
+        return;
+      }
+      const extension = isImage ? "jpg" : file.name.split(".").pop() || "bin";
+      const path = `${userId}/${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from("chat-attachments").upload(path, uploadFile, { contentType: isImage ? "image/jpeg" : file.type });
+      if (uploadError) {
+        setError("Lampiran gagal diunggah.");
+        return;
+      }
       const { data } = supabase.storage.from("chat-attachments").getPublicUrl(path);
-      const isVideo = file.type.startsWith("video/");
-      onUploaded({ url: data.publicUrl, type: isVideo ? "video" : "image" });
+      onUploaded({ url: data.publicUrl, type: isImage ? "image" : "video", sizeBytes: uploadFile.size });
+    } catch {
+      setError("Foto tidak dapat dikompres atau diunggah.");
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   }
 
   return (
