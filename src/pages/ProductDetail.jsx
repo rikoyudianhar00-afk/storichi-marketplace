@@ -135,7 +135,7 @@ export default function ProductDetail() {
   return (
     <main className="container" style={{ paddingTop: 24, paddingBottom: 40 }}>
       <div className="product-detail-grid">
-        <div>
+        <div className="product-detail-media">
           <div className="product-detail-main-img" style={{ aspectRatio: activeImageRatio }}>
             {images.length ? (
               <img
@@ -156,9 +156,11 @@ export default function ProductDetail() {
             <div className="product-detail-thumbs">
               {images.map((img, i) => (
                 <button
+                  type="button"
                   key={i}
                   className={"product-detail-thumb" + (i === activeImg ? " active" : "")}
                   onClick={() => setActiveImg(i)}
+                  aria-label={`Tampilkan gambar ${i + 1}`}
                 >
                   <img
                     src={img}
