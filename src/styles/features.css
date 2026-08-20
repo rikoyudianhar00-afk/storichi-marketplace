@@ -641,3 +641,10 @@
 .group-category-chip-icon { width: 30px; height: 30px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--blue-50); color: var(--blue-600); font-weight: 800; }
 .group-category-chip-icon img { width: 100%; height: 100%; object-fit: cover; }
 .group-category-chip:hover { border-color: var(--blue-600); background: var(--blue-50); }
+
+.verified-badge {
+  display: inline-block;
+  vertical-align: middle;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, .18));
+}

@@ -21,8 +21,9 @@ export default function Navbar() {
           </svg>
         </button>
 
-        <Link to="/" className="navbar-logo">
-          <span>storichi</span>
+        <Link to="/" className="navbar-logo" aria-label="STORICHI Beranda">
+          <img className="navbar-logo-image" src="/storichi-logo.jpg" alt="" />
+          <span>STORICHI</span>
         </Link>
 
         <div className="navbar-actions">

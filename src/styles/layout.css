@@ -280,3 +280,23 @@
     gap: 24px;
   }
 }
+
+.navbar-logo-image {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 10px;
+  flex: 0 0 auto;
+  mix-blend-mode: screen;
+}
+
+.navbar-logo span {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.045em;
+}
+
+@media (max-width: 600px) {
+  .navbar-logo-image { width: 34px; height: 34px; }
+  .navbar-logo span { font-size: 20px; }
+}
