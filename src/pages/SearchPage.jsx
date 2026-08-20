@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import ProductFilters from "../components/ProductFilters";
 import { ProductList } from "../components/ProductSection";
 import SearchBar from "../components/SearchBar";
@@ -10,6 +10,7 @@ export default function SearchPage() {
   const [params] = useSearchParams();
   const query = params.get("q")?.trim() || "";
   const [items, setItems] = useState([]);
+  const [stores, setStores] = useState([]);
   const [sort, setSort] = useState(PRODUCT_SORTS.TOP_SALES);
   const [loading, setLoading] = useState(false);
 
@@ -18,20 +19,37 @@ export default function SearchPage() {
     async function load() {
       if (!query) {
         setItems([]);
+        setStores([]);
         return;
       }
       setLoading(true);
       const safeQuery = query.replace(/[%,()]/g, " ").trim();
-      const { data } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .gt("stock", 0)
-        .or(`name.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%`)
-        .limit(50);
+      const [{ data }, { data: storeData }] = await Promise.all([
+        supabase
+          .from("products")
+          .select("*")
+          .eq("is_active", true)
+          .gt("stock", 0)
+          .or(`name.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,category.ilike.%${safeQuery}%,game_name.ilike.%${safeQuery}%`)
+          .limit(50),
+        supabase
+          .from("profiles")
+          .select("id, display_name, avatar_url, bio, is_verified, is_owner, is_seller")
+          .or(`display_name.ilike.%${safeQuery}%,bio.ilike.%${safeQuery}%`)
+          .or("is_seller.eq.true,is_owner.eq.true")
+          .order("display_name", { ascending: true })
+          .limit(20),
+      ]);
       const enriched = await enrichProducts(data || []);
+      const sellerIds = (storeData || []).map((store) => store.id);
+      const { data: storeProducts } = sellerIds.length
+        ? await supabase.from("products").select("seller_id").in("seller_id", sellerIds).eq("is_active", true).gt("stock", 0)
+        : { data: [] };
+      const productCounts = (storeProducts || []).reduce((counts, product) => counts.set(product.seller_id, (counts.get(product.seller_id) || 0) + 1), new Map());
+      const storesWithCounts = (storeData || []).map((store) => ({ ...store, productCount: productCounts.get(store.id) || 0 })).filter((store) => store.productCount > 0 || store.is_owner);
       if (active) {
         setItems(enriched);
+        setStores(storesWithCounts);
         setLoading(false);
       }
     }
@@ -48,7 +66,8 @@ export default function SearchPage() {
         <h1 className="page-title">Cari produk</h1>
         <SearchBar initialValue={query} autoFocus={!query} />
       </div>
-      {query && <div className="search-result-head"><div><h2>Hasil untuk “{query}”</h2><p>{loading ? "Mencari produk..." : `${items.length} produk ditemukan`}</p></div><ProductFilters value={sort} onChange={setSort} /></div>}
+      {query && <div className="search-result-head"><div><h2>Hasil untuk “{query}”</h2><p>{loading ? "Mencari produk dan toko..." : `${items.length} produk · ${stores.length} toko ditemukan`}</p></div><ProductFilters value={sort} onChange={setSort} /></div>}
+      {query && <section className="search-store-section" aria-labelledby="search-store-title"><div className="search-store-heading"><h2 id="search-store-title">Toko</h2><span>{stores.length ? `${stores.length} toko` : ""}</span></div>{stores.length ? <div className="search-store-list">{stores.map((store) => <Link to={`/toko/${store.id}`} className="search-store-card" key={store.id}><span className="search-store-avatar">{store.avatar_url ? <img src={store.avatar_url} alt="" /> : <span>{store.display_name?.[0] || "S"}</span>}</span><span className="search-store-copy"><strong>{store.display_name || "Toko Storichi"}</strong><small>{store.bio || "Lihat produk dan halaman toko"}</small><em>{store.productCount} produk aktif</em></span><span className="search-store-arrow">→</span></Link>)}</div> : !loading && <p className="search-store-empty">Tidak ada toko yang cocok dengan kata kunci ini.</p>}</section>}
       {query ? <ProductList items={visibleItems} loading={loading} emptyText="Produk tidak ditemukan. Coba kata kunci lain." /> : <div className="empty-state"><p>Masukkan kata kunci untuk mulai mencari.</p></div>}
     </main>
   );

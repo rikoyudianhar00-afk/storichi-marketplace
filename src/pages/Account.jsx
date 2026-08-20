@@ -151,6 +151,7 @@ export default function Account() {
             </div>
           )}
           <p style={{ margin: "4px 0 0", color: "var(--ink-500)" }}>{profile?.email}</p>
+          {profile?.id && <Link to={`/pengguna/${profile.id}`} className="account-preview-link">Pratinjau halaman saya</Link>}
           {profile?.bio && !editing && <p className="profile-bio">{profile.bio}</p>}
         </div>
       </div>
