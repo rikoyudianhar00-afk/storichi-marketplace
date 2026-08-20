@@ -419,3 +419,18 @@ select:focus-visible,
   .navbar-menu-btn svg { width: 20px; height: 20px; }
   .navbar-actions { gap: 4px; }
 }
+
+/* Compact footer typography for the Account page reference */
+.footer { font-size: 13px; }
+.footer-intro, .footer-section { padding: 22px 14px; }
+.footer h4 { font-size: 16px; margin-bottom: 9px; }
+.footer-intro p { max-width: 520px; font-size: 13px; line-height: 1.55; }
+.footer-links a { padding: 11px 8px; font-size: 13px; }
+.footer-bottom { padding: 18px 14px 24px; line-height: 1.55; font-size: 12px; }
+.footer-bottom p + p { font-size: 11px; }
+@media (max-width: 700px) {
+  .footer-intro, .footer-section { padding: 20px 12px; }
+  .footer h4 { font-size: 15px; }
+  .footer-intro p, .footer-links a { font-size: 12.5px; }
+  .footer-bottom { padding-bottom: 20px; }
+}
