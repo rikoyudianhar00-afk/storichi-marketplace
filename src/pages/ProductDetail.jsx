@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import RoleBadge from "../components/RoleBadge";
 import { StarDisplay } from "../components/Stars";
+import ProductShareMenu from "../components/ProductShareMenu";
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -153,6 +154,7 @@ export default function ProductDetail() {
               {liked ? "♥" : "♡"} <span>{likeCount}</span>
             </button>
             <span className="product-view-count">{product.view_count || 0} kunjungan</span>
+            <ProductShareMenu product={product} />
           </div>
 
           <p className="thread-item-sub" style={{ marginBottom: 16 }}>
@@ -166,7 +168,7 @@ export default function ProductDetail() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <strong style={{ fontSize: 13.5 }}>{seller.display_name}</strong>
+                    <Link to={`/toko/${seller.id}`} style={{ fontSize: 13.5, fontWeight: 800 }}>{seller.display_name}</Link>
                   <RoleBadge profile={seller} />
                 </div>
                 <StarDisplay rating={avgRating} count={reviews.length} />

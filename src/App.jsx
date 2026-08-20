@@ -6,6 +6,8 @@ import Home from "./pages/Home";
 import CategoryPage from "./pages/CategoryPage";
 import GroupPage from "./pages/GroupPage";
 import SearchPage from "./pages/SearchPage";
+import ShopPage from "./pages/ShopPage";
+import ManageAds from "./pages/ManageAds";
 import ProductDetail from "./pages/ProductDetail";
 import SellProduct from "./pages/SellProduct";
 import MyProducts from "./pages/MyProducts";
@@ -31,6 +33,7 @@ export default function App() {
         <Route path="/kategori/:slug" element={<CategoryPage />} />
         <Route path="/grup/:slug" element={<GroupPage />} />
         <Route path="/produk/:slug" element={<ProductDetail />} />
+        <Route path="/toko/:sellerId" element={<ShopPage />} />
         <Route path="/jual" element={<MyProducts />} />
         <Route path="/jual/baru" element={<SellProduct />} />
         <Route path="/jual/edit/:productId" element={<SellProduct />} />
@@ -40,6 +43,7 @@ export default function App() {
         <Route path="/rekber/:groupId" element={<RekberRoom />} />
         <Route path="/akun" element={<Account />} />
         <Route path="/kelola-kategori" element={<ManageCategories />} />
+        <Route path="/kelola-iklan" element={<ManageAds />} />
         <Route path="/favorit" element={<SimplePage title="Favorit" description="Produk favorit kamu akan muncul di sini." />} />
         <Route path="/transaksi" element={<SimplePage title="Transaksi" description="Riwayat transaksi kamu akan muncul di sini." />} />
         <Route path="/cari" element={<SearchPage />} />
