@@ -25,6 +25,11 @@ export default function SellProduct() {
   const [name, setName] = useState("");
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState("");
+  const [gameTags, setGameTags] = useState([]);
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
+  const [tagName, setTagName] = useState("");
+  const [tagImageFile, setTagImageFile] = useState(null);
+  const [tagUploading, setTagUploading] = useState(false);
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState(1);
   const [description, setDescription] = useState("");
@@ -36,14 +41,14 @@ export default function SellProduct() {
   const [cropTarget, setCropTarget] = useState(null); // { source, replaceIndex? }
 
   useEffect(() => {
-    supabase
-      .from("categories")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => {
-        setCategories(data || []);
-        if (data?.length && !category) setCategory(data[0].slug);
-      });
+    Promise.all([
+      supabase.from("categories").select("*").order("sort_order", { ascending: true }),
+      supabase.from("game_tags").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+    ]).then(([{ data: categoryData }, { data: tagData }]) => {
+      setCategories(categoryData || []);
+      setGameTags(tagData || []);
+      if (categoryData?.length && !category) setCategory(categoryData[0].slug);
+    });
   }, []);
 
   useEffect(() => {
@@ -61,6 +66,9 @@ export default function SellProduct() {
           setStock(data.stock ?? 1);
           setDescription(data.description || "");
           setImages(data.images?.length ? data.images : data.image_url ? [data.image_url] : []);
+          supabase.from("product_game_tags").select("tag_id").eq("product_id", productId).then(({ data: links }) => {
+            setSelectedTagIds((links || []).map((link) => link.tag_id));
+          });
         }
         setLoadingExisting(false);
       });
@@ -114,6 +122,62 @@ export default function SellProduct() {
     setImages((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  function pickTagImage(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const fileError = validateImageFile(file);
+    if (fileError) {
+      setError(fileError);
+      return;
+    }
+    setTagImageFile(file);
+    setError("");
+  }
+
+  async function createGameTag() {
+    if (!user) return signInWithGoogle();
+    if (!tagName.trim() || !tagImageFile) {
+      setError("Nama tag dan gambar tag wajib diisi.");
+      return;
+    }
+    setTagUploading(true);
+    setError("");
+    const path = `${user.id}/${Date.now()}-${slugify(tagName)}.jpg`;
+    const { error: uploadError } = await supabase.storage.from("game-tag-images").upload(path, tagImageFile, { upsert: false });
+    if (uploadError) {
+      setTagUploading(false);
+      setError("Gagal mengunggah gambar tag. Pastikan migrasi tag game sudah dijalankan.");
+      return;
+    }
+    const { data: publicData } = supabase.storage.from("game-tag-images").getPublicUrl(path);
+    const { data: createdTag, error: tagError } = await supabase
+      .from("game_tags")
+      .insert({ seller_id: user.id, name: tagName.trim(), image_url: publicData.publicUrl })
+      .select()
+      .single();
+    setTagUploading(false);
+    if (tagError) {
+      setError("Gagal membuat tag game.");
+      return;
+    }
+    setGameTags((prev) => [createdTag, ...prev]);
+    setSelectedTagIds((prev) => [...new Set([...prev, createdTag.id])]);
+    setTagName("");
+    setTagImageFile(null);
+  }
+
+  function toggleTag(tagId) {
+    setSelectedTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
+  }
+
+  async function saveProductTags(productId) {
+    await supabase.from("product_game_tags").delete().eq("product_id", productId);
+    if (selectedTagIds.length) {
+      await supabase.from("product_game_tags").insert(selectedTagIds.map((tagId) => ({ product_id: productId, tag_id: tagId })));
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!user) return signInWithGoogle();
@@ -139,6 +203,7 @@ export default function SellProduct() {
 
     if (productId) {
       const { error: updateError } = await supabase.from("products").update(payload).eq("id", productId);
+      if (!updateError) await saveProductTags(productId);
       setSaving(false);
       if (updateError) return setError("Gagal menyimpan perubahan.");
       navigate(`/produk/${productId}`);
@@ -148,6 +213,7 @@ export default function SellProduct() {
         .insert({ ...payload, slug: slugify(name) })
         .select()
         .single();
+      if (!insertError && data?.id) await saveProductTags(data.id);
       setSaving(false);
       if (insertError) return setError("Gagal membuat produk.");
       navigate(`/produk/${data.slug}`);
@@ -215,6 +281,41 @@ export default function SellProduct() {
             </option>
           ))}
         </select>
+
+        <div className="product-tag-manager">
+          <label className="form-label">Tag Game Bergambar <span className="field-hint">(berbeda dari kategori)</span></label>
+          <div className="product-tag-selected">
+            {selectedTagIds.length ? selectedTagIds.map((tagId) => {
+              const tag = gameTags.find((item) => item.id === tagId);
+              if (!tag) return null;
+              return (
+                <button type="button" className="product-tag-chip is-selected" key={tag.id} onClick={() => toggleTag(tag.id)}>
+                  <img src={tag.image_url} alt="" />
+                  <span>{tag.name}</span>
+                  <b aria-hidden="true">×</b>
+                </button>
+              );
+            }) : <span className="field-hint">Belum ada tag game dipilih.</span>}
+          </div>
+          <div className="product-tag-options">
+            {gameTags.filter((tag) => !selectedTagIds.includes(tag.id)).map((tag) => (
+              <button type="button" className="product-tag-chip" key={tag.id} onClick={() => toggleTag(tag.id)}>
+                <img src={tag.image_url} alt="" />
+                <span>{tag.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="product-tag-create-row">
+            <input value={tagName} onChange={(e) => setTagName(e.target.value)} placeholder="Nama tag, contoh Mobile Legends" />
+            <label className="product-tag-file-btn">
+              {tagImageFile ? "Gambar siap" : "Pilih gambar"}
+              <input type="file" accept="image/*" onChange={pickTagImage} hidden />
+            </label>
+            <button type="button" className="btn btn-outline" onClick={createGameTag} disabled={tagUploading}>
+              {tagUploading ? "..." : "Tambah tag"}
+            </button>
+          </div>
+        </div>
 
         <div className="form-row-2">
           <div>

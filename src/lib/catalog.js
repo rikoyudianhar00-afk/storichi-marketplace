@@ -12,20 +12,33 @@ export const PRODUCT_SORTS = {
 
 export async function enrichProducts(products = []) {
   const sellerIds = [...new Set(products.map((product) => product.seller_id).filter(Boolean))];
-  if (!sellerIds.length) return products.map((product) => ({ ...product, rating: 0, rating_count: 0 }));
-
-  const [{ data: sellers }, { data: reviews }] = await Promise.all([
-    supabase.from("profiles").select("id, display_name, avatar_url, bio, is_verified, is_owner").in("id", sellerIds),
-    supabase.from("seller_reviews").select("seller_id, rating").in("seller_id", sellerIds),
+  const productIds = products.map((product) => product.id).filter(Boolean);
+  const [sellerResult, reviewResult, tagResult] = await Promise.all([
+    sellerIds.length
+      ? supabase.from("profiles").select("id, display_name, avatar_url, bio, is_verified, is_owner").in("id", sellerIds)
+      : Promise.resolve({ data: [] }),
+    sellerIds.length
+      ? supabase.from("seller_reviews").select("seller_id, rating").in("seller_id", sellerIds)
+      : Promise.resolve({ data: [] }),
+    productIds.length
+      ? supabase.from("product_game_tags").select("product_id, game_tags(id, name, image_url)").in("product_id", productIds)
+      : Promise.resolve({ data: [] }),
   ]);
 
-  const sellerMap = new Map((sellers || []).map((seller) => [seller.id, seller]));
+  const sellerMap = new Map((sellerResult.data || []).map((seller) => [seller.id, seller]));
   const ratingMap = new Map();
-  (reviews || []).forEach((review) => {
+  (reviewResult.data || []).forEach((review) => {
     const current = ratingMap.get(review.seller_id) || { total: 0, count: 0 };
     current.total += Number(review.rating) || 0;
     current.count += 1;
     ratingMap.set(review.seller_id, current);
+  });
+  const tagMap = new Map();
+  (tagResult.data || []).forEach((link) => {
+    if (!link.game_tags) return;
+    const current = tagMap.get(link.product_id) || [];
+    current.push(link.game_tags);
+    tagMap.set(link.product_id, current);
   });
 
   return products.map((product) => {
@@ -35,6 +48,7 @@ export async function enrichProducts(products = []) {
       seller: sellerMap.get(product.seller_id) || null,
       rating: ratingData.count ? ratingData.total / ratingData.count : 0,
       rating_count: ratingData.count,
+      game_tags: tagMap.get(product.id) || [],
     };
   });
 }

@@ -661,3 +661,21 @@
 @media (prefers-reduced-motion: reduce) {
   .category-door-art, .corridor-hero-icon, .group-category-chip-icon, .product-detail-main-img, .product-detail-thumb { transition: none; }
 }
+
+/* ---------- Product image game tags ---------- */
+.product-tag-manager { display: grid; gap: 9px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-muted, #f7f8fc); }
+.product-tag-manager .form-label { margin: 0; }
+.field-hint { color: var(--ink-500); font-size: 11px; font-weight: 500; }
+.product-tag-selected, .product-tag-options { display: flex; flex-wrap: wrap; gap: 7px; min-height: 24px; }
+.product-tag-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink-700); font-size: 11px; font-weight: 700; }
+.product-tag-chip.is-selected { border-color: var(--blue-600); background: var(--blue-50); color: var(--blue-600); }
+.product-tag-chip img { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; }
+.product-tag-chip b { color: var(--accent-coral); font-size: 15px; line-height: 1; }
+.product-tag-create-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 7px; align-items: center; }
+.product-tag-create-row input { min-width: 0; }
+.product-tag-file-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--ink-700); cursor: pointer; font-size: 11px; font-weight: 700; white-space: nowrap; }
+@media (max-width: 600px) {
+  .product-tag-create-row { grid-template-columns: 1fr 1fr; }
+  .product-tag-create-row input { grid-column: 1 / -1; }
+  .product-tag-create-row .btn { width: 100%; padding-left: 8px; padding-right: 8px; }
+}

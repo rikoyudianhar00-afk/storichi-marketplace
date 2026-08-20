@@ -15,6 +15,7 @@ function formatCategoryLabel(value) {
 export function ProductCard({ product }) {
   const rating = Number(product.rating || 0);
   const categoryLabel = formatCategoryLabel(product.category);
+  const gameTags = Array.isArray(product.game_tags) ? product.game_tags.slice(0, 2) : [];
 
   return (
     <Link to={`/produk/${product.slug}`} className="product-list-card">
@@ -25,7 +26,16 @@ export function ProductCard({ product }) {
           ) : (
             <div className="product-card-thumb-fallback">{product.name?.[0] || "P"}</div>
           )}
-          <span className="product-card-ribbon">{categoryLabel}</span>
+          {gameTags.length > 0 && (
+            <span className="product-card-game-tags" aria-label="Tag game produk">
+              {gameTags.map((tag) => (
+                <span className="product-card-game-tag" key={tag.id} title={tag.name}>
+                  <img src={tag.image_url} alt={tag.name} />
+                  <span>{tag.name}</span>
+                </span>
+              ))}
+            </span>
+          )}
         </div>
       </div>
       <div className="product-list-content">

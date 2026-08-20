@@ -381,3 +381,20 @@
   .product-list-content > .product-card-price { font-size: 15px; }
   .product-card-meta { margin-top: 6px; font-size: 10.5px; }
 }
+
+/* ---------- Square product image and image-based game tags ---------- */
+.product-list-thumb-wrap { width: 132px; flex-basis: 132px; }
+.product-list-thumb { width: 100%; height: auto; min-height: 0; aspect-ratio: 1 / 1; position: relative; border-radius: 0; box-shadow: none; }
+.product-list-content { padding: 13px 15px; }
+.product-card-game-tags { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; max-width: calc(100% - 16px); }
+.product-card-game-tag { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 3px 7px 3px 3px; border: 1px solid rgba(255, 255, 255, .9); border-radius: 8px; background: rgba(255, 255, 255, .94); color: var(--navy-900); box-shadow: 0 3px 8px rgba(11, 31, 76, .24); font-size: 9px; font-weight: 800; line-height: 1.1; }
+.product-card-game-tag img { width: 22px; height: 22px; flex: 0 0 22px; border-radius: 6px; object-fit: cover; }
+.product-card-game-tag span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) {
+  .product-list-thumb-wrap { width: 96px; flex-basis: 96px; }
+  .product-list-thumb { min-height: 0; aspect-ratio: 1 / 1; }
+  .product-list-content { padding: 10px 11px; }
+  .product-card-game-tags { right: 6px; bottom: 6px; gap: 3px; max-width: calc(100% - 12px); }
+  .product-card-game-tag { gap: 4px; padding: 2px 5px 2px 2px; border-radius: 7px; font-size: 8px; }
+  .product-card-game-tag img { width: 18px; height: 18px; flex-basis: 18px; border-radius: 5px; }
+}
