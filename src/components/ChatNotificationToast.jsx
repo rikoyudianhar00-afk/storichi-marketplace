@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function ChatNotificationToast({ userId }) {
   const [toast, setToast] = useState(null);
+  const seenNotifications = useRef(new Set());
 
   useEffect(() => {
     if (!userId) {
@@ -12,6 +13,7 @@ export default function ChatNotificationToast({ userId }) {
     }
 
     let timer;
+    seenNotifications.current.clear();
     const channel = supabase
       .channel(`chat_toast_${userId}`)
       .on(
@@ -19,6 +21,9 @@ export default function ChatNotificationToast({ userId }) {
         { event: "INSERT", schema: "public", table: "chat_notifications", filter: `recipient_id=eq.${userId}` },
         async (payload) => {
           const notification = payload.new;
+          if (!notification?.id || seenNotifications.current.has(notification.id)) return;
+          seenNotifications.current.add(notification.id);
+          if (seenNotifications.current.size > 100) seenNotifications.current.delete(seenNotifications.current.values().next().value);
           const [{ data: message }, { data: thread }] = await Promise.all([
             supabase.from("chat_messages").select("content, sender_id, attachment_type").eq("id", notification.message_id).maybeSingle(),
             supabase.from("chat_threads").select("product:products(name)").eq("id", notification.thread_id).maybeSingle(),

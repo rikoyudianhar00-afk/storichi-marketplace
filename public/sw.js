@@ -2,18 +2,25 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
 self.addEventListener("push", (event) => {
-  let payload = {};
-  try { payload = event.data ? event.data.json() : {}; } catch { payload = { body: event.data?.text() || "Pesan chat baru" }; }
-  const title = payload.title || "Pesan baru di Storichi";
-  const options = {
-    body: payload.body || "Kamu menerima pesan chat baru.",
-    icon: payload.icon || "/favicon.svg",
-    badge: payload.badge || "/favicon.svg",
-    tag: payload.tag || `storichi-chat-${payload.threadId || "message"}`,
-    renotify: true,
-    data: { url: payload.url || (payload.threadId ? `/chat/${payload.threadId}` : "/chat") },
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil((async () => {
+    let payload = {};
+    try { payload = event.data ? event.data.json() : {}; } catch { payload = { body: event.data?.text() || "Pesan chat baru" }; }
+
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const hasVisibleWindow = windows.some((client) => client.visibilityState === "visible");
+    if (hasVisibleWindow) return;
+
+    const title = payload.title || "Pesan baru di Storichi";
+    const options = {
+      body: payload.body || "Kamu menerima pesan chat baru.",
+      icon: payload.icon || "/favicon.svg",
+      badge: payload.badge || "/favicon.svg",
+      tag: payload.notificationId ? `storichi-chat-${payload.notificationId}` : `storichi-chat-${payload.threadId || "message"}`,
+      renotify: false,
+      data: { url: payload.url || (payload.threadId ? `/chat/${payload.threadId}` : "/chat") },
+    };
+    await self.registration.showNotification(title, options);
+  })());
 });
 
 self.addEventListener("notificationclick", (event) => {

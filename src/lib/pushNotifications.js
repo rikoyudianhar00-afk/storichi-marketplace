@@ -13,7 +13,8 @@ export function isPushSupported() {
 
 export async function registerChatServiceWorker() {
   if (!isPushSupported()) return null;
-  return navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  return navigator.serviceWorker.ready;
 }
 
 export async function enableChatPush(userId) {
@@ -34,7 +35,8 @@ export async function enableChatPush(userId) {
     }
 
     const json = subscription.toJSON();
-  const { error } = await supabase.from("push_subscriptions").upsert({
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return { ok: false, message: "Subscription browser tidak lengkap. Hapus izin notifikasi lalu aktifkan kembali." };
+    const { error } = await supabase.from("push_subscriptions").upsert({
     user_id: userId,
     endpoint: json.endpoint,
     subscription: json,
