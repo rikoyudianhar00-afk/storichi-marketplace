@@ -21,6 +21,9 @@ export default function ImageLightbox({ src, alt = "Gambar", open, onClose }) {
   const pointersRef = useRef(new Map());
   const gestureRef = useRef(null);
   const movedRef = useRef(false);
+  const stageRef = useRef(null);
+  const imageRef = useRef(null);
+  const historyEntryRef = useRef(false);
 
   const onCloseRef = useRef(onClose);
 
@@ -38,19 +41,50 @@ export default function ImageLightbox({ src, alt = "Gambar", open, onClose }) {
 
     const previousOverflow = document.body.style.overflow;
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") onCloseRef.current();
+      if (event.key === "Escape") requestClose();
     };
+    const handlePopState = () => {
+      if (!historyEntryRef.current) return;
+      historyEntryRef.current = false;
+      onCloseRef.current();
+    };
+    if (!historyEntryRef.current) {
+      window.history.pushState({ ...(window.history.state || {}), __storichiImageLayer: true }, document.title);
+      historyEntryRef.current = true;
+    }
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("popstate", handlePopState);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("popstate", handlePopState);
       pointersRef.current.clear();
       gestureRef.current = null;
     };
   }, [open]);
 
   if (!open || !src) return null;
+
+  function requestClose() {
+    if (historyEntryRef.current) {
+      historyEntryRef.current = false;
+      window.history.back();
+    }
+    onCloseRef.current();
+  }
+
+  function clampOffset(nextOffset, nextScale = scale) {
+    const stage = stageRef.current;
+    const image = imageRef.current;
+    if (!stage || !image || !image.offsetWidth || !image.offsetHeight) return nextOffset;
+    const maxX = Math.max(0, (image.offsetWidth * nextScale - stage.clientWidth) / 2);
+    const maxY = Math.max(0, (image.offsetHeight * nextScale - stage.clientHeight) / 2);
+    return {
+      x: Math.min(maxX, Math.max(-maxX, nextOffset.x)),
+      y: Math.min(maxY, Math.max(-maxY, nextOffset.y)),
+    };
+  }
 
   function handlePointerDown(event) {
     event.preventDefault();
@@ -99,20 +133,20 @@ export default function ImageLightbox({ src, alt = "Gambar", open, onClose }) {
       const nextCenter = centerBetween(first, second);
       const nextScale = clampScale(gesture.scale * (nextDistance / Math.max(1, gesture.distance)));
       setScale(nextScale);
-      setOffset({
+      setOffset(clampOffset({
         x: gesture.offset.x + nextCenter.x - gesture.center.x,
         y: gesture.offset.y + nextCenter.y - gesture.center.y,
-      });
+      }, nextScale));
       movedRef.current = true;
       return;
     }
 
     const activePoint = nextPointers.get(gesture.pointerId || event.pointerId);
     if (points.length === 1 && activePoint && gesture.type === "pan") {
-      setOffset({
+      setOffset(clampOffset({
         x: gesture.offset.x + activePoint.x - gesture.startX,
         y: gesture.offset.y + activePoint.y - gesture.startY,
-      });
+      }));
       movedRef.current = true;
     }
   }
@@ -135,13 +169,14 @@ export default function ImageLightbox({ src, alt = "Gambar", open, onClose }) {
   }
 
   function handleStageClick(event) {
-    if (event.target === event.currentTarget && !movedRef.current) onCloseRef.current();
+    if (event.target === event.currentTarget && !movedRef.current) requestClose();
     movedRef.current = false;
   }
 
   return (
     <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="Pratinjau gambar" onClick={handleStageClick}>
       <div
+        ref={stageRef}
         className="image-lightbox-stage"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -150,6 +185,7 @@ export default function ImageLightbox({ src, alt = "Gambar", open, onClose }) {
         onClick={handleStageClick}
       >
         <img
+          ref={imageRef}
           src={src}
           alt={alt}
           draggable={false}
