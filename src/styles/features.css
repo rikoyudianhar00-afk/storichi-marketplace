@@ -627,9 +627,7 @@
 
 /* Group category marker: the icon remains unchanged, only receives a subtle spaced outline. */
 .category-tile-icon-wrap, .category-tile-group-marker { display: inline-grid; place-items: center; border-radius: 20px; }
-.category-tile-group-marker { padding: 5px; border: 1px solid rgba(36, 84, 255, .28); background: rgba(36, 84, 255, .035); }
-.category-tile-group-label { color: var(--blue-600); font-size: 9.5px; font-weight: 700; line-height: 1.1; max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.category-tile-grouped { gap: 5px; }
+.category-tile-group-marker { border: 1px solid rgba(36, 84, 255, .28); outline: 1px solid rgba(36, 84, 255, .28); outline-offset: 5px; background: transparent; }
 
 .product-engagement-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }
 .product-like-button { border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink-700); padding: 7px 11px; font-size: 13px; font-weight: 700; }

@@ -38,14 +38,13 @@ export default function CategoryGrid() {
       {categories.map((category) => {
         const group = category.group_id ? groupMap.get(category.group_id) : null;
         return (
-          <Link key={category.id} to={group ? `/grup/${group.slug}` : `/kategori/${category.slug}`} className={`category-tile ${group ? "category-tile-grouped" : ""}`} title={group ? `Bagian dari grup ${group.label}` : category.label}>
+          <Link key={category.id} to={group ? `/grup/${group.slug}` : `/kategori/${category.slug}`} className="category-tile" title={group ? `Bagian dari grup ${group.label}` : category.label}>
             <span className={group ? "category-tile-group-marker" : "category-tile-icon-wrap"}>
               <span className="category-tile-icon category-tile-icon-img">
                 {category.image_url ? <img src={category.image_url} alt={category.label} /> : <span className="category-tile-fallback">{category.label?.[0] || "K"}</span>}
               </span>
             </span>
             <span className="category-tile-label">{category.label}</span>
-            {group && <span className="category-tile-group-label">{group.label}</span>}
           </Link>
         );
       })}
