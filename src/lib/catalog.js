@@ -17,8 +17,8 @@ export async function enrichProducts(products = []) {
     sellerIds.length
       ? supabase.from("profiles").select("id, display_name, avatar_url, bio, is_verified, is_owner").in("id", sellerIds)
       : Promise.resolve({ data: [] }),
-    sellerIds.length
-      ? supabase.from("seller_reviews").select("seller_id, rating").in("seller_id", sellerIds)
+    productIds.length
+      ? supabase.from("product_reviews").select("product_id, rating").in("product_id", productIds)
       : Promise.resolve({ data: [] }),
     productIds.length
       ? supabase.from("product_game_tags").select("product_id, game_tags(id, name, image_url)").in("product_id", productIds)
@@ -28,10 +28,10 @@ export async function enrichProducts(products = []) {
   const sellerMap = new Map((sellerResult.data || []).map((seller) => [seller.id, seller]));
   const ratingMap = new Map();
   (reviewResult.data || []).forEach((review) => {
-    const current = ratingMap.get(review.seller_id) || { total: 0, count: 0 };
+    const current = ratingMap.get(review.product_id) || { total: 0, count: 0 };
     current.total += Number(review.rating) || 0;
     current.count += 1;
-    ratingMap.set(review.seller_id, current);
+    ratingMap.set(review.product_id, current);
   });
   const tagMap = new Map();
   (tagResult.data || []).forEach((link) => {
@@ -42,7 +42,7 @@ export async function enrichProducts(products = []) {
   });
 
   return products.map((product) => {
-    const ratingData = ratingMap.get(product.seller_id) || { total: 0, count: 0 };
+    const ratingData = ratingMap.get(product.id) || { total: 0, count: 0 };
     return {
       ...product,
       seller: sellerMap.get(product.seller_id) || null,

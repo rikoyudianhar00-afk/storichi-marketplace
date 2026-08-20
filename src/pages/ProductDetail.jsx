@@ -34,9 +34,8 @@ export default function ProductDetail() {
         setWishlisted(Boolean(existingWishlist));
       }
       if (p && Number(p.stock ?? 1) <= 0) setSoldOutPopup(true);
-      if (p?.id) {
-        supabase.rpc("increment_product_view", { product_uuid: p.id });
-
+      if (p?.id && user) {
+        supabase.rpc("record_product_view", { product_uuid: p.id });
       }
       if (p?.seller_id) {
         const { data: s } = await supabase.from("profiles").select("*").eq("id", p.seller_id).single();

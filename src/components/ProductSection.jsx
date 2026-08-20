@@ -26,6 +26,14 @@ export function ProductCard({ product }) {
           ) : (
             <div className="product-card-thumb-fallback">{product.name?.[0] || "P"}</div>
           )}
+        </div>
+      </div>
+      <div className="product-list-content">
+        <div className="product-card-topline">
+          <div className="product-card-title-block">
+            <h3 className="product-card-name">{product.name}</h3>
+            <span className="product-card-category">{categoryLabel}</span>
+          </div>
           {gameTags.length > 0 && (
             <span className="product-card-game-tags" aria-label="Tag game produk">
               {gameTags.map((tag) => (
@@ -37,14 +45,13 @@ export function ProductCard({ product }) {
             </span>
           )}
         </div>
-      </div>
-      <div className="product-list-content">
-        <h3 className="product-card-name">{product.name}</h3>
-        <span className="product-card-category">{categoryLabel}</span>
         <strong className="product-card-price">{formatPrice(product.price_from)}</strong>
         <div className="product-card-meta">
           <span>{Number(product.sales_count || 0).toLocaleString("id-ID")} terjual</span>
-          <StarDisplay rating={rating} count={product.rating_count || 0} />
+          <span className="product-card-rating-stack">
+            <span className="product-card-views">{Number(product.view_count || 0).toLocaleString("id-ID")} kunjungan</span>
+            <StarDisplay rating={rating} count={product.rating_count || 0} />
+          </span>
         </div>
       </div>
     </Link>

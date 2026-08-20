@@ -485,3 +485,17 @@
 .shop-store-review-stars { display: flex; gap: 5px; justify-content: center; padding: 3px 0; }
 .shop-store-review-stars button { border: 0; padding: 2px; background: transparent; color: #cbd1dd; font-size: 29px; line-height: 1; }
 .shop-store-review-stars button.is-selected, .shop-store-review-stars button:hover { color: var(--accent-amber); transform: scale(1.06); }
+
+/* Product card: game tags in the empty top-right copy area and views above rating */
+.product-card-topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-width: 0; }
+.product-card-title-block { min-width: 0; flex: 1; }
+.product-card-topline .product-card-game-tags { position: static; flex: 0 1 auto; align-items: flex-end; max-width: 44%; margin: 0; }
+.product-card-topline .product-card-game-tag { max-width: 100%; }
+.product-card-rating-stack { min-width: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.product-card-views { color: var(--ink-500); font-size: 10px; line-height: 1.1; white-space: nowrap; }
+.product-card-rating-stack .star-display { display: inline-flex; }
+@media (max-width: 600px) {
+  .product-card-topline .product-card-game-tags { max-width: 46%; gap: 3px; }
+  .product-card-topline .product-card-game-tag { max-width: 100%; }
+  .product-card-views { font-size: 9px; }
+}
