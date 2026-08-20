@@ -23,7 +23,8 @@ import RekberRoom from "./pages/RekberRoom";
 import Account from "./pages/Account";
 import ManageCategories from "./pages/ManageCategories";
 import InfoHelp from "./pages/InfoHelp";
-import SimplePage from "./pages/SimplePage";
+import Wishlist from "./pages/Wishlist";
+import Notifications from "./pages/Notifications";
 import Transactions from "./pages/Transactions";
 import ChatNotificationToast from "./components/ChatNotificationToast";
 import { useAuth } from "./context/AuthContext";
@@ -53,7 +54,7 @@ export default function App() {
     };
   }, []);
   const location = useLocation();
-  const footerPaths = ["/", "/favorit", "/transaksi", "/rekber", "/akun"];
+  const footerPaths = ["/", "/wishlist", "/favorit", "/transaksi", "/rekber", "/akun"];
   const showFooter = footerPaths.includes(location.pathname) || location.pathname.startsWith("/rekber/");
   return (
     <>
@@ -79,7 +80,9 @@ export default function App() {
         <Route path="/kelola-beranda" element={<ManageHome />} />
         <Route path="/kelola-menu" element={<ManageNavigation />} />
         <Route path="/kelola-moderasi" element={<ManageModeration />} />
-        <Route path="/favorit" element={<SimplePage title="Favorit" description="Produk favorit kamu akan muncul di sini." />} />
+        <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/favorit" element={<Wishlist />} />
+        <Route path="/notifikasi" element={<Notifications />} />
         <Route path="/transaksi" element={<Transactions />} />
         <Route path="/cari" element={<SearchPage />} />
         <Route path="/bantuan" element={<InfoHelp />} />

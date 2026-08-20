@@ -19,7 +19,7 @@ export default function RoleBadge({ profile, size = 15 }) {
 
       {profile.is_midman && (
         <span className="badge-midman" style={{ width: size, height: size, fontSize: size }} title="Mid Man">
-          👳
+          ⚖️
         </span>
       )}
     </span>

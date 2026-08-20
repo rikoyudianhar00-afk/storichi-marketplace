@@ -17,22 +17,26 @@ export default function ProductDetail() {
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const [wishlisted, setWishlisted] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [soldOutPopup, setSoldOutPopup] = useState(false);
 
   useEffect(() => {
     async function load() {
       const { data: p } = await supabase.from("products").select("*").eq("slug", slug).single();
       setProduct(p);
-      setLikeCount(p?.like_count || 0);
+      if (p?.id) {
+        const [{ count: wishlistTotal }, { data: existingWishlist }] = await Promise.all([
+          supabase.from("product_wishlists").select("id", { count: "exact", head: true }).eq("product_id", p.id),
+          user ? supabase.from("product_wishlists").select("id").eq("product_id", p.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+        ]);
+        setWishlistCount(wishlistTotal || 0);
+        setWishlisted(Boolean(existingWishlist));
+      }
       if (p && Number(p.stock ?? 1) <= 0) setSoldOutPopup(true);
       if (p?.id) {
         supabase.rpc("increment_product_view", { product_uuid: p.id });
-        if (user) {
-          const { data: existingLike } = await supabase.from("product_likes").select("id").eq("product_id", p.id).eq("user_id", user.id).maybeSingle();
-          setLiked(Boolean(existingLike));
-        }
+
       }
       if (p?.seller_id) {
         const { data: s } = await supabase.from("profiles").select("*").eq("id", p.seller_id).single();
@@ -56,21 +60,21 @@ export default function ProductDetail() {
     ? sellerReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / sellerReviews.length
     : 0;
 
-  async function toggleLike() {
+  async function toggleWishlist() {
     if (!user) return signInWithGoogle();
     if (!product?.id) return;
-    if (liked) {
-      const { error } = await supabase.from("product_likes").delete().eq("product_id", product.id).eq("user_id", user.id);
+    if (wishlisted) {
+      const { error } = await supabase.from("product_wishlists").delete().eq("product_id", product.id).eq("user_id", user.id);
       if (!error) {
-        setLiked(false);
-        setLikeCount((count) => Math.max(0, count - 1));
+        setWishlisted(false);
+        setWishlistCount((count) => Math.max(0, count - 1));
       }
       return;
     }
-    const { error } = await supabase.from("product_likes").insert({ product_id: product.id, user_id: user.id });
+    const { error } = await supabase.from("product_wishlists").insert({ product_id: product.id, user_id: user.id });
     if (!error) {
-      setLiked(true);
-      setLikeCount((count) => count + 1);
+      setWishlisted(true);
+      setWishlistCount((count) => count + 1);
     }
   }
 
@@ -164,8 +168,8 @@ export default function ProductDetail() {
             </p>
           )}
           <div className="product-engagement-row">
-            <button type="button" className={`product-like-button ${liked ? "is-liked" : ""}`} onClick={toggleLike} aria-label={liked ? "Hapus like" : "Sukai produk"}>
-              {liked ? "♥" : "♡"} <span>{likeCount}</span>
+            <button type="button" className={`product-like-button ${wishlisted ? "is-liked" : ""}`} onClick={toggleWishlist} aria-label={wishlisted ? "Hapus dari wishlist" : "Tambah ke wishlist"}>
+              {wishlisted ? "♥" : "♡"} <span>{wishlistCount}</span>
             </button>
             <span className="product-view-count">{product.view_count || 0} kunjungan</span>
             <ProductShareMenu product={product} />

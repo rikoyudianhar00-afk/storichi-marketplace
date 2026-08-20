@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUnreadChatNotifications } from "../lib/chatNotifications";
+import { useUnreadNotifications } from "../lib/notifications";
 import { supabase } from "../lib/supabase";
 
 export default function Navbar() {
@@ -10,6 +11,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const isShopPage = location.pathname.startsWith("/toko/");
   const unreadCount = useUnreadChatNotifications(user?.id);
+  const notificationCount = useUnreadNotifications(user?.id);
   const [customLinks, setCustomLinks] = useState([]);
   const [categoryGroups, setCategoryGroups] = useState([]);
   const [drawerCategories, setDrawerCategories] = useState([]);
@@ -85,6 +87,14 @@ export default function Navbar() {
               <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </Link>
+          {user && (
+            <Link to="/notifikasi" className="icon-btn navbar-notification-link" aria-label={notificationCount ? `Notifikasi, ${notificationCount} belum dibaca` : "Notifikasi"} title="Notifikasi">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 8h18c0-1-3-1-3-8ZM10 21h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {notificationCount > 0 && <span className="navbar-notification-badge">{notificationCount > 99 ? "99+" : notificationCount}</span>}
+            </Link>
+          )}
           {user ? (
             <div className="navbar-user">
               <Link to="/chat" className="icon-btn navbar-chat-link" aria-label={unreadCount ? `Chat, ${unreadCount} pesan belum dibaca` : "Chat"}>

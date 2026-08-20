@@ -656,3 +656,45 @@ input[type="checkbox"], input[type="radio"] {
 @media (max-width: 600px) {
   .chat-thread-page { min-height: calc(var(--storichi-viewport-height, 100dvh) - 58px - 72px); height: calc(var(--storichi-viewport-height, 100dvh) - 58px - 72px); }
 }
+
+/* ---------- Wishlist, sold ribbon, and notification center ---------- */
+.seller-inventory-thumb { position: relative; overflow: hidden !important; isolation: isolate; }
+.seller-inventory-thumb > img { position: relative; z-index: 0; }
+.sold-diagonal-ribbon { position: absolute; z-index: 2; top: 50%; left: -30%; width: 160%; height: 22px; display: grid; place-items: center; transform: translateY(-50%) rotate(-45deg); background: rgba(190, 35, 48, .9); color: #fff; pointer-events: none; }
+.sold-diagonal-ribbon b { padding: 0 10px; font-size: 10px; letter-spacing: .13em; line-height: 1; }
+.wishlist-heading, .notifications-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 0 12px; }
+.wishlist-heading p, .notifications-heading p { margin: 4px 0 0; color: var(--ink-500); font-size: 12px; }
+.notifications-heart { color: var(--accent-coral); font-size: 52px; line-height: 1; }
+.wishlist-list, .notification-list { display: grid; gap: 10px; padding-bottom: 80px; }
+.wishlist-item { display: flex; align-items: stretch; gap: 8px; overflow: hidden; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow-card); }
+.wishlist-item-main { min-width: 0; flex: 1; display: flex; align-items: stretch; gap: 12px; color: inherit; text-decoration: none; }
+.wishlist-item-thumb { position: relative; width: 92px; flex: 0 0 92px; min-height: 92px; overflow: hidden; display: grid; place-items: center; background: var(--surface-muted, #f1f3f8); color: var(--blue-600); font-weight: 800; }
+.wishlist-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.wishlist-item-copy { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 10px 0; }
+.wishlist-item-copy strong { overflow: hidden; color: var(--ink-900); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.wishlist-item-copy span { color: var(--ink-500); font-size: 11px; }
+.wishlist-item-copy b { color: var(--blue-600); font-size: 13px; }
+.wishlist-remove { flex: 0 0 44px; align-self: center; margin-right: 8px; border: 0; background: transparent; color: var(--accent-coral); font-size: 24px; line-height: 1; }
+.wishlist-item.is-sold { opacity: .72; }
+.notification-item { position: relative; display: flex; align-items: flex-start; gap: 11px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: inherit; text-decoration: none; transition: background 140ms ease-out, transform 140ms ease-out; }
+.notification-item:hover { background: var(--surface-muted, #f5f7fb); transform: translateY(-1px); }
+.notification-item.is-read { opacity: .72; }
+.notification-icon { flex: 0 0 31px; width: 31px; height: 31px; display: grid; place-items: center; border-radius: 50%; background: var(--blue-50); color: var(--blue-600); font-size: 17px; font-weight: 900; }
+.notification-chat .notification-icon { background: #eaf7f5; color: var(--accent-mint); }
+.notification-copy { min-width: 0; display: grid; gap: 3px; flex: 1; }
+.notification-copy strong { font-size: 13px; }
+.notification-copy small, .notification-copy > span { color: var(--ink-500); font-size: 11.5px; line-height: 1.4; }
+.notification-copy time { color: var(--ink-400, #9aa4b6); font-size: 10px; }
+.notification-item > i { width: 7px; height: 7px; flex: 0 0 7px; margin-top: 5px; border-radius: 50%; background: var(--accent-coral); }
+@media (max-width: 600px) {
+  .wishlist-heading, .notifications-heading { padding-top: 17px; }
+  .wishlist-item-thumb { width: 78px; flex-basis: 78px; min-height: 78px; }
+  .wishlist-item-copy strong { font-size: 12px; }
+  .wishlist-remove { flex-basis: 38px; margin-right: 4px; }
+  .sold-diagonal-ribbon { height: 19px; }
+  .sold-diagonal-ribbon b { font-size: 9px; }
+}
+
+.bottom-nav-icon-wrap { position: relative; display: inline-grid; place-items: center; line-height: 1; }
+.wishlist-count-badge { position: absolute; top: -8px; right: -11px; min-width: 15px; height: 15px; padding: 0 3px; display: grid; place-items: center; border-radius: 999px; background: var(--accent-coral); color: #fff; font-size: 8px; line-height: 1; }
+.navbar-notification-link .navbar-notification-badge { top: -4px; right: -4px; }

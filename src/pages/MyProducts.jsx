@@ -160,9 +160,10 @@ export default function MyProducts() {
       ) : (
         <div className="thread-list">
           {visibleProducts.map((p) => (
-            <div key={p.id} className="thread-item">
-              <div className="thread-item-avatar" style={{ overflow: "hidden" }}>
+              <div key={p.id} className="thread-item">
+              <div className={`thread-item-avatar seller-inventory-thumb ${soldTab ? "is-sold" : ""}`}>
                 {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "📦"}
+                {soldTab && <span className="sold-diagonal-ribbon"><b>HABIS</b></span>}
               </div>
               <div style={{ flex: 1 }}>
                 <div className="thread-item-title">{p.name}</div>
