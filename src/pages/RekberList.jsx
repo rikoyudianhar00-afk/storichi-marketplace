@@ -28,7 +28,7 @@ export default function RekberList() {
     setLoading(true);
     const [{ data: memberships }, { data: pendingInvitations, error: invitationError }] = await Promise.all([
       supabase.from("rekber_members").select("group:rekber_groups(*, purchase_request:purchase_requests(thread_id))").eq("user_id", user.id),
-      supabase.from("rekber_invitations").select("*, purchase_request:purchase_requests(thread_id), buyer:profiles!rekber_invitations_buyer_id_fkey(id, display_name, avatar_url), seller:profiles!rekber_invitations_seller_id_fkey(id, display_name, avatar_url)").eq("third_party_id", user.id).in("status", ["pending", "buyer_approved", "accepted"]).order("created_at", { ascending: false }),
+      supabase.from("rekber_invitations").select("*, purchase_request:purchase_requests(thread_id), buyer:profiles!rekber_invitations_buyer_id_fkey(id, display_name, avatar_url), seller:profiles!rekber_invitations_seller_id_fkey(id, display_name, avatar_url)").eq("third_party_id", user.id).or("status.in.(buyer_approved,accepted),and(status.eq.pending,third_party_kind.in.(midman,verified))").order("created_at", { ascending: false }),
     ]);
     if (invitationError) setError("Notifikasi undangan belum dapat dimuat. Jalankan schema_v25.sql.");
     setGroups((memberships || []).map((membership) => membership.group).filter(Boolean));
