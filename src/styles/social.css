@@ -1053,3 +1053,13 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
   background: transparent;
 }
 .whisper-panel-composer .attachment-btn svg { width: 18px; height: 18px; }
+
+/* ---------- Reachable bottom of active Rekber chat ---------- */
+.chat-thread-page.is-rekber-active-chat {
+  padding-bottom: calc(82px + env(safe-area-inset-bottom)) !important;
+}
+@media (max-width: 600px) {
+  .chat-thread-page.is-rekber-active-chat {
+    padding-bottom: calc(86px + env(safe-area-inset-bottom)) !important;
+  }
+}
