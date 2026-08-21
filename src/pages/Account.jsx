@@ -134,7 +134,7 @@ export default function Account() {
     if (!window.confirm("Netralisasi akun akan membatalkan dan menghapus proses Rekber aktif atau undangan Rekber yang macet pada akun ini. Chat biasa tetap dipertahankan. Lanjutkan?")) return;
     setNeutralizing(true);
     setRecoveryMessage("");
-    const { data, error } = await supabase.rpc("neutralize_my_rekber");
+    const { data, error } = await supabase.rpc("neutralize_my_rekber", { p_scope: "account" });
     if (error) setRecoveryMessage(error.message || "Akun belum dapat dinetralkan.");
     else {
       setRecoveryMessage(`Akun berhasil dinetralkan. ${data?.closed_groups || 0} proses Rekber dan ${data?.removed_invitations || 0} undangan dibersihkan.`);
