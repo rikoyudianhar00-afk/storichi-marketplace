@@ -91,7 +91,7 @@ export default function ChatList({ archivedOnly = false }) {
 
     load();
     const channel = supabase.channel(`chat_inbox_${user.id}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, load).subscribe();
-    const requestChannel = supabase.channel(`chat_request_inbox_${user.id}`).on("postgres_changes", { event: "UPDATE", schema: "public", table: "purchase_requests" }, load).subscribe();
+    const requestChannel = supabase.channel(`chat_request_inbox_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "purchase_requests" }, load).subscribe();
     return () => {
       active = false;
       supabase.removeChannel(channel);
