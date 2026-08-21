@@ -181,7 +181,7 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
         </div>}
       </div>}
 
-      {request.status === "approved" && request.rekber_group_id && <button className="btn btn-outline btn-full" style={{ marginTop: 10 }} onClick={() => navigate(`/rekber/${request.rekber_group_id}`)}>Buka Grup Rekber</button>}
+      {request.status === "approved" && request.rekber_group_id && <p className="third-party-consent-wait" style={{ marginTop: 10 }}>✓ Pihak ketiga terhubung di chat transaksi ini. Aktivasi Rekening Bersama dilakukan oleh pihak ketiga dari halaman chat.</p>}
       {request.status === "rejected" && <p className="thread-item-sub" style={{ marginTop: 8, color: "var(--accent-coral)" }}>✕ Ditolak penjual</p>}
       {error && <p className="form-error" style={{ marginTop: 8 }}>{error}</p>}
 
