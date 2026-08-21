@@ -53,21 +53,29 @@ export default function ChatThread() {
     async function load() {
       const { data: threadData } = await supabase
         .from("chat_threads")
-        .select("*, product:products(id, slug, name, image_url, category, price_from)")
+        .select("*, product:products(id, slug, name, image_url, category, price_from, seller_id)")
         .eq("id", threadId)
         .maybeSingle();
       if (!threadData) {
         if (active) setLoading(false);
         return;
       }
-      const { data: req } = await supabase
+      let { data: req } = await supabase
         .from("purchase_requests")
-        .select("*, product:products(id, slug, name, image_url, category, price_from)")
+        .select("*, product:products(id, slug, name, image_url, category, price_from, seller_id)")
         .eq("thread_id", threadId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       const isDirectParticipant = threadData.user_a === user.id || threadData.user_b === user.id;
+      if (!req && threadData.product?.seller_id && user.id !== threadData.product.seller_id) {
+        const { data: latestBuyerMessage } = await supabase.from("chat_messages").select("sender_id, content").eq("thread_id", threadId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+        const looksLikePurchaseRequest = latestBuyerMessage?.sender_id === user.id && /mau beli|ingin beli|ingin membeli|saya beli/i.test(latestBuyerMessage.content || "");
+        if (looksLikePurchaseRequest) {
+          const { data: restoredRequest } = await supabase.from("purchase_requests").insert({ product_id: threadData.product.id, buyer_id: user.id, seller_id: threadData.product.seller_id, thread_id: threadId, status: "pending" }).select("*, product:products(id, slug, name, image_url, category, price_from, seller_id)").single();
+          req = restoredRequest || null;
+        }
+      }
       let group = null;
       if (req?.rekber_group_id) {
         const { data: membership } = await supabase
