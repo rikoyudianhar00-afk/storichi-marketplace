@@ -98,3 +98,10 @@ img {
     background-position: 0 50%;
   }
 }
+
+
+/* Consistent mobile press behavior: no blue tap flash or accidental text selection. */
+button, a, [role="button"], input, textarea, select { -webkit-tap-highlight-color: transparent; }
+button, a, [role="button"] { user-select: none; }
+button:focus:not(:focus-visible), a:focus:not(:focus-visible), [role="button"]:focus:not(:focus-visible) { outline: none; }
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible { outline: 2px solid rgba(36, 84, 255, .38); outline-offset: 2px; }

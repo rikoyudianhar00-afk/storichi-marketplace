@@ -702,8 +702,9 @@ input[type="checkbox"], input[type="radio"] {
 .chat-completed-mark { width: 76px; height: 76px; display: grid; place-items: center; flex: 0 0 auto; background: #22c55e; color: #fff; font-size: 44px; font-weight: 900; line-height: 1; clip-path: polygon(50% 0%, 59% 7%, 69% 3%, 76% 13%, 88% 12%, 90% 25%, 100% 33%, 94% 45%, 100% 56%, 91% 65%, 93% 78%, 80% 81%, 72% 93%, 61% 88%, 50% 100%, 40% 91%, 28% 96%, 22% 84%, 9% 81%, 10% 68%, 0% 59%, 6% 48%, 1% 36%, 12% 28%, 11% 15%, 24% 14%, 32% 4%, 42% 8%); filter: drop-shadow(0 8px 16px rgba(22, 101, 52, .25)); }
 .chat-thread-swipe-shell { position: relative; overflow: hidden; background: #fff; border-bottom: 1px solid var(--border); }
 .chat-thread-swipe-shell .chat-thread-row { position: relative; z-index: 1; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: transform 140ms ease-out; }
-.chat-list-completed-overlay { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(34, 197, 94, .18); color: #15803d; pointer-events: none; }
-.chat-list-completed-overlay .chat-completed-mark { width: 38px; height: 38px; font-size: 23px; }
+.chat-list-completed-overlay { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 8px; overflow: hidden; background: rgba(255, 235, 146, .62); color: #765a00; pointer-events: none; }
+.chat-list-completed-overlay::before { content: "TRANSAKSI SELESAI"; position: absolute; top: 19px; right: -42px; width: 190px; padding: 5px 0; transform: rotate(25deg); background: #f4c531; color: #5b4300; font-size: 9px; font-weight: 900; letter-spacing: .06em; text-align: center; box-shadow: 0 2px 8px rgba(121, 87, 0, .18); }
+.chat-list-completed-overlay .chat-completed-mark { width: 38px; height: 38px; font-size: 23px; background: #d7a900; color: #fff; }
 .chat-list-completed-overlay strong { font-size: 12px; }
 .chat-swipe-hint { margin: 10px 2px 0; color: var(--ink-500); font-size: 11px; text-align: center; }
 .chat-undo-bar { position: fixed; left: 50%; bottom: 82px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(420px, calc(100vw - 24px)); padding: 11px 13px; transform: translateX(-50%); border: 1px solid rgba(36, 84, 255, .16); border-radius: 14px; background: rgba(255, 255, 255, .98); box-shadow: 0 12px 32px rgba(18, 35, 91, .2); color: var(--ink-700); font-size: 12px; }
@@ -776,3 +777,86 @@ input[type="checkbox"], input[type="radio"] {
 .shop-sold-products { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); }
 .shop-sold-toolbar { margin-bottom: 10px; }
 .shop-sold-products .product-list-card { opacity: .92; }
+
+
+/* Restored Rekber participant picker and consent states. */
+.midman-picker { display: grid; gap: 10px; margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 16px; background: #fff; box-shadow: 0 10px 26px rgba(16, 39, 87, .08); }
+.midman-picker-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.midman-picker-heading strong { color: var(--ink-900); font-size: 14px; }
+.midman-picker-heading .thread-item-sub { margin: 3px 0 0; }
+.midman-picker-close { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: var(--surface-muted, #f3f5fa); color: var(--ink-700); font-size: 20px; line-height: 1; }
+.midman-search-box { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-muted, #f6f8fc); color: var(--ink-500); }
+.midman-search-box input { min-width: 0; width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink-900); font: inherit; font-size: 13px; }
+.midman-result-list { display: grid; gap: 6px; max-height: 245px; overflow-y: auto; overscroll-behavior: contain; }
+.midman-result { display: flex; align-items: center; gap: 9px; min-height: 54px; padding: 7px 8px; border: 1px solid transparent; border-radius: 12px; background: #fff; transition: background 140ms ease, border-color 140ms ease; }
+.midman-result:hover, .midman-result.is-selected { border-color: rgba(36, 84, 255, .24); background: #f3f6ff; }
+.midman-result.is-regular { opacity: .72; }
+.midman-result-avatar { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; overflow: hidden; border-radius: 50%; background: #e7edff; color: var(--blue-600); font-weight: 800; }
+.midman-result-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.midman-result-copy { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.midman-result-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-900); font-size: 12px; }
+.midman-result-copy small { color: var(--ink-500); font-size: 10px; }
+.midman-add-button { display: grid; place-items: center; width: 46px; height: 46px; flex: 0 0 46px; padding: 0; border: 0; border-radius: 50%; background: var(--blue-600); color: #fff; font-family: Arial, sans-serif; font-size: 26px; font-weight: 500; line-height: 1; }
+.midman-add-button:disabled { background: #d9deea; color: #8992a5; opacity: 1; }
+.midman-result.is-selected .midman-add-button { background: #16a46b; }
+.midman-result-empty { padding: 18px 8px; border-radius: 10px; background: var(--surface-muted, #f6f8fc); color: var(--ink-500); text-align: center; font-size: 12px; }
+.midman-picker-note { margin: 0; line-height: 1.45; }
+.midman-picker-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 3px; color: var(--ink-500); font-size: 10px; }
+.midman-picker-footer .btn { white-space: nowrap; }
+.pre-lobby-invitation-card { display: grid; gap: 8px; margin-top: 8px; padding: 10px; border: 1px solid rgba(36,84,255,.16); border-radius: 14px; background: #f7f9ff; }
+.pre-lobby-invitation-card > p { margin: 0; color: var(--ink-600, #64748b); font-size: 11px; line-height: 1.45; }
+.pre-lobby-actions { display: flex; gap: 8px; }
+.pre-lobby-actions .btn { flex: 1; }
+.third-party-preview { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 12px; background: #fff; }
+.third-party-preview-avatar { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; overflow: hidden; border-radius: 50%; background: var(--blue-50); color: var(--blue-600); font-weight: 800; }
+.third-party-preview-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.third-party-preview > span:last-child { min-width: 0; display: grid; gap: 2px; }
+.third-party-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-900); font-size: 12px; }
+.third-party-preview small { color: var(--ink-500); font-size: 10px; }
+.third-party-notice-card { max-width: 380px; }
+.third-party-notice-icon { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 8px; border-radius: 50%; background: #e9efff; color: var(--blue-600); font-size: 22px; font-weight: 800; }
+@media (max-width: 600px) { .midman-picker { padding: 10px; } .midman-picker-footer { align-items: stretch; flex-direction: column; } .midman-picker-footer > div { width: 100%; } .midman-picker-footer .btn { flex: 1; } .pre-lobby-actions { flex-direction: column; } }
+
+/* Remove browser tap flash/context-menu visual from chat controls. */
+.chat-thread-page button, .chat-thread-page a, .chat-thread-page input, .chat-thread-page textarea, .midman-picker button, .midman-picker input { -webkit-tap-highlight-color: transparent !important; }
+.chat-thread-page button:focus, .chat-thread-page a:focus { outline: none; }
+
+
+/* Active Rekber chat presentation. */
+.chat-thread-page.is-rekber-active-chat { background: #fffdf2; }
+.rekber-chat-active-strip { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #f2d36a; background: #fff3b0; color: #765a00; font-size: 11px; text-align: center; }
+.rekber-chat-active-strip strong { color: #5b4300; font-size: 12px; }
+.rekber-chat-active-strip span { line-height: 1.35; }
+.chat-request-wrap.is-rekber-active { border-color: #e7bc25; background: #fff9cf; box-shadow: 0 8px 24px rgba(180, 132, 0, .12); }
+.rekber-chat-product-flag { min-height: 0; padding: 0 12px; color: #8a6900; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-align: center; }
+.chat-request-wrap:not(.is-rekber-active) .rekber-chat-product-flag { display: none; }
+.chat-message-row.is-rekber-third-party { justify-content: center; }
+.chat-message-row.is-rekber-third-party .chat-bubble { max-width: min(82%, 520px); border: 1px solid #e7bc25; background: #fff3b0; color: #5b4300; text-align: center; }
+.chat-rekber-sender-label { display: block; margin-bottom: 4px; color: #765a00; font-size: 10px; font-weight: 800; }
+.chat-thread-page button, .chat-thread-page a, .chat-thread-page input, .chat-thread-page textarea, .midman-picker button, .midman-picker input { -webkit-tap-highlight-color: transparent !important; }
+.chat-thread-page button:focus, .chat-thread-page a:focus { outline: none; }
+@media (max-width: 600px) { .rekber-chat-active-strip { align-items: flex-start; flex-direction: column; gap: 2px; padding: 8px 10px; text-align: left; } .chat-message-row.is-rekber-third-party .chat-bubble { max-width: 90%; } }
+
+.chat-thread-page button, .chat-thread-page a, .chat-thread-page img, .chat-thread-page video, .chat-thread-page .chat-bubble, .chat-thread-row, .midman-picker button, .midman-picker input { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.chat-image-button, .chat-qris-image-button { touch-action: manipulation; }
+
+
+/* Rekber invitation notifications. */
+.rekber-list-page { padding-bottom: 100px; }
+.rekber-invitation-section, .rekber-groups-section { margin-top: 18px; }
+.rekber-list-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+.rekber-list-section-heading h2 { margin: 2px 0 0; font-size: 17px; }
+.notification-count-badge { display: grid; place-items: center; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 999px; background: var(--accent-coral); color: #fff; font-size: 11px; font-weight: 900; }
+.rekber-invitation-card { display: flex; align-items: flex-start; gap: 11px; padding: 13px; border: 1px solid rgba(36,84,255,.15); border-radius: 16px; background: #fff; box-shadow: var(--shadow-card); }
+.rekber-invitation-card + .rekber-invitation-card { margin-top: 9px; }
+.rekber-invitation-avatar { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 42px; overflow: hidden; border-radius: 50%; background: var(--blue-50); color: var(--blue-600); font-weight: 900; }
+.rekber-invitation-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rekber-invitation-copy { min-width: 0; flex: 1; display: grid; gap: 4px; }
+.rekber-invitation-copy strong { color: var(--ink-900); font-size: 13px; line-height: 1.35; }
+.rekber-invitation-copy span, .rekber-invitation-copy small { color: var(--ink-500); font-size: 11px; }
+.rekber-invitation-copy small { line-height: 1.4; }
+.rekber-invitation-actions { display: flex; gap: 7px; margin-top: 5px; }
+.rekber-invitation-actions .btn { flex: 1; }
+.rekber-invitation-error { margin-top: 12px; }
+.third-party-consent-wait { margin: 0; padding: 9px 10px; border-radius: 10px; background: #eefbf5; color: #16815a; font-size: 11px; }
+@media (max-width: 600px) { .rekber-invitation-card { padding: 11px; } .rekber-invitation-actions { flex-direction: column; } }

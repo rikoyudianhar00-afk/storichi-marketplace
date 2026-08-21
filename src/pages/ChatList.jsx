@@ -41,12 +41,14 @@ export default function ChatList({ archivedOnly = false }) {
     let active = true;
 
     async function load() {
-      const { data: rawThreads } = await supabase
-        .from("chat_threads")
-        .select("*, product:products(name, image_url)")
-        .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
-        .order("created_at", { ascending: false });
-      const list = rawThreads || [];
+      const [{ data: directThreads }, { data: rekberMemberships }] = await Promise.all([
+        supabase.from("chat_threads").select("*, product:products(name, image_url)").or(`user_a.eq.${user.id},user_b.eq.${user.id}`).order("created_at", { ascending: false }),
+        supabase.from("rekber_members").select("group:rekber_groups(id, status, purchase_request:purchase_requests(thread_id))").eq("user_id", user.id),
+      ]);
+      const rekberThreadIds = (rekberMemberships || []).map((membership) => membership.group?.purchase_request?.thread_id).filter(Boolean);
+      const { data: rekberThreads } = rekberThreadIds.length ? await supabase.from("chat_threads").select("*, product:products(name, image_url)").in("id", rekberThreadIds) : { data: [] };
+      const threadMap = new Map([...(directThreads || []), ...(rekberThreads || [])].map((thread) => [thread.id, thread]));
+      const list = [...threadMap.values()];
       const ids = list.map((thread) => thread.id);
       if (!ids.length) {
         if (active) { setThreads([]); setLoading(false); }

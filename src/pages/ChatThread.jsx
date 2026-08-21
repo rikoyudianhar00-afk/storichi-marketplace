@@ -18,6 +18,7 @@ export default function ChatThread() {
   const { user, profile: currentProfile, refreshProfile } = useAuth();
   const [thread, setThread] = useState(null);
   const [participant, setParticipant] = useState(null);
+  const [rekberGroup, setRekberGroup] = useState(null);
   const [messages, setMessages] = useState([]);
   const [request, setRequest] = useState(null);
   const [text, setText] = useState("");
@@ -55,20 +56,45 @@ export default function ChatThread() {
         .select("*, product:products(id, slug, name, image_url, category, price_from)")
         .eq("id", threadId)
         .maybeSingle();
-      if (!threadData || (threadData.user_a !== user.id && threadData.user_b !== user.id)) {
+      if (!threadData) {
         if (active) setLoading(false);
         return;
       }
-      const participantId = threadData.user_a === user.id ? threadData.user_b : threadData.user_a;
-      const [{ data: msgs }, { data: req }, { data: profile }] = await Promise.all([
+      const { data: req } = await supabase
+        .from("purchase_requests")
+        .select("*, product:products(id, slug, name, image_url, category, price_from)")
+        .eq("thread_id", threadId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const isDirectParticipant = threadData.user_a === user.id || threadData.user_b === user.id;
+      let group = null;
+      if (req?.rekber_group_id) {
+        const { data: membership } = await supabase
+          .from("rekber_members")
+          .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind)")
+          .eq("group_id", req.rekber_group_id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        group = membership?.group || null;
+      }
+      const isAllowedRekberParticipant = Boolean(group && group.status === "active");
+      if (!isDirectParticipant && !isAllowedRekberParticipant) {
+        if (active) setLoading(false);
+        return;
+      }
+      const participantId = isDirectParticipant
+        ? (threadData.user_a === user.id ? threadData.user_b : threadData.user_a)
+        : (req?.seller_id || threadData.user_a);
+      const [{ data: msgs }, { data: profile }] = await Promise.all([
         supabase.from("chat_messages").select("*").eq("thread_id", threadId).order("created_at", { ascending: true }),
-        supabase.from("purchase_requests").select("*, product:products(id, slug, name, image_url, category, price_from)").eq("thread_id", threadId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("profiles").select("id, display_name, avatar_url, bio, qris_url, is_verified, is_owner, is_seller").eq("id", participantId).maybeSingle(),
       ]);
       await markChatThreadRead(user.id, threadId);
       if (active) {
         setThread(threadData);
         setParticipant(profile);
+        setRekberGroup(group);
         setMessages(msgs || []);
         setRequest(req || null);
         setFinalPrice(req?.final_price || req?.product?.price_from || "");
@@ -96,6 +122,22 @@ export default function ChatThread() {
     };
   }, [threadId, user]);
 
+  useEffect(() => {
+    if (!user || !request?.rekber_group_id) {
+      setRekberGroup(null);
+      return undefined;
+    }
+    let active = true;
+    supabase
+      .from("rekber_members")
+      .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind)")
+      .eq("group_id", request.rekber_group_id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (active) setRekberGroup(data?.group || null); });
+    return () => { active = false; };
+  }, [request?.rekber_group_id, user?.id]);
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   function openLightbox(url) {
@@ -106,6 +148,8 @@ export default function ChatThread() {
     setLightboxUrl(null);
   }
 
+  const isActiveRekber = Boolean(rekberGroup && rekberGroup.status === "active");
+  const isRekberThirdParty = Boolean(isActiveRekber && user?.id === rekberGroup?.third_party_id);
   const isBuyer = Boolean(request && user?.id === request.buyer_id);
   const isSeller = Boolean(request && user?.id === request.seller_id);
   const isDirect = request?.purchase_mode === "direct";
@@ -313,7 +357,7 @@ export default function ChatThread() {
   if (!thread) return <main className="container empty-state"><p>Percakapan tidak ditemukan.</p></main>;
 
   return (
-    <main className="chat-thread-page">
+    <main className={`chat-thread-page ${isActiveRekber ? "is-rekber-active-chat" : ""}`}>
       {chatCompleted && <div className={`chat-completed-overlay ${completedHistoryRevealed ? "is-revealed" : ""}`} aria-label="Transaksi selesai dan terkunci">
         {!completedHistoryRevealed ? <>
           <div className="chat-completed-mark" aria-hidden="true">✓</div>
@@ -326,6 +370,8 @@ export default function ChatThread() {
         </> : <div className="completed-history-revealed-bar"><span className="chat-completed-mini-mark" aria-hidden="true">✓</span><strong>Transaksi selesai</strong><span>Riwayat dapat dibaca</span></div>}
       </div>}
 
+      {isActiveRekber && <div className="rekber-chat-active-strip" role="status"><strong>Rekber aktif</strong><span>Pembeli, penjual, dan {rekberGroup.third_party_kind === "midman" ? "⚖️ Midman" : "pihak ketiga"} berada di chat ini.</span></div>}
+
       <header className="chat-conversation-header">
         <Link to="/chat" className="chat-back-button" aria-label="Kembali ke daftar chat">←</Link>
         <Link to={`/toko/${participant?.id || ""}`} className="chat-conversation-avatar" aria-label={`Buka toko ${participant?.display_name || "pengguna"}`} title="Buka toko pengguna">{participant?.avatar_url ? <img src={participant.avatar_url} alt="" /> : <span>{participant?.display_name?.[0] || "U"}</span>}</Link>
@@ -333,19 +379,19 @@ export default function ChatThread() {
         <span className="chat-online-dot" title="Percakapan aman" />
       </header>
 
-      {request && <div className={`chat-request-wrap ${productCollapsed ? "is-collapsed" : ""}`}>
+      {request && <div className={`chat-request-wrap ${productCollapsed ? "is-collapsed" : ""} ${isActiveRekber ? "is-rekber-active" : ""}`}>
         <button type="button" className="chat-product-collapse" onClick={() => setProductCollapsed((value) => !value)} aria-expanded={!productCollapsed}>
           <span>{productCollapsed ? "Produk yang dibeli" : "Perkecil kartu produk"}</span><span aria-hidden="true">{productCollapsed ? "⌄" : "⌃"}</span>
         </button>
-        {!productCollapsed && <PurchaseRequestCard request={{ ...request, product: request.product || thread.product }} isSeller={isSeller} currentUserId={user.id} onUpdate={setRequest} />}
+        {!productCollapsed && <><div className="rekber-chat-product-flag">{isActiveRekber ? "REKBER AKTIF" : ""}</div><PurchaseRequestCard request={{ ...request, product: request.product || thread.product }} isSeller={isSeller} currentUserId={user.id} onUpdate={setRequest} /></>}
         {productCollapsed && <Link to={`/produk/${request.product?.slug || thread.product?.slug || ""}`} className="chat-product-collapsed-title">{request.product?.name || thread.product?.name || "Produk"}</Link>}
       </div>}
 
       <div className="chat-messages" aria-live="polite">
         <div className="chat-day-label">Percakapan Storichi</div>
         {messages.map((message) => (
-          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
-            <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""} ${message.attachment_type === "system" ? "chat-system-bubble" : ""}`}>
+          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${isActiveRekber && (message.sender_id === rekberGroup?.midman_id || message.sender_id === rekberGroup?.third_party_id) ? "is-rekber-third-party" : ""} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
+            <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""} ${message.attachment_type === "system" ? "chat-system-bubble" : ""}`}>{isActiveRekber && (message.sender_id === rekberGroup?.midman_id || message.sender_id === rekberGroup?.third_party_id) && <small className="chat-rekber-sender-label">⚖️ {isRekberThirdParty && message.sender_id === user.id ? "Kamu · Pihak ketiga" : "Midman / Pihak ketiga"}</small>}
               {message.attachment_type === "qris" && message.attachment_url ? (
                 <div className="chat-qris-card">
                   <strong>QRIS dari {message.sender_id === user.id ? (currentProfile?.display_name || "Penjual") : (participant?.display_name || "Penjual")}</strong>

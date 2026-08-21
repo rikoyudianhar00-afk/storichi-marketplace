@@ -15,7 +15,7 @@ const WORKFLOW_LABELS = {
 };
 
 function roleLabel(role) {
-  return role === "buyer" ? "Pembeli" : role === "seller" ? "Penjual" : role === "midman" ? "Midman" : "Peserta";
+  return role === "buyer" ? "Pembeli" : role === "seller" ? "Penjual" : role === "midman" ? "Midman" : role === "third_party" ? "Pihak ketiga" : "Peserta";
 }
 
 export default function RekberRoom() {
@@ -34,7 +34,7 @@ export default function RekberRoom() {
   const [reviewComment, setReviewComment] = useState("");
   const bottomRef = useRef(null);
 
-  const isMidman = group?.midman_id === user?.id;
+  const isEscrowOperator = group?.midman_id === user?.id || group?.third_party_id === user?.id;
   const isCreator = group?.created_by === user?.id;
 
   useEffect(() => {
@@ -130,21 +130,21 @@ export default function RekberRoom() {
 
       <section className="rekber-workflow-card">
         <div className="rekber-workflow-heading"><div><span className="section-kicker">Rekber 3 pihak</span><h2>Alur penyerahan aman</h2></div><strong>{WORKFLOW_LABELS[workflowStatus] || workflowStatus}</strong></div>
-        <p className="rekber-workflow-note">Pembeli menyerahkan dana dan penjual menyerahkan item kepada midman. Setelah keduanya dikonfirmasi, midman melepas item kepada pembeli dan dana kepada penjual.</p>
+        <p className="rekber-workflow-note">Pembeli menyerahkan dana dan penjual menyerahkan item kepada pihak ketiga. Setelah keduanya dikonfirmasi, pihak ketiga melepas item kepada pembeli dan dana kepada penjual.</p>
         <div className="rekber-role-grid">
           {members.map((member) => <div key={member.id} className={`rekber-role-card ${member.role}`}><strong>{roleLabel(member.role)}</strong><span>{member.profile?.display_name || "Pengguna"}</span>{member.profile?.is_midman && <RoleBadge profile={member.profile} />}</div>)}
         </div>
-        {isMidman && active && (
+        {isEscrowOperator && active && (
           <div className="rekber-midman-actions">
-            <p className="thread-item-sub">Kontrol Midman</p>
+            <p className="thread-item-sub">Kontrol pihak ketiga</p>
             <div className="rekber-action-grid">
-              {group.funds_status !== "held" && <button className="btn btn-outline" disabled={workflowBusy} onClick={() => updateWorkflow("confirm_funds")}>Konfirmasi dana dipegang</button>}
-              {group.item_status !== "held" && <button className="btn btn-outline" disabled={workflowBusy} onClick={() => updateWorkflow("confirm_item")}>Konfirmasi item dipegang</button>}
+              {group.funds_status !== "held" && <button className="btn btn-outline" disabled={workflowBusy} onClick={() => updateWorkflow("confirm_funds")}>Konfirmasi dana dipegang pihak ketiga</button>}
+              {group.item_status !== "held" && <button className="btn btn-outline" disabled={workflowBusy} onClick={() => updateWorkflow("confirm_item")}>Konfirmasi item dipegang pihak ketiga</button>}
               {group.funds_status === "held" && group.item_status === "held" && <button className="btn btn-primary" disabled={workflowBusy} onClick={() => updateWorkflow("release")}>Lepaskan dana & item</button>}
             </div>
           </div>
         )}
-        <div className="rekber-status-lines"><span>Dana: <b>{group.funds_status === "held" ? "Dipegang midman" : "Menunggu konfirmasi"}</b></span><span>Item: <b>{group.item_status === "held" ? "Dipegang midman" : "Menunggu konfirmasi"}</b></span></div>
+        <div className="rekber-status-lines"><span>Dana: <b>{group.funds_status === "held" ? "Dipegang pihak ketiga" : "Menunggu konfirmasi"}</b></span><span>Item: <b>{group.item_status === "held" ? "Dipegang pihak ketiga" : "Menunggu konfirmasi"}</b></span></div>
         {workflowError && <p className="form-error">{workflowError}</p>}
       </section>
 
@@ -152,7 +152,7 @@ export default function RekberRoom() {
 
       <div className="chat-messages">
         <div className="chat-day-label">Chat Rekber</div>
-        {messages.map((message) => <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"}`}><div className="chat-bubble">{message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <img src={message.attachment_url} alt="Lampiran pesan" className="chat-attachment-media" />) : <span>{message.content}</span>}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div></div>)}
+        {messages.map((message) => { const isThirdPartyMessage = message.sender_id === group.midman_id || message.sender_id === group.third_party_id; return <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${isThirdPartyMessage ? "is-rekber-third-party" : ""}`}><div className="chat-bubble">{isThirdPartyMessage && <small className="chat-rekber-sender-label">⚖️ {message.sender_id === user.id ? "Kamu · Pihak ketiga" : "Midman / Pihak ketiga"}</small>}{message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <img src={message.attachment_url} alt="Lampiran pesan" className="chat-attachment-media" />) : <span>{message.content}</span>}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div></div>; })}
         <div ref={bottomRef} />
       </div>
       {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
