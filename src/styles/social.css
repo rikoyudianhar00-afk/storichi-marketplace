@@ -1026,3 +1026,30 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
   .chat-message-row.is-rekber-third-party .chat-message-avatar-top { width: 28px; height: 28px; flex-basis: 28px; }
   .chat-thread-page { padding-bottom: 0 !important; }
 }
+
+/* ---------- Rekber composer stays in the main three-party flow ---------- */
+.chat-thread-page.is-rekber-active-chat .chat-composer-shell,
+.chat-thread-page.is-rekber-active-chat .chat-input-bar {
+  position: static !important;
+  bottom: auto !important;
+  z-index: auto !important;
+}
+.chat-thread-page.is-rekber-active-chat .chat-composer-shell {
+  width: min(100%, 752px);
+  margin: 0 auto;
+}
+.chat-thread-page.is-rekber-active-chat .chat-input-bar {
+  width: 100%;
+  box-shadow: none;
+}
+.whisper-panel-composer { align-items: center; }
+.whisper-panel-composer .attachment-btn {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.whisper-panel-composer .attachment-btn svg { width: 18px; height: 18px; }

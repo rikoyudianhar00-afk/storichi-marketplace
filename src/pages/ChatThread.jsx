@@ -609,6 +609,7 @@ export default function ChatThread() {
           }) : <p className="whisper-empty">Belum ada pesan whispering.</p>}
         </div>
         <form className="whisper-panel-composer" onSubmit={(event) => { event.preventDefault(); sendWhisperText(target, textValue, setTextValue); }}>
+          <AttachmentButton userId={user.id} onUploaded={(attachment) => sendWhisperAttachment(target, attachment)} disabled={chatCompleted} />
           <input value={textValue} onChange={(event) => setTextValue?.(event.target.value)} placeholder={`Pesan untuk ${title}`} maxLength={2000} disabled={chatCompleted} aria-label={`Pesan whisper untuk ${title}`} />
           <button type="submit" className="whisper-panel-send" disabled={chatCompleted || !textValue.trim()} aria-label={`Kirim pesan ke ${title}`}>Kirim</button>
         </form>
@@ -666,6 +667,16 @@ export default function ChatThread() {
             {!isMidmanMessage && message.sender_id === user.id && <span className="chat-message-avatar chat-message-avatar-right" aria-hidden="true">{messageProfile?.avatar_url ? <img src={messageProfile.avatar_url} alt="" /> : <span>{messageProfile?.display_name?.[0] || "U"}</span>}</span>}
           </div>;
         })}
+      </div>
+
+      {moderationNotice && <div className="chat-moderation-warning" role="alert">{moderationNotice}</div>}
+      {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
+      <div className={`chat-composer-shell ${chatLocked ? "is-locked" : ""}`}>
+        <form className="chat-input-bar" onSubmit={sendMessage}>
+          <AttachmentButton userId={user.id} onUploaded={sendAttachment} disabled={chatLocked} />
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder={chatLocked ? "Beri rating sebelum chat..." : "Tulis pesan..."} aria-label="Tulis pesan" disabled={chatLocked} />
+          <button type="submit" className="chat-send-button" disabled={chatLocked || !text.trim()} aria-label="Kirim pesan">↑</button>
+        </form>
       </div>
 
       {isWhispering && <section className={`whisper-overlay ${isRekberThirdParty ? "whisper-overlay-third-party" : "whisper-overlay-party"}`} aria-label="Layer whisper Rekber" aria-live="polite">
@@ -753,15 +764,6 @@ export default function ChatThread() {
         </div>
       )}
 
-      {moderationNotice && <div className="chat-moderation-warning" role="alert">{moderationNotice}</div>}
-      {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
-      <div className={`chat-composer-shell ${chatLocked ? "is-locked" : ""}`}>
-        <form className="chat-input-bar" onSubmit={sendMessage}>
-          <AttachmentButton userId={user.id} onUploaded={sendAttachment} disabled={chatLocked} />
-          <input value={text} onChange={(e) => setText(e.target.value)} placeholder={chatLocked ? "Beri rating sebelum chat..." : "Tulis pesan..."} aria-label="Tulis pesan" disabled={chatLocked} />
-          <button type="submit" className="chat-send-button" disabled={chatLocked || !text.trim()} aria-label="Kirim pesan">↑</button>
-        </form>
-      </div>
     </main>
   );
 }
