@@ -15,6 +15,10 @@ export default function Account() {
   const [saving, setSaving] = useState(false);
   const [cropSource, setCropSource] = useState(null);
   const [imageError, setImageError] = useState("");
+  const [qrisFile, setQrisFile] = useState(null);
+  const [qrisSaving, setQrisSaving] = useState(false);
+  const [neutralizing, setNeutralizing] = useState(false);
+  const [recoveryMessage, setRecoveryMessage] = useState("");
 
   const [tagEmail, setTagEmail] = useState("");
   const [tagType, setTagType] = useState("is_verified");
@@ -75,6 +79,68 @@ export default function Account() {
       setEditing(false);
     }
     setSaving(false);
+  }
+
+  function handlePickQris(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const fileError = validateImageFile(file);
+    if (fileError) {
+      setImageError(fileError);
+      return;
+    }
+    setImageError("");
+    setQrisFile(file);
+  }
+
+  async function saveQris() {
+    if (!qrisFile) return;
+    setQrisSaving(true);
+    setImageError("");
+    const extension = qrisFile.type === "image/png" ? "png" : "jpg";
+    const path = `${user.id}/qris-account-${Date.now()}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from("chat-attachments").upload(path, qrisFile, { contentType: qrisFile.type, upsert: false });
+    if (uploadError) {
+      setImageError(uploadError.message || "QRIS gagal diunggah.");
+      setQrisSaving(false);
+      return;
+    }
+    const { data: publicData } = supabase.storage.from("chat-attachments").getPublicUrl(path);
+    const { error: profileError } = await supabase.from("profiles").update({ qris_url: publicData.publicUrl, qris_updated_at: new Date().toISOString() }).eq("id", user.id);
+    if (profileError) setImageError(profileError.message || "QRIS gagal disimpan.");
+    else {
+      setQrisFile(null);
+      setRecoveryMessage("QRIS berhasil diperbarui.");
+      refreshProfile?.();
+    }
+    setQrisSaving(false);
+  }
+
+  async function removeQris() {
+    if (!window.confirm("Hapus QRIS Seller dari akun ini?")) return;
+    setQrisSaving(true);
+    const { error } = await supabase.from("profiles").update({ qris_url: null, qris_updated_at: new Date().toISOString() }).eq("id", user.id);
+    if (error) setImageError(error.message || "QRIS gagal dihapus.");
+    else {
+      setQrisFile(null);
+      setRecoveryMessage("QRIS berhasil dihapus dari akun.");
+      refreshProfile?.();
+    }
+    setQrisSaving(false);
+  }
+
+  async function neutralizeAccount() {
+    if (!window.confirm("Netralisasi akun akan membatalkan dan menghapus proses Rekber aktif atau undangan Rekber yang macet pada akun ini. Chat biasa tetap dipertahankan. Lanjutkan?")) return;
+    setNeutralizing(true);
+    setRecoveryMessage("");
+    const { data, error } = await supabase.rpc("neutralize_my_rekber");
+    if (error) setRecoveryMessage(error.message || "Akun belum dapat dinetralkan.");
+    else {
+      setRecoveryMessage(`Akun berhasil dinetralkan. ${data?.closed_groups || 0} proses Rekber dan ${data?.removed_invitations || 0} undangan dibersihkan.`);
+      refreshProfile?.();
+    }
+    setNeutralizing(false);
   }
 
   async function assignTag(e) {
@@ -164,6 +230,19 @@ export default function Account() {
           <span>🤝 Grup Rekber</span>
         </Link>
       </div>
+
+      <section className="account-qris-card" aria-labelledby="account-qris-title">
+        <div className="account-section-heading"><div><h3 id="account-qris-title">QRIS Seller</h3><p>Ganti gambar QRIS yang akan dipakai saat transaksi.</p></div><span className="account-qris-status">{profile?.qris_url ? "Tersimpan" : "Belum ada"}</span></div>
+        {profile?.qris_url ? <button type="button" className="account-qris-preview-button" onClick={() => window.open(profile.qris_url, "_blank", "noopener,noreferrer")} aria-label="Buka QRIS tersimpan"><img src={profile.qris_url} alt="QRIS Seller tersimpan" /></button> : <div className="account-qris-empty">Belum ada gambar QRIS Seller.</div>}
+        <div className="account-qris-actions"><label className="btn btn-outline account-file-button">{qrisFile ? "Gambar dipilih" : profile?.qris_url ? "Pilih QRIS baru" : "Upload QRIS"}<input type="file" accept="image/*" hidden onChange={handlePickQris} disabled={qrisSaving} /></label><button type="button" className="btn btn-primary" onClick={saveQris} disabled={!qrisFile || qrisSaving}>{qrisSaving ? "Menyimpan..." : "Simpan QRIS"}</button>{profile?.qris_url && <button type="button" className="btn btn-outline account-danger-button" onClick={removeQris} disabled={qrisSaving}>Hapus</button>}</div>
+        <small>Maksimal 5 MB. QRIS baru langsung dipakai pada transaksi berikutnya.</small>
+      </section>
+
+      <section className="account-recovery-card" aria-labelledby="account-recovery-title">
+        <div className="account-section-heading"><div><h3 id="account-recovery-title">Netralisasi Akun</h3><p>Gunakan jika akun tersangkut pada Rekber yang macet. Chat biasa tetap dipertahankan.</p></div><span className="account-recovery-icon">↻</span></div>
+        <button type="button" className="btn btn-outline account-danger-button" onClick={neutralizeAccount} disabled={neutralizing}>{neutralizing ? "Menetralkan..." : "Netralisasi Akun"}</button>
+        {recoveryMessage && <p className="account-recovery-message" role="status">{recoveryMessage}</p>}
+      </section>
 
       {profile?.is_owner && (
         <div className="owner-panel">
