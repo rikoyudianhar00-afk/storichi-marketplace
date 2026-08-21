@@ -176,7 +176,7 @@ export default function ChatThread() {
   const isDirect = request?.purchase_mode === "direct";
   const waitingForBuyerRating = isDirect && isBuyer && request?.rating_requested_at && !request?.buyer_rating;
   const sellerCanSendQris = isDirect && isSeller && request?.status === "approved" && !request?.qris_sent_at && !request?.buyer_rating;
-  const sellerCanSendRekberQris = isActiveRekber && isSeller && !rekberGroup?.qris_to_third_party_sent_at;
+  const sellerCanSendRekberQris = isActiveRekber && Boolean(rekberGroup?.activated_at) && isSeller && !rekberGroup?.qris_to_third_party_sent_at;
   const sellerCanRequestRating = isDirect && isSeller && request?.status === "approved" && request?.qris_sent_at && !request?.rating_requested_at && !request?.buyer_rating;
   const sellerCanComplete = isDirect && isSeller && request?.status === "approved" && Boolean(request?.buyer_rating);
   const chatCompleted = request?.status === "completed";
@@ -185,7 +185,7 @@ export default function ChatThread() {
   const sellerWhisperMessages = messages.filter((message) => message.visibility === "seller_whisper");
   const buyerWhisperMessages = messages.filter((message) => message.visibility === "buyer_whisper");
   const mainChatMessages = messages.filter((message) => !message.visibility || message.visibility === "main");
-  const isWhispering = Boolean(isActiveRekber || isRekberCompleted);
+  const isWhispering = Boolean((isActiveRekber && rekberGroup?.activated_at) || isRekberCompleted);
 
   useEffect(() => {
     if (!chatCompleted) {
@@ -276,7 +276,7 @@ export default function ChatThread() {
     }
     setChatError("");
     setText("");
-    const visibility = isActiveRekber ? (isRekberThirdParty ? `${thirdPartyTarget}_whisper` : `${isBuyer ? "buyer" : "seller"}_whisper`) : "main";
+    const visibility = isWhispering ? (isRekberThirdParty ? `${thirdPartyTarget}_whisper` : `${isBuyer ? "buyer" : "seller"}_whisper`) : "main";
     const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: result.value, visibility });
     if (error) setChatError("Pesan gagal dikirim. Coba lagi.");
   }
@@ -284,7 +284,7 @@ export default function ChatThread() {
   async function sendAttachment({ url, type, sizeBytes }) {
     if (!user || chatLocked) return;
     setChatError("");
-    const visibility = isActiveRekber ? (isRekberThirdParty ? `${thirdPartyTarget}_whisper` : `${isBuyer ? "buyer" : "seller"}_whisper`) : "main";
+    const visibility = isWhispering ? (isRekberThirdParty ? `${thirdPartyTarget}_whisper` : `${isBuyer ? "buyer" : "seller"}_whisper`) : "main";
     const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type, attachment_size_bytes: sizeBytes || null, visibility });
     if (error) setChatError("Lampiran gagal dikirim.");
   }
@@ -505,7 +505,7 @@ export default function ChatThread() {
         </> : <div className="completed-history-revealed-bar"><span className="chat-completed-mini-mark" aria-hidden="true">✓</span><strong>Transaksi selesai</strong><span>Riwayat dapat dibaca</span></div>}
       </div>}
 
-      {isActiveRekber && <div className="rekber-chat-active-strip" role="status"><strong>Rekber aktif</strong><span>Pembeli, penjual, dan {rekberGroup.third_party_kind === "midman" ? "⚖️ Midman" : "pihak ketiga"} berada di chat ini.</span></div>}
+      {isActiveRekber && <div className="rekber-chat-active-strip" role="status"><strong>{rekberGroup.activated_at ? "Rekber aktif" : "Pihak ketiga terhubung"}</strong><span>{rekberGroup.activated_at ? `Whispering aktif untuk ${rekberGroup.third_party_kind === "midman" ? "⚖️ Midman" : "pihak ketiga"}.` : `Chat normal tiga pihak. Menunggu ${rekberGroup.third_party_kind === "midman" ? "⚖️ Midman" : "pihak ketiga"} mengaktifkan rekening bersama.`}</span></div>}
 
       <header className="chat-conversation-header">
         <Link to="/chat" className="chat-back-button" aria-label="Kembali ke daftar chat">←</Link>
@@ -518,7 +518,7 @@ export default function ChatThread() {
         <button type="button" className="chat-product-collapse" onClick={() => setProductCollapsed((value) => !value)} aria-expanded={!productCollapsed}>
           <span>{productCollapsed ? "Produk yang dibeli" : "Perkecil kartu produk"}</span><span aria-hidden="true">{productCollapsed ? "⌄" : "⌃"}</span>
         </button>
-        {!productCollapsed && <><div className="rekber-chat-product-flag">{isActiveRekber ? "REKBER AKTIF" : ""}</div><PurchaseRequestCard request={{ ...request, product: request.product || thread.product }} isSeller={isSeller} currentUserId={user.id} onUpdate={setRequest} /></>}
+        {!productCollapsed && <><div className="rekber-chat-product-flag">{rekberGroup?.activated_at ? "REKBER AKTIF" : ""}</div><PurchaseRequestCard request={{ ...request, product: request.product || thread.product }} isSeller={isSeller} currentUserId={user.id} onUpdate={setRequest} /></>}
         {productCollapsed && <Link to={`/produk/${request.product?.slug || thread.product?.slug || ""}`} className="chat-product-collapsed-title">{request.product?.name || thread.product?.name || "Produk"}</Link>}
       </div>}
 
