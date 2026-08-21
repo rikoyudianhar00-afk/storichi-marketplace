@@ -184,8 +184,9 @@ export default function ChatThread() {
     setLightboxUrl(null);
   }
 
-  const isActiveRekber = Boolean(rekberGroup && rekberGroup.status === "active");
-  const isRekberThirdParty = Boolean(user?.id === rekberGroup?.third_party_id);
+  const hasJoinedThreePartyChat = Boolean(rekberGroup?.third_party_id && ["active", "completed"].includes(rekberGroup.status));
+  const isActiveRekber = Boolean(hasJoinedThreePartyChat && rekberGroup.status === "active");
+  const isRekberThirdParty = Boolean(hasJoinedThreePartyChat && user?.id === rekberGroup?.third_party_id);
   const isBuyer = Boolean(request && user?.id === request.buyer_id);
   const isSeller = Boolean(request && user?.id === request.seller_id);
   const isDirect = request?.purchase_mode === "direct";
@@ -653,7 +654,7 @@ export default function ChatThread() {
       </div>}
 
       <div className="chat-messages" aria-live="polite">
-        <div className="chat-day-label">Percakapan tiga pihak</div>
+        <div className="chat-day-label">{hasJoinedThreePartyChat ? "Percakapan tiga pihak" : "Percakapan transaksi"}</div>
         {mainChatMessages.map((message) => {
           const isMidmanMessage = !isRekberThirdParty && message.sender_id === rekberGroup?.third_party_id;
           const messageProfile = message.sender_id === user.id ? currentProfile : (message.sender_id === rekberGroup?.third_party_id ? rekberThirdPartyProfile : participant);
