@@ -26,25 +26,29 @@ export default function Transactions() {
     }
     let active = true;
     async function load() {
-      const requestSelect = "*, product:products(id, slug, name, image_url, category), buyer:profiles!purchase_requests_buyer_id_fkey(display_name), seller:profiles!purchase_requests_seller_id_fkey(id, display_name, is_seller, is_verified, is_midman, is_owner), rekber_group:rekber_groups(id, code, third_party_id, third_party_kind, buyer_id, seller_id, status)";
-      const [{ data: ownRequests }, { data: midmanGroups }] = await Promise.all([
+      const requestSelect = "*, product:products(id, slug, name, image_url, category), buyer:profiles!purchase_requests_buyer_id_fkey(id, display_name, avatar_url), seller:profiles!purchase_requests_seller_id_fkey(id, display_name, avatar_url, is_seller, is_verified, is_midman, is_owner), rekber_group:rekber_groups(id, code, third_party_id, third_party_kind, buyer_id, seller_id, status, completed_at, custody_completed_at, activated_at)";
+      const [{ data: ownRequests }, { data: completedGroups }] = await Promise.all([
         supabase.from("purchase_requests").select(requestSelect).or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`).eq("status", "completed").order("completed_at", { ascending: false }),
-        supabase.from("rekber_groups").select("purchase_request_id").eq("third_party_id", user.id).eq("status", "completed"),
+        supabase.from("rekber_groups").select("id, purchase_request_id, third_party_id, third_party_kind, buyer_id, seller_id, status, completed_at, custody_completed_at, activated_at").or(`buyer_id.eq.${user.id},seller_id.eq.${user.id},third_party_id.eq.${user.id}`).eq("status", "completed"),
       ]);
-      const midmanRequestIds = [...new Set((midmanGroups || []).map((group) => group.purchase_request_id).filter(Boolean))];
-      const { data: midmanRequests } = midmanRequestIds.length
-        ? await supabase.from("purchase_requests").select(requestSelect).in("id", midmanRequestIds).eq("status", "completed")
+      const groupRequestIds = [...new Set((completedGroups || []).map((group) => group.purchase_request_id).filter(Boolean))];
+      const groupByRequestId = new Map((completedGroups || []).filter((group) => group.purchase_request_id).map((group) => [group.purchase_request_id, group]));
+      const { data: rekberRequests } = groupRequestIds.length
+        ? await supabase.from("purchase_requests").select(requestSelect).in("id", groupRequestIds)
         : { data: [] };
-      const rawRows = [...new Map([...(ownRequests || []), ...(midmanRequests || [])].map((item) => [item.id, item])).values()]
+      const rawRows = [...new Map([...(ownRequests || []), ...(rekberRequests || [])].map((item) => [item.id, item])).values()]
         .sort((a, b) => new Date(b.completed_at || 0) - new Date(a.completed_at || 0));
       const threadIds = rawRows.map((item) => item.thread_id).filter(Boolean);
-      const thirdPartyIds = rawRows.map((item) => item.rekber_group?.third_party_id).filter(Boolean);
+      const thirdPartyIds = rawRows.map((item) => (item.rekber_group?.third_party_id || groupByRequestId.get(item.id)?.third_party_id)).filter(Boolean);
       const [{ data: messages }, { data: thirdPartyProfiles }] = await Promise.all([
         threadIds.length ? supabase.from("chat_messages").select("*").in("thread_id", threadIds).order("created_at", { ascending: true }) : Promise.resolve({ data: [] }),
         thirdPartyIds.length ? supabase.from("profiles").select("id, display_name, avatar_url, is_verified, is_midman, is_owner").in("id", [...new Set(thirdPartyIds)]) : Promise.resolve({ data: [] }),
       ]);
       const thirdPartyById = new Map((thirdPartyProfiles || []).map((profile) => [profile.id, profile]));
-      const rows = rawRows.map((item) => ({ ...item, thirdParty: thirdPartyById.get(item.rekber_group?.third_party_id) || null }));
+      const rows = rawRows.map((item) => {
+        const rekberGroup = item.rekber_group || groupByRequestId.get(item.id) || null;
+        return { ...item, rekber_group: rekberGroup, thirdParty: thirdPartyById.get(rekberGroup?.third_party_id) || null };
+      });
       const grouped = (messages || []).reduce((acc, message) => {
         acc[message.thread_id] = [...(acc[message.thread_id] || []), message];
         return acc;
