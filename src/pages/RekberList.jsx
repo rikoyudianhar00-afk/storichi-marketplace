@@ -19,7 +19,11 @@ export default function RekberList() {
   useEffect(() => {
     if (!user) return undefined;
     loadGroupsAndInvitations();
-    const channel = supabase.channel(`rekber-list-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `third_party_id=eq.${user.id}` }, loadGroupsAndInvitations).subscribe();
+    const channel = supabase.channel(`rekber-list-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `third_party_id=eq.${user.id}` }, loadGroupsAndInvitations)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_members", filter: `user_id=eq.${user.id}` }, loadGroupsAndInvitations)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_groups" }, loadGroupsAndInvitations)
+      .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 

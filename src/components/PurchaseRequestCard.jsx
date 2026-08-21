@@ -39,17 +39,24 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
       return undefined;
     }
     let active = true;
-    supabase
-      .from("rekber_invitations")
-      .select("*, third_party:profiles!rekber_invitations_third_party_id_fkey(id, display_name, avatar_url, bio, is_verified, is_midman, is_owner)")
-      .eq("purchase_request_id", request.id)
-      .maybeSingle()
-      .then(({ data, error: loadError }) => {
-        if (!active) return;
-        if (loadError && loadError.code !== "PGRST116") setError("Undangan pihak ketiga belum dapat dimuat.");
-        setInvitation(data || null);
-      });
-    return () => { active = false; };
+    const loadInvitation = async () => {
+      const { data, error: loadError } = await supabase
+        .from("rekber_invitations")
+        .select("*, third_party:profiles!rekber_invitations_third_party_id_fkey(id, display_name, avatar_url, bio, is_verified, is_midman, is_owner)")
+        .eq("purchase_request_id", request.id)
+        .maybeSingle();
+      if (!active) return;
+      if (loadError && loadError.code !== "PGRST116") setError("Undangan pihak ketiga belum dapat dimuat.");
+      setInvitation(data || null);
+    };
+    loadInvitation();
+    const invitationChannel = supabase.channel(`purchase-invitation-${request.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `purchase_request_id=eq.${request.id}` }, loadInvitation)
+      .subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(invitationChannel);
+    };
   }, [request.id, request.status, request.rekber_group_id, request.purchase_mode]);
 
   useEffect(() => {

@@ -149,14 +149,24 @@ export default function ChatThread() {
       return undefined;
     }
     let active = true;
-    supabase
-      .from("rekber_members")
-      .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind, activated_at, activated_by, buyer_done_at, seller_done_at, qris_to_third_party_sent_at, custody_completed_at)")
-      .eq("group_id", request.rekber_group_id)
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => { if (active) setRekberGroup(data?.group || null); });
-    return () => { active = false; };
+    const groupSelect = "group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind, activated_at, activated_by, buyer_done_at, seller_done_at, qris_to_third_party_sent_at, custody_completed_at)";
+    const loadGroup = async () => {
+      const { data } = await supabase
+        .from("rekber_members")
+        .select(groupSelect)
+        .eq("group_id", request.rekber_group_id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (active) setRekberGroup(data?.group || null);
+    };
+    loadGroup();
+    const groupChannel = supabase.channel(`rekber-state-${request.rekber_group_id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_groups", filter: `id=eq.${request.rekber_group_id}` }, loadGroup)
+      .subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(groupChannel);
+    };
   }, [request?.rekber_group_id, user?.id]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
