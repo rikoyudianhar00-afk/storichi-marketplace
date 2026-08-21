@@ -1063,3 +1063,17 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
     padding-bottom: calc(86px + env(safe-area-inset-bottom)) !important;
   }
 }
+
+/* ---------- Active Rekber flow order: main chat -> composer -> custody controls -> whisper ---------- */
+.chat-thread-page.is-rekber-active-chat > .chat-conversation-header { order: 1; }
+.chat-thread-page.is-rekber-active-chat > .chat-request-wrap { order: 2; }
+.chat-thread-page.is-rekber-active-chat > .chat-messages { order: 3; }
+.chat-thread-page.is-rekber-active-chat > .chat-moderation-warning,
+.chat-thread-page.is-rekber-active-chat > .chat-moderation-notice,
+.chat-thread-page.is-rekber-active-chat > .chat-composer-shell { order: 4; }
+.chat-thread-page.is-rekber-active-chat > .rekber-chat-control-card { order: 5; }
+.chat-thread-page.is-rekber-active-chat > .whisper-overlay { order: 6; }
+.chat-thread-page.is-rekber-active-chat > .chat-rating-trigger,
+.chat-thread-page.is-rekber-active-chat > .rekber-rating-popup { order: 7; }
+
+.transaction-chat-note { display: block; margin: 6px 0 8px; color: var(--ink-500); font-size: 10px; line-height: 1.35; }
