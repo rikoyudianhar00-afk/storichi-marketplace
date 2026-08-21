@@ -934,3 +934,32 @@ input[type="checkbox"], input[type="radio"] {
 .account-recovery-card { border-color: rgba(204, 70, 70, .25); }
 .account-recovery-message { margin: 10px 0 0; color: var(--ink-500); font-size: 13px; line-height: 1.4; }
 @media (max-width: 560px) { .account-qris-actions > * { flex: 1 1 100%; } }
+
+/* ---------- Rekber whisper overlay: main chat remains the base ---------- */
+.whisper-overlay { width: min(100% - 20px, 760px); margin: 0 auto 8px; padding: 8px; border: 1px solid #e8d27d; border-radius: 16px; background: rgba(255,253,240,.94); box-shadow: 0 8px 24px rgba(180,132,0,.12); }
+.whisper-overlay-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 2px 7px; color: #765a00; font-size: 10px; }
+.whisper-overlay-label strong { color: #5b4300; font-size: 12px; }
+.whisper-overlay-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.whisper-overlay .whisper-panel { min-height: 230px; background: rgba(255,255,255,.92); }
+.whisper-overlay .whisper-panel-single { width: min(100%, 560px); min-height: 250px; margin: 0 auto; }
+.whisper-panel-header { position: relative; }
+.whisper-panel-toggle, .whisper-panel-collapse-button { border: 0; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+.whisper-panel-toggle { padding: 0; }
+.whisper-panel-heading { flex: 1; }
+.whisper-panel-collapse-button { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: transparent; color: #765a00; font-size: 20px; line-height: 1; }
+.whisper-panel-collapse-button:active, .whisper-panel-toggle:active { background: rgba(232,210,125,.3); }
+.whisper-panel-composer { display: flex; gap: 6px; padding: 7px; border-top: 1px solid #eee1a6; background: #fffdf2; }
+.whisper-panel-composer input { min-width: 0; flex: 1; height: 34px; padding: 0 10px; border: 1px solid #e5d788; border-radius: 999px; background: #fff; color: var(--ink-900); font-size: 12px; outline: none; }
+.whisper-panel-composer input:focus { border-color: #c49b1c; box-shadow: 0 0 0 3px rgba(196,155,28,.12); }
+.whisper-panel-send { min-width: 52px; height: 34px; padding: 0 10px; border: 0; border-radius: 999px; background: #e5bd36; color: #5b4300; font-size: 11px; font-weight: 800; }
+.whisper-panel-send:disabled { opacity: .45; }
+.whisper-panel-collapsed { min-height: 0 !important; }
+.whisper-panel-collapsed .whisper-panel-header { border-bottom: 0; }
+@media (max-width: 600px) {
+  .whisper-overlay { width: 100%; margin-bottom: 6px; padding: 7px 8px; border-right: 0; border-left: 0; border-radius: 0; }
+  .whisper-overlay-label { align-items: flex-start; flex-direction: column; gap: 1px; }
+  .whisper-overlay-panels { grid-template-columns: 1fr; }
+  .whisper-overlay .whisper-panel { min-height: 190px; }
+  .whisper-overlay .whisper-panel-single { min-height: 230px; }
+  .whisper-panel-composer { position: sticky; bottom: 0; }
+}
