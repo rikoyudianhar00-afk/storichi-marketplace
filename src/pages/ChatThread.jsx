@@ -596,10 +596,17 @@ export default function ChatThread() {
       </header>
       {!collapsed && <>
         <div className="whisper-panel-messages">
-          {list.length ? list.map((message) => <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${message.sender_id === rekberGroup?.third_party_id ? "is-rekber-third-party" : ""}`}><div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""}`}>
-            {message.attachment_type === "qris" && message.attachment_url ? <div className="chat-qris-card"><strong>QRIS pembayaran</strong><button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button><small>Dikirim melalui whispering Storichi</small></div> : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
-            <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>
-          </div></div>) : <p className="whisper-empty">Belum ada pesan whispering.</p>}
+          {list.length ? list.map((message) => {
+            const messageProfile = message.sender_id === user.id ? currentProfile : (message.sender_id === rekberGroup?.third_party_id ? rekberThirdPartyProfile : profile);
+            return <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"}`}>
+              {message.sender_id !== user.id && <span className="chat-message-avatar chat-message-avatar-left" aria-hidden="true">{messageProfile?.avatar_url ? <img src={messageProfile.avatar_url} alt="" /> : <span>{messageProfile?.display_name?.[0] || "U"}</span>}</span>}
+              <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""}`}>
+                {message.attachment_type === "qris" && message.attachment_url ? <div className="chat-qris-card"><strong>QRIS pembayaran</strong><button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button><small>Dikirim melalui whispering Storichi</small></div> : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
+                <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>
+              </div>
+              {message.sender_id === user.id && <span className="chat-message-avatar chat-message-avatar-right" aria-hidden="true">{messageProfile?.avatar_url ? <img src={messageProfile.avatar_url} alt="" /> : <span>{messageProfile?.display_name?.[0] || "U"}</span>}</span>}
+            </div>;
+          }) : <p className="whisper-empty">Belum ada pesan whispering.</p>}
         </div>
         <form className="whisper-panel-composer" onSubmit={(event) => { event.preventDefault(); sendWhisperText(target, textValue, setTextValue); }}>
           <input value={textValue} onChange={(event) => setTextValue?.(event.target.value)} placeholder={`Pesan untuk ${title}`} maxLength={2000} disabled={chatCompleted} aria-label={`Pesan whisper untuk ${title}`} />
@@ -646,14 +653,19 @@ export default function ChatThread() {
 
       <div className="chat-messages" aria-live="polite">
         <div className="chat-day-label">Percakapan tiga pihak</div>
-        {mainChatMessages.map((message) => (
-          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${message.sender_id === rekberGroup?.third_party_id ? "is-rekber-third-party" : ""} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
+        {mainChatMessages.map((message) => {
+          const isMidmanMessage = !isRekberThirdParty && message.sender_id === rekberGroup?.third_party_id;
+          const messageProfile = message.sender_id === user.id ? currentProfile : (message.sender_id === rekberGroup?.third_party_id ? rekberThirdPartyProfile : participant);
+          return <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${isMidmanMessage ? "is-rekber-third-party" : ""} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
+            {isMidmanMessage && <span className="chat-message-avatar chat-message-avatar-top" aria-hidden="true">{messageProfile?.avatar_url ? <img src={messageProfile.avatar_url} alt="" /> : <span>{messageProfile?.display_name?.[0] || "M"}</span>}</span>}
+            {!isMidmanMessage && message.sender_id !== user.id && <span className="chat-message-avatar chat-message-avatar-left" aria-hidden="true">{messageProfile?.avatar_url ? <img src={messageProfile.avatar_url} alt="" /> : <span>{messageProfile?.display_name?.[0] || "U"}</span>}</span>}
             <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""} ${message.attachment_type === "system" ? "chat-system-bubble" : ""}`}>
               {message.attachment_type === "qris" && message.attachment_url ? <div className="chat-qris-card"><strong>QRIS dari {message.sender_id === user.id ? (currentProfile?.display_name || "Seller") : (participant?.display_name || "Seller")}</strong><button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button><small>Scan QRIS ini untuk melanjutkan pembayaran</small></div> : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
               <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}{message.sender_id === user.id && <span className={`chat-message-read-state ${message.read_at ? "is-read" : ""}`} title={message.read_at ? "Telah terbaca" : "Terkirim"}>{message.read_at ? " ✓✓" : " ✓"}</span>}</time>
             </div>
-          </div>
-        ))}
+            {!isMidmanMessage && message.sender_id === user.id && <span className="chat-message-avatar chat-message-avatar-right" aria-hidden="true">{messageProfile?.avatar_url ? <img src={messageProfile.avatar_url} alt="" /> : <span>{messageProfile?.display_name?.[0] || "U"}</span>}</span>}
+          </div>;
+        })}
       </div>
 
       {isWhispering && <section className={`whisper-overlay ${isRekberThirdParty ? "whisper-overlay-third-party" : "whisper-overlay-party"}`} aria-label="Layer whisper Rekber" aria-live="polite">

@@ -1002,3 +1002,27 @@ input[type="checkbox"], input[type="radio"] {
     min-height: calc(100dvh - 58px - 72px) !important;
   }
 }
+
+/* ---------- Chat bubble avatars and compact mobile composer end ---------- */
+.chat-message-row { align-items: flex-end; gap: 6px; }
+.chat-message-avatar { display: grid; place-items: center; width: 26px; height: 26px; flex: 0 0 26px; overflow: hidden; border: 1px solid rgba(36,84,255,.14); border-radius: 50%; background: var(--blue-50); color: var(--blue-600); font-size: 10px; font-weight: 800; }
+.chat-message-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.chat-message-avatar-top { margin-bottom: 3px; }
+.chat-message-row.is-rekber-third-party { align-items: center; flex-direction: column; gap: 2px; }
+.chat-message-row.is-rekber-third-party .chat-message-avatar-top { width: 30px; height: 30px; flex-basis: 30px; }
+.chat-message-row.is-rekber-third-party .chat-bubble { margin: 0 auto; }
+.chat-message-row.is-mine:not(.is-rekber-third-party) .chat-message-avatar-right { order: 2; }
+.chat-message-row.is-theirs:not(.is-rekber-third-party) .chat-message-avatar-left { order: 0; }
+.whisper-panel-messages .chat-message-row.is-mine:not(.is-rekber-third-party) { justify-content: flex-end; }
+.whisper-panel-messages .chat-message-row.is-theirs:not(.is-rekber-third-party) { justify-content: flex-start; }
+
+body:has(.chat-thread-page) { padding-bottom: 0 !important; }
+.chat-thread-page { padding-bottom: 0 !important; }
+.chat-thread-page .chat-composer-shell { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+.chat-thread-page .chat-input-bar { margin-bottom: 0 !important; }
+@media (max-width: 600px) {
+  .chat-message-avatar { width: 23px; height: 23px; flex-basis: 23px; }
+  .chat-message-row { gap: 5px; }
+  .chat-message-row.is-rekber-third-party .chat-message-avatar-top { width: 28px; height: 28px; flex-basis: 28px; }
+  .chat-thread-page { padding-bottom: 0 !important; }
+}
