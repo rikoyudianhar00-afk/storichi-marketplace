@@ -123,7 +123,7 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
     const { data: groupId, error: createError } = await supabase.rpc("create_rekber_lobby_with_third_party", { p_purchase_request_id: request.id, p_third_party_id: selectedProfile.id });
     setBusy(false);
     if (createError || !groupId) return setError(createError?.message || "Lobby Rekber gagal dibuat.");
-    navigate(`/rekber/${groupId}`);
+    navigate(`/chat/${request.thread_id}`);
   }
 
   async function inviteRegular() {

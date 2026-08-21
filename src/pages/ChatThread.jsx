@@ -45,6 +45,14 @@ export default function ChatThread() {
   const [qrisError, setQrisError] = useState("");
   const [qrisBusy, setQrisBusy] = useState(false);
   const bottomRef = useRef(null);
+  const [thirdPartyTarget, setThirdPartyTarget] = useState("buyer");
+  const [rekberRatingOpen, setRekberRatingOpen] = useState(false);
+  const [rekberProductRating, setRekberProductRating] = useState(0);
+  const [rekberThirdPartyRating, setRekberThirdPartyRating] = useState(0);
+  const [rekberRatingComment, setRekberRatingComment] = useState("");
+  const [rekberRatingSubmitted, setRekberRatingSubmitted] = useState(false);
+  const [rekberThirdPartyProfile, setRekberThirdPartyProfile] = useState(null);
+  const [rekberBuyerProfile, setRekberBuyerProfile] = useState(null);
 
   useEffect(() => {
     if (!user || !threadId) return undefined;
@@ -84,7 +92,7 @@ export default function ChatThread() {
       if (req?.rekber_group_id) {
         const { data: membership } = await supabase
           .from("rekber_members")
-          .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind)")
+          .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind, activated_at, activated_by, buyer_done_at, seller_done_at, qris_to_third_party_sent_at, custody_completed_at)")
           .eq("group_id", req.rekber_group_id)
           .eq("user_id", user.id)
           .maybeSingle();
@@ -143,7 +151,7 @@ export default function ChatThread() {
     let active = true;
     supabase
       .from("rekber_members")
-      .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind)")
+      .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind, activated_at, activated_by, buyer_done_at, seller_done_at, qris_to_third_party_sent_at, custody_completed_at)")
       .eq("group_id", request.rekber_group_id)
       .eq("user_id", user.id)
       .maybeSingle()
@@ -168,10 +176,16 @@ export default function ChatThread() {
   const isDirect = request?.purchase_mode === "direct";
   const waitingForBuyerRating = isDirect && isBuyer && request?.rating_requested_at && !request?.buyer_rating;
   const sellerCanSendQris = isDirect && isSeller && request?.status === "approved" && !request?.qris_sent_at && !request?.buyer_rating;
+  const sellerCanSendRekberQris = isActiveRekber && isSeller && !rekberGroup?.qris_to_third_party_sent_at;
   const sellerCanRequestRating = isDirect && isSeller && request?.status === "approved" && request?.qris_sent_at && !request?.rating_requested_at && !request?.buyer_rating;
   const sellerCanComplete = isDirect && isSeller && request?.status === "approved" && Boolean(request?.buyer_rating);
   const chatCompleted = request?.status === "completed";
   const chatLocked = Boolean(waitingForBuyerRating || chatCompleted);
+  const isRekberCompleted = Boolean(rekberGroup && rekberGroup.status === "completed");
+  const sellerWhisperMessages = messages.filter((message) => message.visibility === "seller_whisper");
+  const buyerWhisperMessages = messages.filter((message) => message.visibility === "buyer_whisper");
+  const mainChatMessages = messages.filter((message) => !message.visibility || message.visibility === "main");
+  const isWhispering = Boolean(isActiveRekber || isRekberCompleted);
 
   useEffect(() => {
     if (!chatCompleted) {
@@ -179,6 +193,42 @@ export default function ChatThread() {
       setHistorySwipeOffset(0);
     }
   }, [chatCompleted]);
+
+  useEffect(() => {
+    if (!rekberGroup?.third_party_id) {
+      setRekberThirdPartyProfile(null);
+      return undefined;
+    }
+    let active = true;
+    supabase.from("profiles").select("id, display_name, avatar_url, bio, is_verified, is_midman, is_owner").eq("id", rekberGroup.third_party_id).maybeSingle().then(({ data }) => {
+      if (active) setRekberThirdPartyProfile(data || null);
+    });
+    return () => { active = false; };
+  }, [rekberGroup?.third_party_id]);
+
+  useEffect(() => {
+    if (!rekberGroup?.buyer_id) {
+      setRekberBuyerProfile(null);
+      return undefined;
+    }
+    let active = true;
+    supabase.from("profiles").select("id, display_name, avatar_url, bio, is_verified, is_midman, is_owner").eq("id", rekberGroup.buyer_id).maybeSingle().then(({ data }) => {
+      if (active) setRekberBuyerProfile(data || null);
+    });
+    return () => { active = false; };
+  }, [rekberGroup?.buyer_id]);
+
+  useEffect(() => {
+    if (!rekberGroup?.id || !isRekberCompleted || (!isBuyer && !isSeller)) {
+      setRekberRatingSubmitted(false);
+      return undefined;
+    }
+    let active = true;
+    supabase.from("rekber_third_party_reviews").select("id").eq("group_id", rekberGroup.id).eq("reviewer_id", user.id).maybeSingle().then(({ data }) => {
+      if (active) setRekberRatingSubmitted(Boolean(data));
+    });
+    return () => { active = false; };
+  }, [rekberGroup?.id, isRekberCompleted, isBuyer, isSeller, user?.id]);
 
   function handleHistorySwipeStart(event) {
     if (!chatCompleted || completedHistoryRevealed) return;
@@ -226,14 +276,16 @@ export default function ChatThread() {
     }
     setChatError("");
     setText("");
-    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: result.value });
+    const visibility = isActiveRekber ? (isRekberThirdParty ? `${thirdPartyTarget}_whisper` : `${isBuyer ? "buyer" : "seller"}_whisper`) : "main";
+    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: result.value, visibility });
     if (error) setChatError("Pesan gagal dikirim. Coba lagi.");
   }
 
   async function sendAttachment({ url, type, sizeBytes }) {
     if (!user || chatLocked) return;
     setChatError("");
-    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type, attachment_size_bytes: sizeBytes || null });
+    const visibility = isActiveRekber ? (isRekberThirdParty ? `${thirdPartyTarget}_whisper` : `${isBuyer ? "buyer" : "seller"}_whisper`) : "main";
+    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type, attachment_size_bytes: sizeBytes || null, visibility });
     if (error) setChatError("Lampiran gagal dikirim.");
   }
 
@@ -271,19 +323,23 @@ export default function ChatThread() {
     setQrisBusy(true);
     setBusyAction(true);
     setChatError("");
-    const { data: qrisMessage, error: qrisErrorResult } = await supabase.rpc("send_direct_purchase_qris", { p_request_id: request.id, p_qris_url: qrisUrl });
+    const { data: qrisMessage, error: qrisErrorResult } = isActiveRekber
+      ? await supabase.rpc("send_rekber_qris", { p_group_id: rekberGroup.id, p_qris_url: qrisUrl })
+      : await supabase.rpc("send_direct_purchase_qris", { p_request_id: request.id, p_qris_url: qrisUrl });
     if (qrisErrorResult) {
       setQrisBusy(false);
       setBusyAction(false);
       setChatError(qrisErrorResult.message || "QRIS gagal diberikan.");
-      return;
+      return false;
     }
     setQrisBusy(false);
     setBusyAction(false);
     const sentAt = qrisMessage?.created_at || new Date().toISOString();
-    setRequest((prev) => ({ ...prev, qris_sent_at: sentAt }));
+    if (isActiveRekber) setRekberGroup((prev) => ({ ...prev, qris_to_third_party_sent_at: sentAt }));
+    else setRequest((prev) => ({ ...prev, qris_sent_at: sentAt }));
     setQrisUploadOpen(false);
     resetQrisUpload();
+    return true;
   }
 
   async function handleGiveQris() {
@@ -323,6 +379,60 @@ export default function ChatThread() {
     } finally {
       setQrisBusy(false);
     }
+  }
+
+  async function activateSharedAccount() {
+    if (!isRekberThirdParty || !rekberGroup?.id) return;
+    setBusyAction(true);
+    setChatError("");
+    const { data, error } = await supabase.rpc("activate_rekber_account", { p_group_id: rekberGroup.id });
+    setBusyAction(false);
+    if (error) return setChatError(error.message || "Rekening bersama gagal diaktifkan.");
+    setRekberGroup(data);
+  }
+
+  async function markRekberDone() {
+    if ((!isBuyer && !isSeller) || !rekberGroup?.id || !isActiveRekber) return;
+    if (isSeller && !rekberGroup.qris_to_third_party_sent_at) {
+      if (!currentProfile?.qris_url) return setChatError("Siapkan QRIS toko terlebih dahulu. QRIS wajib dikirim ke pihak ketiga sebelum transaksi diselesaikan.");
+      const qrisSent = await sendQrisMessage(currentProfile.qris_url);
+      if (!qrisSent) return;
+    }
+    setBusyAction(true);
+    setChatError("");
+    const { data, error } = await supabase.rpc("mark_rekber_party_done", { p_group_id: rekberGroup.id });
+    setBusyAction(false);
+    if (error) return setChatError(error.message || "Konfirmasi penyelesaian gagal disimpan.");
+    setRekberGroup(data);
+  }
+
+  async function completeRekberCustody() {
+    if (!isRekberThirdParty || !rekberGroup?.id) return;
+    setBusyAction(true);
+    setChatError("");
+    const { data, error } = await supabase.rpc("complete_rekber_custody", { p_group_id: rekberGroup.id });
+    setBusyAction(false);
+    if (error) return setChatError(error.message || "Pengamanan transaksi belum dapat diselesaikan.");
+    setRekberGroup(data);
+    setRequest((prev) => ({ ...prev, status: "completed", completed_at: new Date().toISOString() }));
+  }
+
+  async function submitRekberRating() {
+    if (!rekberProductRating || !rekberThirdPartyRating || !rekberGroup?.id) return setChatError("Pilih rating produk dan pihak ketiga terlebih dahulu.");
+    setBusyAction(true);
+    setChatError("");
+    const rpcName = isBuyer ? "submit_rekber_buyer_rating" : "submit_rekber_seller_rating";
+    const args = isBuyer
+      ? { p_group_id: rekberGroup.id, p_product_rating: rekberProductRating, p_third_party_rating: rekberThirdPartyRating, p_comment: rekberRatingComment.trim() || null }
+      : { p_group_id: rekberGroup.id, p_third_party_rating: rekberThirdPartyRating, p_comment: rekberRatingComment.trim() || null };
+    const { error } = await supabase.rpc(rpcName, args);
+    setBusyAction(false);
+    if (error) return setChatError(error.message || "Rating Rekber gagal disimpan.");
+    setRekberRatingOpen(false);
+    setRekberRatingSubmitted(true);
+    setRekberProductRating(0);
+    setRekberThirdPartyRating(0);
+    setRekberRatingComment("");
   }
 
   async function submitRating() {
@@ -365,6 +475,18 @@ export default function ChatThread() {
     setPricePromptOpen(false);
   }
 
+  function renderMessageList(list, title, profile, panelClass = "") {
+    return <section className={`whisper-panel ${panelClass}`} aria-label={`Chat ${title}`}>
+      <header className="whisper-panel-header"><span className="whisper-panel-avatar">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{profile?.display_name?.[0] || "U"}</span>}</span><div><strong>{title}</strong><small>{profile?.display_name || "Pengguna"}</small></div></header>
+      <div className="whisper-panel-messages">
+        {list.length ? list.map((message) => <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"}`}><div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""}`}>
+          {message.attachment_type === "qris" && message.attachment_url ? <div className="chat-qris-card"><strong>QRIS pembayaran</strong><button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button><small>Dikirim melalui whispering Storichi</small></div> : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
+          <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>
+        </div></div>) : <p className="whisper-empty">Belum ada pesan whispering.</p>}
+      </div>
+    </section>;
+  }
+
   if (!user) return <main className="container empty-state"><h2>Masuk untuk membuka chat</h2></main>;
   if (loading) return <main className="chat-thread-page"><div className="skeleton" style={{ height: "70vh" }} /></main>;
   if (!thread) return <main className="container empty-state"><p>Percakapan tidak ditemukan.</p></main>;
@@ -400,24 +522,45 @@ export default function ChatThread() {
         {productCollapsed && <Link to={`/produk/${request.product?.slug || thread.product?.slug || ""}`} className="chat-product-collapsed-title">{request.product?.name || thread.product?.name || "Produk"}</Link>}
       </div>}
 
-      <div className="chat-messages" aria-live="polite">
+      {isWhispering ? <div className={`whisper-layout ${isRekberThirdParty ? "whisper-layout-third-party" : "whisper-layout-party"}`} aria-live="polite">
+        {isRekberThirdParty ? <>
+          <div className="whispering-title"><strong>Whispering Rekber</strong><span>Kamu menjadi penghubung aman antara penjual dan pembeli.</span></div>
+          <div className="whisper-target-switch" role="group" aria-label="Pilih target whisper"><span>Kirim pesan ke:</span><button type="button" className={thirdPartyTarget === "seller" ? "is-active" : ""} onClick={() => setThirdPartyTarget("seller")}>Penjual</button><button type="button" className={thirdPartyTarget === "buyer" ? "is-active" : ""} onClick={() => setThirdPartyTarget("buyer")}>Pembeli</button></div>
+          {renderMessageList(sellerWhisperMessages, "Penjual", participant, "whisper-panel-seller")}
+          {renderMessageList(buyerWhisperMessages, "Pembeli", rekberBuyerProfile, "whisper-panel-buyer")}
+        </> : renderMessageList(isBuyer ? buyerWhisperMessages : sellerWhisperMessages, "Pihak ketiga", rekberThirdPartyProfile, "whisper-panel-single")}
+        <div ref={bottomRef} />
+      </div> : <div className="chat-messages" aria-live="polite">
         <div className="chat-day-label">Percakapan Storichi</div>
-        {messages.map((message) => (
-          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${isActiveRekber && (message.sender_id === rekberGroup?.midman_id || message.sender_id === rekberGroup?.third_party_id) ? "is-rekber-third-party" : ""} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
-            <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""} ${message.attachment_type === "system" ? "chat-system-bubble" : ""}`}>{isActiveRekber && (message.sender_id === rekberGroup?.midman_id || message.sender_id === rekberGroup?.third_party_id) && <small className="chat-rekber-sender-label">⚖️ {isRekberThirdParty && message.sender_id === user.id ? "Kamu · Pihak ketiga" : "Midman / Pihak ketiga"}</small>}
-              {message.attachment_type === "qris" && message.attachment_url ? (
-                <div className="chat-qris-card">
-                  <strong>QRIS dari {message.sender_id === user.id ? (currentProfile?.display_name || "Penjual") : (participant?.display_name || "Penjual")}</strong>
-                  <button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button>
-                  <small>Scan QRIS ini untuk melanjutkan pembayaran</small>
-                </div>
-              ) : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan, ketuk untuk membuka dan memperbesar" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
+        {mainChatMessages.map((message) => (
+          <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
+            <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""} ${message.attachment_type === "system" ? "chat-system-bubble" : ""}`}>
+              {message.attachment_type === "qris" && message.attachment_url ? <div className="chat-qris-card"><strong>QRIS dari {message.sender_id === user.id ? (currentProfile?.display_name || "Penjual") : (participant?.display_name || "Penjual")}</strong><button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button><small>Scan QRIS ini untuk melanjutkan pembayaran</small></div> : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
               <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}{message.sender_id === user.id && <span className={`chat-message-read-state ${message.read_at ? "is-read" : ""}`} title={message.read_at ? "Telah terbaca" : "Terkirim"}>{message.read_at ? " ✓✓" : " ✓"}</span>}</time>
             </div>
           </div>
         ))}
         <div ref={bottomRef} />
-      </div>
+      </div>}
+
+      {isActiveRekber && <section className="rekber-chat-control-card" aria-label="Kontrol Rekber di chat">
+        <div className="rekber-chat-control-heading"><strong>Rekening Bersama</strong><span>{rekberGroup.activated_at ? "Aktif" : "Menunggu aktivasi pihak ketiga"}</span></div>
+        {isRekberThirdParty && !rekberGroup.activated_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={activateSharedAccount}>{busyAction ? "Mengaktifkan..." : "Aktifkan Rekening Bersama"}</button>}
+        {isRekberThirdParty && rekberGroup.activated_at && <p className="rekber-chat-control-note">Whispering aktif. Pilih target chat di bawah untuk mengirim informasi secara privat.</p>}
+        {sellerCanSendRekberQris && <button type="button" className="chat-qris-trigger" disabled={busyAction || qrisBusy} onClick={handleGiveQris} title="Kirim QRIS seller ke pihak ketiga">▣ <span>{currentProfile?.qris_url ? "Kirim QRIS ke pihak ketiga" : "Siapkan & kirim QRIS"}</span></button>}
+        {!isRekberThirdParty && rekberGroup.activated_at && ((isBuyer && !rekberGroup.buyer_done_at) || (isSeller && !rekberGroup.seller_done_at)) && <button type="button" className="btn btn-outline btn-full" disabled={busyAction} onClick={markRekberDone}>{busyAction ? "Menyimpan..." : "Saya setuju menyelesaikan transaksi"}</button>}
+        {isRekberThirdParty && rekberGroup.buyer_done_at && rekberGroup.seller_done_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={completeRekberCustody}>{busyAction ? "Mengamankan..." : "Pengamanan item/dana selesai"}</button>}
+        <div className="rekber-chat-status-line"><span>Penjual: {rekberGroup.seller_done_at ? "siap" : "belum"}</span><span>Pembeli: {rekberGroup.buyer_done_at ? "siap" : "belum"}</span><span>QRIS: {rekberGroup.qris_to_third_party_sent_at ? "terkirim" : "belum"}</span></div>
+      </section>}
+
+      {isRekberCompleted && (isBuyer || isSeller) && !rekberRatingSubmitted && !rekberRatingOpen && <button type="button" className="chat-rating-trigger" onClick={() => setRekberRatingOpen(true)}>☆ <span>{isBuyer ? "Beri rating produk & pihak ketiga" : "Beri rating pihak ketiga"}</span></button>}
+      {rekberRatingOpen && <section className="direct-rating-popup rekber-rating-popup" aria-label="Beri rating Rekber">
+        <div className="direct-rating-popup-head"><strong>{isBuyer ? "Nilai produk dan pihak ketiga" : "Nilai pihak ketiga"}</strong><span>Rating hanya dapat dikirim satu kali.</span></div>
+        {isBuyer && <><small>Rating produk</small><div className="direct-rating-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={`product-${value}`} className={value <= rekberProductRating ? "is-selected" : ""} onClick={() => setRekberProductRating(value)} aria-label={`${value} bintang produk`}>★</button>)}</div></>}
+        <small>Rating pihak ketiga</small><div className="direct-rating-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={`third-party-${value}`} className={value <= rekberThirdPartyRating ? "is-selected" : ""} onClick={() => setRekberThirdPartyRating(value)} aria-label={`${value} bintang pihak ketiga`}>★</button>)}</div>
+        <input value={rekberRatingComment} onChange={(e) => setRekberRatingComment(e.target.value)} placeholder="Komentar singkat (opsional)" />
+        <button type="button" className="btn btn-primary btn-full" disabled={busyAction || !rekberThirdPartyRating || (isBuyer && !rekberProductRating)} onClick={submitRekberRating}>{busyAction ? "Menyimpan..." : "Kirim rating"}</button>
+      </section>}
 
       <ImageLightbox
         src={lightboxUrl}
@@ -475,6 +618,7 @@ export default function ChatThread() {
       {moderationNotice && <div className="chat-moderation-warning" role="alert">{moderationNotice}</div>}
       {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
       <div className={`chat-composer-shell ${chatLocked ? "is-locked" : ""}`}>
+        {isRekberThirdParty && isActiveRekber && <div className="whisper-composer-target"><span>Tujuan whisper:</span><button type="button" className={thirdPartyTarget === "seller" ? "is-active" : ""} onClick={() => setThirdPartyTarget("seller")}>Penjual</button><button type="button" className={thirdPartyTarget === "buyer" ? "is-active" : ""} onClick={() => setThirdPartyTarget("buyer")}>Pembeli</button></div>}
         <form className="chat-input-bar" onSubmit={sendMessage}>
           <AttachmentButton userId={user.id} onUploaded={sendAttachment} disabled={chatLocked} />
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder={chatLocked ? "Beri rating sebelum chat..." : "Tulis pesan..."} aria-label="Tulis pesan" disabled={chatLocked} />
