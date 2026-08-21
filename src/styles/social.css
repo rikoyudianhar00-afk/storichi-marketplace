@@ -903,3 +903,10 @@ input[type="checkbox"], input[type="radio"] {
 .transaction-third-party-meta small { color: #8a6900; font-size: 10px; }
 .transaction-third-party-meta strong { font-size: 12px; }
 .transaction-third-party-meta span { color: #765a00; font-size: 10px; }
+
+.rekber-mm-strip-profile { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.rekber-mm-strip-avatar { display: inline-flex; flex: 0 0 28px; width: 28px; height: 28px; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(118, 90, 0, .28); border-radius: 50%; background: #fff; color: #765a00; font-size: 12px; font-weight: 800; }
+.rekber-mm-strip-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rekber-mm-strip-profile > span:last-child { display: flex; min-width: 0; flex-direction: column; }
+.rekber-mm-strip-profile small { max-width: 180px; overflow: hidden; color: #765a00; font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) { .rekber-chat-active-strip { align-items: center; } .rekber-mm-strip-profile small { max-width: 240px; } }

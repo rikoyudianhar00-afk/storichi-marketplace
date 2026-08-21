@@ -12,11 +12,11 @@ function candidateKind(profile) {
 
 function candidateLabel(profile) {
   const kind = candidateKind(profile);
-  return kind === "midman" ? "⚖️ Midman" : kind === "verified" ? "Pengguna verified" : "Pengguna biasa";
+  return kind === "midman" ? "⚖️ Midman (MM)" : kind === "verified" ? "Verified MM" : "Midman (MM)";
 }
 
 function invitationLabel(invitation) {
-  return invitation?.third_party_kind === "midman" ? "⚖️ Midman" : invitation?.third_party_kind === "verified" ? "Pengguna verified" : "Pengguna biasa";
+  return invitation?.third_party_kind === "midman" ? "⚖️ Midman (MM)" : invitation?.third_party_kind === "verified" ? "Verified MM" : "Midman (MM)";
 }
 
 export default function PurchaseRequestCard({ request, isSeller, currentUserId, onUpdate }) {
@@ -183,16 +183,16 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
           <label className="midman-search-box" htmlFor={`midman-search-${request.id}`}><span aria-hidden="true">⌕</span><input id={`midman-search-${request.id}`} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama pengguna..." autoComplete="off" /></label>
           {loadingProfiles ? <div className="midman-result-empty">Memuat pengguna...</div> : !visibleProfiles.length ? <div className="midman-result-empty">Pengguna tidak ditemukan.</div> : <div className="midman-result-list" role="listbox" aria-label="Hasil pengguna">{visibleProfiles.map((profile) => { const kind = candidateKind(profile); const selected = selectedProfileId === profile.id; return <div className={`midman-result ${selected ? "is-selected" : ""} ${kind === "regular" ? "is-regular" : ""}`} key={profile.id}><span className="midman-result-avatar">{profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{profile.display_name?.[0] || "U"}</span>}</span><span className="midman-result-copy"><strong>{profile.display_name || "Pengguna"}</strong><small>{candidateLabel(profile)}{kind === "regular" ? " · ajukan ke pembeli" : kind === "verified" ? " · peringatan ringan lalu undangan" : " · undangan menunggu persetujuan"}{Number(profile.rekber_invite_count || 0) > 0 ? ` · ${Number(profile.rekber_invite_count)} undangan` : ""}</small></span><button type="button" className="midman-add-button" disabled={busy} onClick={() => selectProfile(profile)} aria-label={`Pilih ${profile.display_name || "pengguna"}`}>{selected ? "✓" : "+"}</button></div>; })}</div>}
           {selectedProfile && <div className={`third-party-preview third-party-preview-${candidateKind(selectedProfile)}`}><span className="third-party-preview-avatar">{selectedProfile.avatar_url ? <img src={selectedProfile.avatar_url} alt="" /> : <span>{selectedProfile.display_name?.[0] || "U"}</span>}</span><span><strong>{selectedProfile.display_name}</strong><small>{candidateLabel(selectedProfile)} · {candidateKind(selectedProfile) === "regular" ? "menunggu persetujuan pembeli" : "siap diundang"}</small></span></div>}
-          <p className="thread-item-sub midman-picker-note">Belum ada grup yang dibuat pada tahap pemilihan ini.</p>
+          <p className="thread-item-sub midman-picker-note">Belum ada grup yang dibuat pada tahap pemilihan ini. Midman (MM) harus menerima undangan terlebih dahulu.</p>
           <div className="midman-picker-footer"><span>{selectedProfile ? candidateLabel(selectedProfile) : "Belum dipilih"}</span><div style={{ display: "flex", gap: 8 }}><button type="button" className="btn btn-primary" disabled={busy || !selectedProfile} onClick={candidateKind(selectedProfile) === "regular" ? inviteRegular : inviteDirectThirdParty}>{busy ? "Memproses..." : candidateKind(selectedProfile) === "regular" ? "Ajukan ke pembeli" : "Undang sekarang"}</button><button type="button" className="btn btn-outline" onClick={() => setShowPicker(false)}>Batal</button></div></div>
         </div>}
       </div>}
 
-      {request.status === "approved" && request.rekber_group_id && <p className="third-party-consent-wait" style={{ marginTop: 10 }}>✓ Pihak ketiga terhubung di chat transaksi ini. Aktivasi Rekening Bersama dilakukan oleh pihak ketiga dari halaman chat.</p>}
+      {request.status === "approved" && request.rekber_group_id && <p className="third-party-consent-wait" style={{ marginTop: 10 }}>✓ Midman (MM) terhubung di chat transaksi ini. Aktivasi Rekening Bersama dilakukan oleh Midman (MM) dari halaman chat.</p>}
       {request.status === "rejected" && <p className="thread-item-sub" style={{ marginTop: 8, color: "var(--accent-coral)" }}>✕ Ditolak penjual</p>}
       {error && <p className="form-error" style={{ marginTop: 8 }}>{error}</p>}
 
-      {verifiedNotice && <div className="direct-action-modal" role="dialog" aria-modal="true" aria-labelledby={`verified-title-${request.id}`}><div className="direct-action-modal-card third-party-notice-card"><div className="third-party-notice-icon">✓</div><h3 id={`verified-title-${request.id}`}>Pihak ketiga verified</h3><p><strong>{verifiedNotice.display_name}</strong> memiliki badge verified, tetapi bukan Midman resmi. Pilihan ini tetap bisa digunakan, namun Storichi menyarankan Midman resmi untuk pengamanan transaksi.</p><label><input type="checkbox" checked={skipVerifiedNotice} onChange={(e) => setSkipVerifiedNotice(e.target.checked)} /> Jangan ingatkan lagi di perangkat ini</label><div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => setVerifiedNotice(null)}>Batal</button><button type="button" className="btn btn-primary" onClick={confirmVerified}>Saya mengerti</button></div></div></div>}
+      {verifiedNotice && <div className="direct-action-modal" role="dialog" aria-modal="true" aria-labelledby={`verified-title-${request.id}`}><div className="direct-action-modal-card third-party-notice-card"><div className="third-party-notice-icon">✓</div><h3 id={`verified-title-${request.id}`}>Verified MM</h3><p><strong>{verifiedNotice.display_name}</strong> memiliki badge verified, tetapi bukan Midman resmi. Pilihan ini tetap bisa digunakan, namun Storichi menyarankan Midman resmi untuk pengamanan transaksi.</p><label><input type="checkbox" checked={skipVerifiedNotice} onChange={(e) => setSkipVerifiedNotice(e.target.checked)} /> Jangan ingatkan lagi di perangkat ini</label><div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => setVerifiedNotice(null)}>Batal</button><button type="button" className="btn btn-primary" onClick={confirmVerified}>Saya mengerti</button></div></div></div>}
     </div>
   );
 }

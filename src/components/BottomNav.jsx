@@ -14,21 +14,31 @@ const ITEMS = [
 export default function BottomNav() {
   const { user } = useAuth();
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [rekberInvitationCount, setRekberInvitationCount] = useState(0);
   useEffect(() => {
     if (!user) {
       setWishlistCount(0);
+      setRekberInvitationCount(0);
       return undefined;
     }
     let active = true;
     const refresh = async () => {
-      const { count } = await supabase.from("product_wishlists").select("id", { count: "exact", head: true }).eq("user_id", user.id);
-      if (active) setWishlistCount(count || 0);
+      const [{ count: wishlistTotal }, { count: invitationTotal }] = await Promise.all([
+        supabase.from("product_wishlists").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("rekber_invitations").select("id", { count: "exact", head: true }).eq("third_party_id", user.id).or("status.eq.buyer_approved,and(status.eq.pending,third_party_kind.in.(midman,verified))"),
+      ]);
+      if (active) {
+        setWishlistCount(wishlistTotal || 0);
+        setRekberInvitationCount(invitationTotal || 0);
+      }
     };
     refresh();
     const channel = supabase.channel(`wishlist_badge_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "product_wishlists", filter: `user_id=eq.${user.id}` }, refresh).subscribe();
+    const rekberChannel = supabase.channel(`rekber_invitation_badge_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `third_party_id=eq.${user.id}` }, refresh).subscribe();
     return () => {
       active = false;
       supabase.removeChannel(channel);
+      supabase.removeChannel(rekberChannel);
     };
   }, [user]);
 
@@ -37,7 +47,7 @@ export default function BottomNav() {
       <div className="bottom-nav-inner">
         {ITEMS.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.to === "/"} className={({ isActive }) => "bottom-nav-item" + (isActive ? " active" : "")}>
-            <span className="bottom-nav-icon-wrap"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d={item.icon} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>{item.to === "/wishlist" && wishlistCount > 0 && <b className="wishlist-count-badge">{wishlistCount > 99 ? "99+" : wishlistCount}</b>}</span>
+            <span className="bottom-nav-icon-wrap"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d={item.icon} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>{item.to === "/wishlist" && wishlistCount > 0 && <b className="wishlist-count-badge">{wishlistCount > 99 ? "99+" : wishlistCount}</b>}{item.to === "/rekber" && rekberInvitationCount > 0 && <b className="wishlist-count-badge">{rekberInvitationCount > 99 ? "99+" : rekberInvitationCount}</b>}</span>
             {item.label}
           </NavLink>
         ))}

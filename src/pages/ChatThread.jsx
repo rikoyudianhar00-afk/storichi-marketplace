@@ -487,7 +487,7 @@ export default function ChatThread() {
 
   function renderMessageList(list, title, profile, panelClass = "") {
     return <section className={`whisper-panel ${panelClass}`} aria-label={`Chat ${title}`}>
-      <header className="whisper-panel-header"><span className="whisper-panel-avatar">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{profile?.display_name?.[0] || "U"}</span>}</span><div><strong>{title}</strong><small>{profile?.display_name || "Pengguna"}</small></div></header>
+      <header className="whisper-panel-header"><span className="whisper-panel-avatar">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{profile?.display_name?.[0] || "U"}</span>}</span><div><strong>{title}</strong><small>{profile?.display_name || "Midman (MM)"}</small></div></header>
       <div className="whisper-panel-messages">
         {list.length ? list.map((message) => <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"}`}><div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""}`}>
           {message.attachment_type === "qris" && message.attachment_url ? <div className="chat-qris-card"><strong>QRIS pembayaran</strong><button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button><small>Dikirim melalui whispering Storichi</small></div> : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
@@ -515,7 +515,7 @@ export default function ChatThread() {
         </> : <div className="completed-history-revealed-bar"><span className="chat-completed-mini-mark" aria-hidden="true">✓</span><strong>Transaksi selesai</strong><span>Riwayat dapat dibaca</span></div>}
       </div>}
 
-      {isActiveRekber && <div className="rekber-chat-active-strip" role="status"><strong>{rekberGroup.activated_at ? "Rekber aktif" : "Pihak ketiga terhubung"}</strong><span>{rekberGroup.activated_at ? `Whispering aktif untuk ${rekberGroup.third_party_kind === "midman" ? "⚖️ Midman" : "pihak ketiga"}.` : `Chat normal tiga pihak. Menunggu ${rekberGroup.third_party_kind === "midman" ? "⚖️ Midman" : "pihak ketiga"} mengaktifkan rekening bersama.`}</span></div>}
+      {isActiveRekber && <div className="rekber-chat-active-strip" role="status"><span className="rekber-mm-strip-profile"><span className="rekber-mm-strip-avatar">{rekberThirdPartyProfile?.avatar_url ? <img src={rekberThirdPartyProfile.avatar_url} alt="" /> : <span>{rekberThirdPartyProfile?.display_name?.[0] || "M"}</span>}</span><span><strong>{rekberGroup.activated_at ? "Rekber aktif" : "Midman (MM) terhubung"}</strong><small>{rekberThirdPartyProfile?.display_name || "Midman (MM)"}</small></span></span><span>{rekberGroup.activated_at ? "Whispering aktif." : "Chat normal tiga pihak. Menunggu Midman (MM) mengaktifkan rekening bersama."}</span></div>}
 
       <header className="chat-conversation-header">
         <Link to="/chat" className="chat-back-button" aria-label="Kembali ke daftar chat">←</Link>
@@ -538,7 +538,7 @@ export default function ChatThread() {
           <div className="whisper-target-switch" role="group" aria-label="Pilih target whisper"><span>Kirim pesan ke:</span><button type="button" className={thirdPartyTarget === "seller" ? "is-active" : ""} onClick={() => setThirdPartyTarget("seller")}>Penjual</button><button type="button" className={thirdPartyTarget === "buyer" ? "is-active" : ""} onClick={() => setThirdPartyTarget("buyer")}>Pembeli</button></div>
           {renderMessageList(sellerWhisperMessages, "Penjual", participant, "whisper-panel-seller")}
           {renderMessageList(buyerWhisperMessages, "Pembeli", rekberBuyerProfile, "whisper-panel-buyer")}
-        </> : renderMessageList(isBuyer ? buyerWhisperMessages : sellerWhisperMessages, "Pihak ketiga", rekberThirdPartyProfile, "whisper-panel-single")}
+        </> : renderMessageList(isBuyer ? buyerWhisperMessages : sellerWhisperMessages, "Midman (MM)", rekberThirdPartyProfile, "whisper-panel-single")}
         <div ref={bottomRef} />
       </div> : <div className="chat-messages" aria-live="polite">
         <div className="chat-day-label">Percakapan Storichi</div>
@@ -554,13 +554,13 @@ export default function ChatThread() {
       </div>}
 
       {isActiveRekber && <section className="rekber-chat-control-card" aria-label="Kontrol Rekber di chat">
-        <div className="rekber-chat-control-heading"><strong>Rekening Bersama</strong><span>{rekberGroup.activated_at ? "Aktif" : "Menunggu aktivasi pihak ketiga"}</span></div>
+        <div className="rekber-chat-control-heading"><strong>Rekening Bersama</strong><span>{rekberGroup.activated_at ? "Aktif" : "Menunggu aktivasi Midman (MM)"}</span></div>
         {isRekberThirdParty && !rekberGroup.activated_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={activateSharedAccount}>{busyAction ? "Mengaktifkan..." : "Aktifkan Rekening Bersama"}</button>}
-        {isRekberThirdParty && rekberGroup.activated_at && <p className="rekber-chat-control-note">Whispering aktif. Pilih target chat di bawah untuk mengirim informasi secara privat.</p>}
+        {isRekberThirdParty && rekberGroup.activated_at && <p className="rekber-chat-control-note">Whispering aktif dengan Midman (MM). Pilih target chat di bawah untuk mengirim informasi secara privat.</p>}
         {sellerCanSendRekberQris && <button type="button" className="chat-qris-trigger" disabled={busyAction || qrisBusy} onClick={handleGiveQris} title="Kirim QRIS seller ke pihak ketiga">▣ <span>{currentProfile?.qris_url ? "Kirim QRIS ke pihak ketiga" : "Siapkan & kirim QRIS"}</span></button>}
         {!isRekberThirdParty && rekberGroup.activated_at && ((isBuyer && !rekberGroup.buyer_done_at) || (isSeller && !rekberGroup.seller_done_at)) && <button type="button" className="btn btn-outline btn-full" disabled={busyAction} onClick={markRekberDone}>{busyAction ? "Menyimpan..." : "Saya setuju menyelesaikan transaksi"}</button>}
         {isRekberThirdParty && rekberGroup.buyer_done_at && rekberGroup.seller_done_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={completeRekberCustody}>{busyAction ? "Mengamankan..." : "Pengamanan item/dana selesai"}</button>}
-        <div className="rekber-chat-status-line"><span>Penjual: {rekberGroup.seller_done_at ? "siap" : "belum"}</span><span>Pembeli: {rekberGroup.buyer_done_at ? "siap" : "belum"}</span><span>QRIS: {rekberGroup.qris_to_third_party_sent_at ? "terkirim" : "belum"}</span></div>
+        <div className="rekber-chat-status-line"><span>Penjual: {rekberGroup.seller_done_at ? "siap" : "belum"}</span><span>Pembeli: {rekberGroup.buyer_done_at ? "siap" : "belum"}</span><span>MM: {rekberGroup.qris_to_third_party_sent_at ? "QRIS terkirim" : "QRIS belum"}</span></div>
       </section>}
 
       {isRekberCompleted && (isBuyer || isSeller) && !rekberRatingSubmitted && !rekberRatingOpen && <button type="button" className="chat-rating-trigger" onClick={() => setRekberRatingOpen(true)}>☆ <span>{isBuyer ? "Beri rating produk & pihak ketiga" : "Beri rating pihak ketiga"}</span></button>}
