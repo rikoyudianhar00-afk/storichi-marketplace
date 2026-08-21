@@ -963,3 +963,42 @@ input[type="checkbox"], input[type="radio"] {
   .whisper-overlay .whisper-panel-single { min-height: 230px; }
   .whisper-panel-composer { position: sticky; bottom: 0; }
 }
+
+/* ---------- Mobile Rekber chat: centered MM and full-page scrolling ---------- */
+.chat-message-row.is-rekber-third-party { justify-content: center !important; }
+.chat-message-row.is-rekber-third-party .chat-bubble { margin-left: auto; margin-right: auto; text-align: center; }
+
+.chat-thread-page {
+  height: auto !important;
+  min-height: calc(100dvh - 74px - 72px) !important;
+  overflow: visible !important;
+  padding-bottom: calc(98px + env(safe-area-inset-bottom)) !important;
+}
+.chat-thread-page .chat-messages {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
+  padding-bottom: 12px !important;
+}
+.chat-thread-page .whisper-overlay {
+  flex: 0 0 auto !important;
+  max-height: none !important;
+}
+.chat-thread-page .whisper-panel-messages {
+  max-height: none !important;
+  overflow: visible !important;
+}
+.chat-thread-page .chat-composer-shell {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 15;
+  background: transparent;
+}
+@media (max-width: 860px) {
+  .chat-thread-page {
+    min-height: calc(100dvh - 58px - 72px) !important;
+  }
+}
