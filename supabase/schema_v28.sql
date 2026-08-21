@@ -64,6 +64,7 @@ grant execute on function public.storichi_is_rekber_request_member(uuid) to auth
 -- while members calls the SECURITY DEFINER helper instead of groups policy evaluation.
 drop policy if exists "Member bisa lihat grup miliknya" on public.rekber_groups;
 drop policy if exists "Peserta bisa melihat grup rekber" on public.rekber_groups;
+drop policy if exists "Peserta bisa melihat grup rekber tanpa rekursi" on public.rekber_groups;
 create policy "Peserta bisa melihat grup rekber tanpa rekursi" on public.rekber_groups
   for select using (
     auth.uid() = buyer_id or auth.uid() = seller_id or auth.uid() = midman_id or auth.uid() = third_party_id
@@ -72,19 +73,25 @@ create policy "Peserta bisa melihat grup rekber tanpa rekursi" on public.rekber_
 
 drop policy if exists "Member bisa lihat daftar member grupnya" on public.rekber_members;
 drop policy if exists "Peserta bisa melihat anggota lobby" on public.rekber_members;
+drop policy if exists "Peserta bisa melihat anggota lobby tanpa rekursi" on public.rekber_members;
 create policy "Peserta bisa melihat anggota lobby tanpa rekursi" on public.rekber_members
   for select using (public.storichi_is_rekber_group_participant(group_id, auth.uid()));
 
 -- Keep request/thread access on the non-recursive helpers.
 drop policy if exists "User bisa lihat thread miliknya" on public.chat_threads;
 drop policy if exists "User bisa lihat thread miliknya ou Rekber" on public.chat_threads;
+drop policy if exists "User bisa lihat thread miliknya ou Rekber tanpa rekursi" on public.chat_threads;
+drop policy if exists "User bisa lihat thread miliknya atau Rekber tanpa rekursi" on public.chat_threads;
 drop policy if exists "User bisa lihat thread miliknya atau Rekber" on public.chat_threads;
+drop policy if exists "User bisa lihat thread miliknya atau Rekber aktif" on public.chat_threads;
 create policy "User bisa lihat thread miliknya atau Rekber tanpa rekursi" on public.chat_threads
   for select using (auth.uid() = user_a or auth.uid() = user_b or public.storichi_is_rekber_thread_member(id));
 
 drop policy if exists "User bisa baca pesan di thread miliknya" on public.chat_messages;
 drop policy if exists "User bisa baca pesan miliknya atau Rekber" on public.chat_messages;
+drop policy if exists "User bisa baca pesan di thread miliknya atau Rekber aktif" on public.chat_messages;
 drop policy if exists "Peserta bisa baca chat dan whisper Rekber" on public.chat_messages;
+drop policy if exists "Peserta bisa baca chat dan whisper Rekber tanpa rekursi" on public.chat_messages;
 create policy "Peserta bisa baca chat dan whisper Rekber tanpa rekursi" on public.chat_messages
   for select using (
     exists (
@@ -117,7 +124,9 @@ create policy "Peserta bisa baca chat dan whisper Rekber tanpa rekursi" on publi
 
 drop policy if exists "User bisa kirim pesan di thread miliknya" on public.chat_messages;
 drop policy if exists "User bisa kirim pesan miliknya atau Rekber aktif" on public.chat_messages;
+drop policy if exists "User bisa kirim pesan di thread miliknya atau Rekber aktif" on public.chat_messages;
 drop policy if exists "Peserta bisa kirim chat dan whisper Rekber" on public.chat_messages;
+drop policy if exists "Peserta bisa kirim chat dan whisper Rekber tanpa rekursi" on public.chat_messages;
 create policy "Peserta bisa kirim chat dan whisper Rekber tanpa rekursi" on public.chat_messages
   for insert with check (
     auth.uid() = sender_id
@@ -150,5 +159,6 @@ create policy "Peserta bisa kirim chat dan whisper Rekber tanpa rekursi" on publ
   );
 
 drop policy if exists "Buyer seller atau Rekber member bisa lihat request" on public.purchase_requests;
+drop policy if exists "Buyer seller atau Rekber member tanpa rekursi" on public.purchase_requests;
 create policy "Buyer seller atau Rekber member tanpa rekursi" on public.purchase_requests
   for select using (auth.uid() = buyer_id or auth.uid() = seller_id or public.storichi_is_rekber_request_member(id));
