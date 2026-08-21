@@ -33,6 +33,9 @@ export default function ChatThread() {
   const [pricePromptOpen, setPricePromptOpen] = useState(false);
   const [finalPrice, setFinalPrice] = useState("");
   const [itemQuantity, setItemQuantity] = useState("1");
+  const [rekberPricePromptOpen, setRekberPricePromptOpen] = useState(false);
+  const [rekberFinalPrice, setRekberFinalPrice] = useState("");
+  const [rekberItemQuantity, setRekberItemQuantity] = useState("1");
   const [skipDoneConfirm, setSkipDoneConfirm] = useState(false);
   const [productCollapsed, setProductCollapsed] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
@@ -200,6 +203,9 @@ export default function ChatThread() {
   const sellerWhisperMessages = messages.filter((message) => message.visibility === "seller_whisper");
   const buyerWhisperMessages = messages.filter((message) => message.visibility === "buyer_whisper");
   const mainChatMessages = messages.filter((message) => !message.visibility || message.visibility === "main");
+  const displayedMainChatMessages = isRekberCompleted
+    ? mainChatMessages.filter((message) => message.sender_id === rekberGroup?.third_party_id)
+    : mainChatMessages;
   const isWhispering = Boolean((isActiveRekber && rekberGroup?.activated_at) || isRekberCompleted);
 
   useEffect(() => {
@@ -511,19 +517,30 @@ export default function ChatThread() {
     setRekberGroup(data);
   }
 
+  function openRekberCustodyFlow() {
+    setRekberItemQuantity(String(Math.max(1, Number(request?.item_quantity || 1))));
+    setRekberFinalPrice(request?.final_price ? String(request.final_price) : "");
+    setRekberPricePromptOpen(true);
+  }
+
   async function completeRekberCustody() {
     if (!isRekberThirdParty || !rekberGroup?.id) return;
     if (!rekberGroup.midman_rating_requested_at || rekberReviewCount < 2) {
       setChatError("Minta rating Seller dan Buyer, lalu tunggu keduanya mengirim rating.");
       return;
     }
+    const parsedPrice = Number(rekberFinalPrice);
+    const parsedQuantity = Number(rekberItemQuantity);
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) return setChatError("Jumlah barang harus berupa bilangan bulat minimal 1.");
+    if (!parsedPrice || parsedPrice <= 0) return setChatError("Midman (MM) harus mengisi harga total barang.");
     setBusyAction(true);
     setChatError("");
-    const { data, error } = await supabase.rpc("complete_rekber_custody", { p_group_id: rekberGroup.id });
+    const { data, error } = await supabase.rpc("complete_rekber_custody", { p_group_id: rekberGroup.id, p_final_price: parsedPrice, p_item_quantity: parsedQuantity });
     setBusyAction(false);
     if (error) return setChatError(error.message || "Pengamanan transaksi belum dapat diselesaikan.");
     setRekberGroup(data);
-    setRequest((prev) => ({ ...prev, status: "completed", completed_at: new Date().toISOString() }));
+    setRequest((prev) => ({ ...prev, status: "completed", final_price: parsedPrice, item_quantity: parsedQuantity, completed_at: new Date().toISOString() }));
+    setRekberPricePromptOpen(false);
   }
 
   async function submitRekberRating() {
@@ -654,8 +671,8 @@ export default function ChatThread() {
       </div>}
 
       <div className="chat-messages" aria-live="polite">
-        <div className="chat-day-label">{hasJoinedThreePartyChat ? "Percakapan tiga pihak" : "Percakapan transaksi"}</div>
-        {mainChatMessages.map((message) => {
+        <div className="chat-day-label">{isRekberCompleted ? "Riwayat Midman (MM)" : hasJoinedThreePartyChat ? "Percakapan tiga pihak" : "Percakapan transaksi"}</div>
+        {displayedMainChatMessages.map((message) => {
           const isMidmanMessage = !isRekberThirdParty && message.sender_id === rekberGroup?.third_party_id;
           const messageProfile = message.sender_id === user.id ? currentProfile : (message.sender_id === rekberGroup?.third_party_id ? rekberThirdPartyProfile : participant);
           return <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${isMidmanMessage ? "is-rekber-third-party" : ""} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
@@ -699,7 +716,7 @@ export default function ChatThread() {
         {isRekberThirdParty && rekberGroup.custody_requested_at && <p className="rekber-chat-control-note">QRIS Seller sudah diminta dan dikirim ke Midman (MM). Menunggu persetujuan Seller dan Buyer.</p>}
         {isRekberThirdParty && rekberGroup.custody_requested_at && rekberGroup.buyer_done_at && rekberGroup.seller_done_at && !rekberGroup.midman_rating_requested_at && <button type="button" className="btn btn-outline btn-full" disabled={busyAction} onClick={requestRekberRating}>{busyAction ? "Mengirim permintaan..." : "Minta rating dari Seller & Buyer"}</button>}
         {isRekberThirdParty && rekberGroup.midman_rating_requested_at && <p className="rekber-chat-control-note">Rating diterima: {rekberReviewCount}/2. Custody terbuka setelah Seller dan Buyer mengirim rating.</p>}
-        {isRekberThirdParty && rekberGroup.custody_requested_at && rekberGroup.buyer_done_at && rekberGroup.seller_done_at && rekberGroup.midman_rating_requested_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction || rekberReviewCount < 2} onClick={completeRekberCustody}>{busyAction ? "Mengamankan..." : rekberReviewCount < 2 ? "Menunggu rating Seller & Buyer" : "Selesaikan custody"}</button>}
+        {isRekberThirdParty && rekberGroup.custody_requested_at && rekberGroup.buyer_done_at && rekberGroup.seller_done_at && rekberGroup.midman_rating_requested_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction || rekberReviewCount < 2} onClick={openRekberCustodyFlow}>{busyAction ? "Mengamankan..." : rekberReviewCount < 2 ? "Menunggu rating Seller & Buyer" : "Selesaikan custody"}</button>}
         <div className="rekber-chat-status-line"><span>Seller: {rekberGroup.seller_done_at ? "siap" : "belum"}</span><span>Buyer: {rekberGroup.buyer_done_at ? "siap" : "belum"}</span><span>QRIS Seller: {rekberGroup.qris_to_third_party_sent_at ? "terkirim" : "belum"}</span><span>Rating MM: {rekberReviewCount}/2</span></div>
       </section>}
 
@@ -750,6 +767,18 @@ export default function ChatThread() {
       {doneConfirmOpen && (
         <div className="direct-action-modal" role="dialog" aria-modal="true">
           <div className="direct-action-modal-card"><h3>Selesaikan transaksi?</h3><p>Pastikan item sudah diterima dan Buyer sudah memberikan rating. Setelah DONE, transaksi akan masuk ke riwayat.</p><label><input type="checkbox" checked={skipDoneConfirm} onChange={(e) => setSkipDoneConfirm(e.target.checked)} /> Jangan tampilkan lagi</label><div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => setDoneConfirmOpen(false)}>Batal</button><button type="button" className="btn btn-primary" onClick={continueDoneFlow}>Lanjut</button></div></div>
+        </div>
+      )}
+      {rekberPricePromptOpen && (
+        <div className="direct-action-modal" role="dialog" aria-modal="true">
+          <div className="direct-action-modal-card">
+            <h3>Data transaksi Rekber</h3>
+            <p>Midman (MM) wajib mengisi jumlah barang dan harga total sebelum custody diselesaikan.</p>
+            <label className="done-price-field">Jumlah barang<input type="number" min="1" step="1" inputMode="numeric" value={rekberItemQuantity} onChange={(e) => setRekberItemQuantity(e.target.value)} placeholder="Contoh: 2" /></label>
+            <label className="done-price-field">Harga total<input type="number" min="1" inputMode="numeric" value={rekberFinalPrice} onChange={(e) => setRekberFinalPrice(e.target.value)} placeholder="Contoh: 100000" /></label>
+            {Number(rekberItemQuantity) > 0 && Number(rekberFinalPrice) > 0 && <div className="done-price-ratio"><strong>Harga : jumlah</strong><span>{Number(rekberFinalPrice).toLocaleString("id-ID")} : {Number(rekberItemQuantity).toLocaleString("id-ID")} = {(Number(rekberFinalPrice) / Number(rekberItemQuantity)).toLocaleString("id-ID", { maximumFractionDigits: 2 })} per barang</span></div>}
+            <div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => setRekberPricePromptOpen(false)}>Batal</button><button type="button" className="btn btn-primary" disabled={busyAction} onClick={completeRekberCustody}>{busyAction ? "Mengamankan..." : "Selesaikan custody"}</button></div>
+          </div>
         </div>
       )}
       {pricePromptOpen && (
