@@ -53,5 +53,6 @@ create policy "User bisa kirim pesan miliknya atau Rekber aktif" on public.chat_
   for insert with check (auth.uid() = sender_id and exists (select 1 from public.chat_threads t where t.id = thread_id and (t.user_a = auth.uid() or t.user_b = auth.uid() or public.storichi_is_rekber_thread_member(t.id))));
 
 drop policy if exists "Buyer/seller bisa lihat request miliknya" on public.purchase_requests;
+drop policy if exists "Buyer seller atau Rekber member bisa lihat request" on public.purchase_requests;
 create policy "Buyer seller atau Rekber member bisa lihat request" on public.purchase_requests
   for select using (auth.uid() = buyer_id or auth.uid() = seller_id or public.storichi_is_rekber_request_member(id));

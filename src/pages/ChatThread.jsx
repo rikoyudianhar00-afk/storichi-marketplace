@@ -60,13 +60,17 @@ export default function ChatThread() {
         if (active) setLoading(false);
         return;
       }
-      let { data: req } = await supabase
+      let { data: req, error: requestQueryError } = await supabase
         .from("purchase_requests")
         .select("*, product:products(id, slug, name, image_url, category, price_from, seller_id)")
         .eq("thread_id", threadId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (requestQueryError) {
+        const fallbackRequest = await supabase.from("purchase_requests").select("*").eq("thread_id", threadId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+        req = fallbackRequest.data || null;
+      }
       const isDirectParticipant = threadData.user_a === user.id || threadData.user_b === user.id;
       if (!req && threadData.product?.seller_id && user.id !== threadData.product.seller_id) {
         const { data: latestBuyerMessage } = await supabase.from("chat_messages").select("sender_id, content").eq("thread_id", threadId).order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -120,8 +124,9 @@ export default function ChatThread() {
         setMessages((prev) => prev.map((message) => (message.id === payload.new.id ? { ...message, ...payload.new } : message)));
       }
     }).subscribe();
-    const requestChannel = supabase.channel(`purchase_request_${threadId}`).on("postgres_changes", { event: "UPDATE", schema: "public", table: "purchase_requests", filter: `thread_id=eq.${threadId}` }, (payload) => {
-      setRequest((prev) => ({ ...(prev || {}), ...payload.new }));
+    const requestChannel = supabase.channel(`purchase_request_${threadId}`).on("postgres_changes", { event: "*", schema: "public", table: "purchase_requests", filter: `thread_id=eq.${threadId}` }, (payload) => {
+      if (payload.eventType === "INSERT") setRequest((prev) => prev || payload.new);
+      if (payload.eventType === "UPDATE") setRequest((prev) => ({ ...(prev || {}), ...payload.new }));
     }).subscribe();
     return () => {
       active = false;

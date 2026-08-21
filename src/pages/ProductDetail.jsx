@@ -18,6 +18,7 @@ export default function ProductDetail() {
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState("");
   const [wishlisted, setWishlisted] = useState(false);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [soldOutPopup, setSoldOutPopup] = useState(false);
@@ -109,36 +110,75 @@ export default function ProductDetail() {
       return;
     }
     setRequesting(true);
+    setRequestError("");
 
-    let { data: thread } = await supabase
+    let { data: thread, error: threadError } = await supabase
       .from("chat_threads")
       .select("id")
       .eq("product_id", product.id)
       .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
+    if (threadError) {
+      const fallbackThread = await supabase.from("chat_threads").select("id").eq("product_id", product.id).or(`user_a.eq.${user.id},user_b.eq.${user.id}`).limit(1).maybeSingle();
+      thread = fallbackThread.data || null;
+    }
+
     if (!thread) {
-      const { data: newThread } = await supabase
+      const { data: newThread, error: createThreadError } = await supabase
         .from("chat_threads")
         .insert({ user_a: user.id, user_b: product.seller_id, product_id: product.id })
-        .select()
+        .select("id")
         .single();
+      if (createThreadError || !newThread) {
+        setRequesting(false);
+        setRequestError(createThreadError?.message || "Chat belum dapat dibuat. Coba lagi.");
+        return;
+      }
       thread = newThread;
     }
 
-    await supabase.from("chat_messages").insert({
+    const { error: messageError } = await supabase.from("chat_messages").insert({
       thread_id: thread.id,
       sender_id: user.id,
       content: `Halo, saya mau beli produk "${product.name}".`,
     });
+    if (messageError) {
+      setRequesting(false);
+      setRequestError(messageError.message || "Pesan pembelian belum dapat dikirim. Coba lagi.");
+      return;
+    }
 
-    await supabase.from("purchase_requests").insert({
-      product_id: product.id,
-      buyer_id: user.id,
-      seller_id: product.seller_id,
-      thread_id: thread.id,
-      status: "pending",
-    });
+    const { data: existingRequest, error: existingRequestError } = await supabase
+      .from("purchase_requests")
+      .select("id")
+      .eq("thread_id", thread.id)
+      .eq("buyer_id", user.id)
+      .neq("status", "completed")
+      .neq("status", "rejected")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existingRequestError) {
+      console.warn("Tidak dapat memeriksa purchase request aktif:", existingRequestError.message);
+    }
+
+    if (!existingRequest) {
+      const { error: requestInsertError } = await supabase.from("purchase_requests").insert({
+        product_id: product.id,
+        buyer_id: user.id,
+        seller_id: product.seller_id,
+        thread_id: thread.id,
+        status: "pending",
+      });
+      if (requestInsertError) {
+        setRequesting(false);
+        setRequestError(requestInsertError.message || "Permintaan beli belum dapat disimpan. Coba lagi.");
+        return;
+      }
+    }
 
     setRequesting(false);
     navigate(`/chat/${thread.id}`);
@@ -239,9 +279,12 @@ export default function ProductDetail() {
           )}
 
           {!isOwnProduct ? (
-            <button className="btn btn-primary btn-full" onClick={requestToBuy} disabled={requesting} style={{ marginTop: 16 }}>
-              {requesting ? "Memproses..." : Number(product.stock ?? 1) <= 0 ? "Item telah habis" : "Saya Mau Beli"}
-            </button>
+            <>
+              <button className="btn btn-primary btn-full" onClick={requestToBuy} disabled={requesting} style={{ marginTop: 16 }}>
+                {requesting ? "Memproses..." : Number(product.stock ?? 1) <= 0 ? "Item telah habis" : "Saya Mau Beli"}
+              </button>
+              {requestError && <p className="form-error" role="alert" style={{ marginTop: 8 }}>{requestError}</p>}
+            </>
           ) : (
             <p style={{ color: "var(--ink-500)", marginTop: 16 }}>{Number(product.stock ?? 1) <= 0 ? "Item ini telah habis dan hanya terlihat di menu produk terjual." : "Ini produk kamu sendiri."}</p>
           )}

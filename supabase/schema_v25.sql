@@ -183,9 +183,6 @@ create policy "Peserta bisa melihat grup rekber" on public.rekber_groups for sel
 
 drop policy if exists "Peserta bisa melihat anggota lobby" on public.rekber_members;
 create policy "Peserta bisa melihat anggota lobby" on public.rekber_members for select using (exists (select 1 from public.rekber_groups g where g.id = group_id and (auth.uid() = g.buyer_id or auth.uid() = g.seller_id or auth.uid() = g.midman_id or auth.uid() = g.third_party_id)));
-EOF
-
-
 -- Allow the designated third party to operate the escrow workflow.
 create or replace function public.update_rekber_workflow(p_group_id uuid, p_action text)
 returns public.rekber_groups
