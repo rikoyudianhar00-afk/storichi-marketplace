@@ -12,10 +12,10 @@ export default function RoleBadge({ profile, size = 15 }) {
 
   return (
     <span className="role-badge-row" style={{ fontSize: size }}>
-      <span title={profile.is_seller ? "Penjual" : "Pembeli"}>{baseIcon}</span>
+      <span title={profile.is_seller ? "Seller" : "Buyer"}>{baseIcon}</span>
 
       {profile.is_owner && <VerifiedBadge color="#111318" size={size} label="Owner terverifikasi" />}
-      {profile.is_verified && !profile.is_owner && <VerifiedBadge color="#2454FF" size={size} label="Penjual terverifikasi" />}
+      {profile.is_verified && !profile.is_owner && <VerifiedBadge color="#2454FF" size={size} label="Seller terverifikasi" />}
 
       {profile.is_midman && (
         <span className="badge-midman" style={{ width: size, height: size, fontSize: size }} title="Mid Man">

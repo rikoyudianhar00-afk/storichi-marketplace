@@ -107,7 +107,7 @@ export default function ChatList({ archivedOnly = false }) {
     };
   }, [user]);
 
-  if (!user) return <main className="container empty-state"><h2>Masuk untuk melihat chat</h2><p>Login dengan Google untuk mulai chat dengan penjual atau pembeli.</p></main>;
+  if (!user) return <main className="container empty-state"><h2>Masuk untuk melihat chat</h2><p>Login dengan Google untuk mulai chat dengan Seller atau Buyer.</p></main>;
 
   async function enablePush() {
     setPushBusy(true);

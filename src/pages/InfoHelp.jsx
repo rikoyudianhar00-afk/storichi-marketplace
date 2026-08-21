@@ -28,23 +28,22 @@ export default function InfoHelp() {
         <h2>Membeli Produk</h2>
         <ol>
           <li>Buka halaman produk yang diinginkan, tap <strong>Saya Mau Beli</strong>.</li>
-          <li>Kamu otomatis diarahkan ke Chat dengan penjual, berisi permintaan beli.</li>
-          <li>Tunggu penjual <strong>menyetujui</strong> atau menolak permintaan tersebut.</li>
-          <li>Setelah disetujui, tombol <strong>Buat Grup Rekber</strong> akan muncul di chat itu.</li>
+          <li>Kamu otomatis diarahkan ke Chat dengan Seller, berisi permintaan beli.</li>
+          <li>Tunggu Seller <strong>menyetujui</strong> atau menolak permintaan tersebut.</li>
+          <li>Setelah disetujui, Seller dapat memilih Midman (MM) dan mengirim undangan dari chat transaksi itu.</li>
         </ol>
       </section>
 
       <section className="info-section">
         <h2>Grup Rekber (Rekening Bersama)</h2>
         <p>
-          Rekber adalah ruang transaksi sementara antara pembeli dan penjual, dibuat otomatis
-          setelah penjual menyetujui permintaan beli — bukan dibuat manual.
+          Rekber berjalan di chat transaksi yang sama setelah Seller menyetujui permintaan beli dan Midman (MM) menerima undangan.
         </p>
         <ol>
-          <li>Di dalam grup, kedua pihak bisa chat, kirim foto/video (misal bukti pembayaran).</li>
-          <li>Pembuat grup bisa <strong>invite</strong> pihak ketiga (misalnya Mid Man) lewat email.</li>
-          <li>Setelah transaksi selesai, pembuat grup menandai <strong>Selesai</strong>, lalu bisa memberi penilaian bintang untuk penjual.</li>
-          <li>Grup juga bisa <strong>dibatalkan</strong> jika transaksi tidak jadi.</li>
+          <li>Di dalam chat transaksi, Buyer, Seller, dan Midman (MM) dapat berkomunikasi sesuai aksesnya.</li>
+          <li>Seller dapat <strong>invite</strong> Midman (MM) melalui notifikasi Rekber.</li>
+          <li>Midman (MM) mengaktifkan Rekening Bersama, mengamankan dana/item, lalu Buyer dan Seller memberikan persetujuan serta rating.</li>
+          <li>Rekber dapat <strong>dibatalkan</strong> jika transaksi tidak jadi.</li>
         </ol>
       </section>
 
@@ -64,15 +63,15 @@ export default function InfoHelp() {
           <div className="role-info-item">
             <RoleBadge profile={SAMPLE.buyer} size={20} />
             <div>
-              <strong>Pembeli</strong>
-              <p>Tanda default untuk pengguna yang belum pernah menjual produk apapun.</p>
+              <strong>Buyer</strong>
+              <p>Tanda default untuk pengguna yang belum pernah menerbitkan produk.</p>
             </div>
           </div>
 
           <div className="role-info-item">
             <RoleBadge profile={SAMPLE.seller} size={20} />
             <div>
-              <strong>Penjual</strong>
+              <strong>Seller</strong>
               <p>Otomatis muncul begitu pengguna menerbitkan minimal satu produk.</p>
             </div>
           </div>
@@ -81,16 +80,16 @@ export default function InfoHelp() {
             <RoleBadge profile={SAMPLE.verified} size={20} />
             <div>
               <strong>Terverifikasi (centang biru)</strong>
-              <p>Diberikan langsung oleh Owner kepada penjual yang sudah terbukti terpercaya.</p>
+              <p>Diberikan langsung oleh Owner kepada Seller yang sudah terbukti terpercaya.</p>
             </div>
           </div>
 
           <div className="role-info-item">
             <RoleBadge profile={SAMPLE.midman} size={20} />
             <div>
-              <strong>Mid Man</strong>
+              <strong>Midman (MM)</strong>
               <p>
-                Pihak penengah transaksi, ditunjuk oleh Owner. Tanda ini bisa muncul bersamaan
+                Penghubung transaksi yang ditunjuk oleh Owner. Tanda ini bisa muncul bersamaan
                 dengan tanda lain (double tanda).
               </p>
             </div>

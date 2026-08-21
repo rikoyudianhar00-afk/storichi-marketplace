@@ -910,3 +910,11 @@ input[type="checkbox"], input[type="radio"] {
 .rekber-mm-strip-profile > span:last-child { display: flex; min-width: 0; flex-direction: column; }
 .rekber-mm-strip-profile small { max-width: 180px; overflow: hidden; color: #765a00; font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 600px) { .rekber-chat-active-strip { align-items: center; } .rekber-mm-strip-profile small { max-width: 240px; } }
+
+.whisper-layout-party { align-items: center; }
+.whisper-layout-party .whisper-panel-single { width: min(100%, 560px); flex: 0 0 min(62vh, 420px); min-height: 260px; }
+@media (max-width: 600px) { .whisper-layout-party .whisper-panel-single { width: calc(100% - 8px); flex-basis: min(58vh, 420px); } }
+
+.whisper-layout-party { align-items: center; }
+.whisper-layout-party .whisper-panel-single { width: min(100%, 560px); flex: 0 0 min(62vh, 420px); min-height: 260px; }
+@media (max-width: 600px) { .whisper-layout-party .whisper-panel-single { width: calc(100% - 8px); flex-basis: min(58vh, 420px); } }

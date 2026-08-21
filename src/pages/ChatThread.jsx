@@ -44,6 +44,7 @@ export default function ChatThread() {
   const [qrisPreviewUrl, setQrisPreviewUrl] = useState("");
   const [qrisError, setQrisError] = useState("");
   const [qrisBusy, setQrisBusy] = useState(false);
+  const [qrisUploadMode, setQrisUploadMode] = useState("seller");
   const bottomRef = useRef(null);
   const [thirdPartyTarget, setThirdPartyTarget] = useState("buyer");
   const [rekberRatingOpen, setRekberRatingOpen] = useState(false);
@@ -92,7 +93,7 @@ export default function ChatThread() {
       if (req?.rekber_group_id) {
         const { data: membership } = await supabase
           .from("rekber_members")
-          .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind, activated_at, activated_by, buyer_done_at, seller_done_at, qris_to_third_party_sent_at, custody_completed_at)")
+          .select("group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind, activated_at, activated_by, buyer_done_at, seller_done_at, qris_to_third_party_sent_at, custody_completed_at, midman_qris_url, midman_qris_sent_at, custody_requested_at)")
           .eq("group_id", req.rekber_group_id)
           .eq("user_id", user.id)
           .maybeSingle();
@@ -149,7 +150,7 @@ export default function ChatThread() {
       return undefined;
     }
     let active = true;
-    const groupSelect = "group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind, activated_at, activated_by, buyer_done_at, seller_done_at, qris_to_third_party_sent_at, custody_completed_at)";
+    const groupSelect = "group:rekber_groups(id, name, status, workflow_status, buyer_id, seller_id, midman_id, third_party_id, third_party_kind, activated_at, activated_by, buyer_done_at, seller_done_at, qris_to_third_party_sent_at, custody_completed_at, midman_qris_url, midman_qris_sent_at, custody_requested_at)";
     const loadGroup = async () => {
       const { data } = await supabase
         .from("rekber_members")
@@ -186,7 +187,6 @@ export default function ChatThread() {
   const isDirect = request?.purchase_mode === "direct";
   const waitingForBuyerRating = isDirect && isBuyer && request?.rating_requested_at && !request?.buyer_rating;
   const sellerCanSendQris = isDirect && isSeller && request?.status === "approved" && !request?.qris_sent_at && !request?.buyer_rating;
-  const sellerCanSendRekberQris = isActiveRekber && Boolean(rekberGroup?.activated_at) && isSeller && !rekberGroup?.qris_to_third_party_sent_at;
   const sellerCanRequestRating = isDirect && isSeller && request?.status === "approved" && request?.qris_sent_at && !request?.rating_requested_at && !request?.buyer_rating;
   const sellerCanComplete = isDirect && isSeller && request?.status === "approved" && Boolean(request?.buyer_rating);
   const chatCompleted = request?.status === "completed";
@@ -354,6 +354,7 @@ export default function ChatThread() {
 
   async function handleGiveQris() {
     if (!request || !isSeller) return;
+    setQrisUploadMode("seller");
     if (!qrisFile && currentProfile?.qris_url) {
       await sendQrisMessage(currentProfile.qris_url);
       return;
@@ -391,23 +392,70 @@ export default function ChatThread() {
     }
   }
 
+  async function handleMidmanQris() {
+    if (!isRekberThirdParty || !rekberGroup?.id) return;
+    setQrisUploadMode("midman");
+    if (!qrisFile) {
+      setQrisUploadOpen(true);
+      return;
+    }
+    setQrisBusy(true);
+    setQrisError("");
+    try {
+      const uploadFile = await compressImageForChat(qrisFile, 100 * 1024);
+      if (uploadFile.size > 100 * 1024) {
+        setQrisError("QRIS masih terlalu besar setelah dikompres. Pilih gambar lain.");
+        return;
+      }
+      const path = `${user.id}/midman-qris-${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.jpg`;
+      const { error: uploadError } = await supabase.storage.from("chat-attachments").upload(path, uploadFile, { contentType: "image/jpeg", upsert: false });
+      if (uploadError) {
+        setQrisError("QRIS Midman gagal diunggah.");
+        return;
+      }
+      const { data: publicData } = supabase.storage.from("chat-attachments").getPublicUrl(path);
+      const { data: group, error: qrisErrorResult } = await supabase.rpc("set_rekber_midman_qris", { p_group_id: rekberGroup.id, p_qris_url: publicData.publicUrl });
+      if (qrisErrorResult) {
+        setQrisError(qrisErrorResult.message || "QRIS Midman gagal disimpan.");
+        return;
+      }
+      setRekberGroup(group);
+      setQrisUploadOpen(false);
+      resetQrisUpload();
+    } catch {
+      setQrisError("QRIS Midman tidak dapat diproses. Pilih gambar yang valid.");
+    } finally {
+      setQrisBusy(false);
+    }
+  }
+
   async function activateSharedAccount() {
     if (!isRekberThirdParty || !rekberGroup?.id) return;
+    if (!rekberGroup.midman_qris_url) {
+      setQrisUploadMode("midman");
+      setQrisUploadOpen(true);
+      return;
+    }
     setBusyAction(true);
     setChatError("");
-    const { data, error } = await supabase.rpc("activate_rekber_account", { p_group_id: rekberGroup.id });
+    const { data, error } = await supabase.rpc("activate_rekber_account", { p_group_id: rekberGroup.id, p_qris_url: rekberGroup.midman_qris_url });
     setBusyAction(false);
     if (error) return setChatError(error.message || "Rekening bersama gagal diaktifkan.");
     setRekberGroup(data);
   }
 
+  async function requestRekberCustody() {
+    if (!isRekberThirdParty || !rekberGroup?.id || !rekberGroup.activated_at) return;
+    setBusyAction(true);
+    setChatError("");
+    const { data, error } = await supabase.rpc("request_rekber_custody", { p_group_id: rekberGroup.id });
+    setBusyAction(false);
+    if (error) return setChatError(error.message || "Pengamanan dana/item belum dapat diminta.");
+    setRekberGroup(data);
+  }
+
   async function markRekberDone() {
-    if ((!isBuyer && !isSeller) || !rekberGroup?.id || !isActiveRekber) return;
-    if (isSeller && !rekberGroup.qris_to_third_party_sent_at) {
-      if (!currentProfile?.qris_url) return setChatError("Siapkan QRIS toko terlebih dahulu. QRIS wajib dikirim ke pihak ketiga sebelum transaksi diselesaikan.");
-      const qrisSent = await sendQrisMessage(currentProfile.qris_url);
-      if (!qrisSent) return;
-    }
+    if ((!isBuyer && !isSeller) || !rekberGroup?.id || !isActiveRekber || !rekberGroup.custody_requested_at || !rekberGroup.qris_to_third_party_sent_at) return;
     setBusyAction(true);
     setChatError("");
     const { data, error } = await supabase.rpc("mark_rekber_party_done", { p_group_id: rekberGroup.id });
@@ -428,7 +476,7 @@ export default function ChatThread() {
   }
 
   async function submitRekberRating() {
-    if (!rekberProductRating || !rekberThirdPartyRating || !rekberGroup?.id) return setChatError("Pilih rating produk dan pihak ketiga terlebih dahulu.");
+    if (!rekberProductRating || !rekberThirdPartyRating || !rekberGroup?.id) return setChatError("Pilih rating produk dan Midman (MM) terlebih dahulu.");
     setBusyAction(true);
     setChatError("");
     const rpcName = isBuyer ? "submit_rekber_buyer_rating" : "submit_rekber_seller_rating";
@@ -534,10 +582,10 @@ export default function ChatThread() {
 
       {isWhispering ? <div className={`whisper-layout ${isRekberThirdParty ? "whisper-layout-third-party" : "whisper-layout-party"}`} aria-live="polite">
         {isRekberThirdParty ? <>
-          <div className="whispering-title"><strong>Whispering Rekber</strong><span>Kamu menjadi penghubung aman antara penjual dan pembeli.</span></div>
-          <div className="whisper-target-switch" role="group" aria-label="Pilih target whisper"><span>Kirim pesan ke:</span><button type="button" className={thirdPartyTarget === "seller" ? "is-active" : ""} onClick={() => setThirdPartyTarget("seller")}>Penjual</button><button type="button" className={thirdPartyTarget === "buyer" ? "is-active" : ""} onClick={() => setThirdPartyTarget("buyer")}>Pembeli</button></div>
-          {renderMessageList(sellerWhisperMessages, "Penjual", participant, "whisper-panel-seller")}
-          {renderMessageList(buyerWhisperMessages, "Pembeli", rekberBuyerProfile, "whisper-panel-buyer")}
+          <div className="whispering-title"><strong>Whispering Rekber</strong><span>Kamu menjadi penghubung aman antara Seller dan Buyer.</span></div>
+          <div className="whisper-target-switch" role="group" aria-label="Pilih target whisper"><span>Kirim pesan ke:</span><button type="button" className={thirdPartyTarget === "seller" ? "is-active" : ""} onClick={() => setThirdPartyTarget("seller")}>Seller</button><button type="button" className={thirdPartyTarget === "buyer" ? "is-active" : ""} onClick={() => setThirdPartyTarget("buyer")}>Buyer</button></div>
+          {renderMessageList(sellerWhisperMessages, "Seller", participant, "whisper-panel-seller")}
+          {renderMessageList(buyerWhisperMessages, "Buyer", rekberBuyerProfile, "whisper-panel-buyer")}
         </> : renderMessageList(isBuyer ? buyerWhisperMessages : sellerWhisperMessages, "Midman (MM)", rekberThirdPartyProfile, "whisper-panel-single")}
         <div ref={bottomRef} />
       </div> : <div className="chat-messages" aria-live="polite">
@@ -545,7 +593,7 @@ export default function ChatThread() {
         {mainChatMessages.map((message) => (
           <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${message.attachment_type === "qris" ? "is-qris" : ""} ${message.attachment_type === "system" ? "is-system" : ""}`}>
             <div className={`chat-bubble ${message.attachment_type === "qris" ? "chat-qris-bubble" : ""} ${message.attachment_type === "system" ? "chat-system-bubble" : ""}`}>
-              {message.attachment_type === "qris" && message.attachment_url ? <div className="chat-qris-card"><strong>QRIS dari {message.sender_id === user.id ? (currentProfile?.display_name || "Penjual") : (participant?.display_name || "Penjual")}</strong><button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button><small>Scan QRIS ini untuk melanjutkan pembayaran</small></div> : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
+              {message.attachment_type === "qris" && message.attachment_url ? <div className="chat-qris-card"><strong>QRIS dari {message.sender_id === user.id ? (currentProfile?.display_name || "Seller") : (participant?.display_name || "Seller")}</strong><button type="button" className="chat-image-button chat-qris-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka QRIS dan zoom"><img src={message.attachment_url} alt="QRIS pembayaran, ketuk untuk memperbesar" className="chat-attachment-media" /></button><small>Scan QRIS ini untuk melanjutkan pembayaran</small></div> : message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <button type="button" className="chat-image-button" onClick={() => openLightbox(message.attachment_url)} aria-label="Buka gambar pesan dan zoom"><img src={message.attachment_url} alt="Lampiran gambar pesan" className="chat-attachment-media" /></button>) : <span>{message.content}</span>}
               <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}{message.sender_id === user.id && <span className={`chat-message-read-state ${message.read_at ? "is-read" : ""}`} title={message.read_at ? "Telah terbaca" : "Terkirim"}>{message.read_at ? " ✓✓" : " ✓"}</span>}</time>
             </div>
           </div>
@@ -555,19 +603,20 @@ export default function ChatThread() {
 
       {isActiveRekber && <section className="rekber-chat-control-card" aria-label="Kontrol Rekber di chat">
         <div className="rekber-chat-control-heading"><strong>Rekening Bersama</strong><span>{rekberGroup.activated_at ? "Aktif" : "Menunggu aktivasi Midman (MM)"}</span></div>
-        {isRekberThirdParty && !rekberGroup.activated_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={activateSharedAccount}>{busyAction ? "Mengaktifkan..." : "Aktifkan Rekening Bersama"}</button>}
-        {isRekberThirdParty && rekberGroup.activated_at && <p className="rekber-chat-control-note">Whispering aktif dengan Midman (MM). Pilih target chat di bawah untuk mengirim informasi secara privat.</p>}
-        {sellerCanSendRekberQris && <button type="button" className="chat-qris-trigger" disabled={busyAction || qrisBusy} onClick={handleGiveQris} title="Kirim QRIS seller ke pihak ketiga">▣ <span>{currentProfile?.qris_url ? "Kirim QRIS ke pihak ketiga" : "Siapkan & kirim QRIS"}</span></button>}
-        {!isRekberThirdParty && rekberGroup.activated_at && ((isBuyer && !rekberGroup.buyer_done_at) || (isSeller && !rekberGroup.seller_done_at)) && <button type="button" className="btn btn-outline btn-full" disabled={busyAction} onClick={markRekberDone}>{busyAction ? "Menyimpan..." : "Saya setuju menyelesaikan transaksi"}</button>}
-        {isRekberThirdParty && rekberGroup.buyer_done_at && rekberGroup.seller_done_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={completeRekberCustody}>{busyAction ? "Mengamankan..." : "Pengamanan item/dana selesai"}</button>}
-        <div className="rekber-chat-status-line"><span>Penjual: {rekberGroup.seller_done_at ? "siap" : "belum"}</span><span>Pembeli: {rekberGroup.buyer_done_at ? "siap" : "belum"}</span><span>MM: {rekberGroup.qris_to_third_party_sent_at ? "QRIS terkirim" : "QRIS belum"}</span></div>
+        {isRekberThirdParty && !rekberGroup.activated_at && <><p className="rekber-chat-control-note">Upload QRIS Midman (MM) terlebih dahulu. Saat rekening bersama diaktifkan, QRIS ini otomatis dikirim ke Buyer.</p><button type="button" className="chat-qris-trigger" disabled={qrisBusy} onClick={handleMidmanQris}>▣ <span>{rekberGroup.midman_qris_url ? "Ganti QRIS Midman (MM)" : "Upload QRIS Midman (MM)"}</span></button><button type="button" className="btn btn-primary btn-full" disabled={busyAction || !rekberGroup.midman_qris_url} onClick={activateSharedAccount}>{busyAction ? "Mengaktifkan..." : "Aktifkan Rekening Bersama"}</button></>}
+        {isRekberThirdParty && rekberGroup.activated_at && <p className="rekber-chat-control-note">Whispering aktif dengan Midman (MM). QRIS Midman sudah dikirim otomatis ke Buyer.</p>}
+        {!isRekberThirdParty && rekberGroup.activated_at && rekberGroup.custody_requested_at && rekberGroup.qris_to_third_party_sent_at && ((isBuyer && !rekberGroup.buyer_done_at) || (isSeller && !rekberGroup.seller_done_at)) && <button type="button" className="btn btn-outline btn-full" disabled={busyAction} onClick={markRekberDone}>{busyAction ? "Menyimpan..." : "Saya setuju menyelesaikan transaksi"}</button>}
+        {isRekberThirdParty && rekberGroup.activated_at && !rekberGroup.custody_requested_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={requestRekberCustody}>{busyAction ? "Mengirim QRIS Seller..." : "Pengamanan dana/item selesai"}</button>}
+        {isRekberThirdParty && rekberGroup.custody_requested_at && <p className="rekber-chat-control-note">QRIS Seller sudah diminta dan dikirim ke Midman (MM). Menunggu persetujuan Seller dan Buyer.</p>}
+        {isRekberThirdParty && rekberGroup.custody_requested_at && rekberGroup.buyer_done_at && rekberGroup.seller_done_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={completeRekberCustody}>{busyAction ? "Mengamankan..." : "Selesaikan custody"}</button>}
+        <div className="rekber-chat-status-line"><span>Seller: {rekberGroup.seller_done_at ? "siap" : "belum"}</span><span>Buyer: {rekberGroup.buyer_done_at ? "siap" : "belum"}</span><span>QRIS Seller: {rekberGroup.qris_to_third_party_sent_at ? "terkirim" : "belum"}</span></div>
       </section>}
 
-      {isRekberCompleted && (isBuyer || isSeller) && !rekberRatingSubmitted && !rekberRatingOpen && <button type="button" className="chat-rating-trigger" onClick={() => setRekberRatingOpen(true)}>☆ <span>{isBuyer ? "Beri rating produk & pihak ketiga" : "Beri rating pihak ketiga"}</span></button>}
+      {isRekberCompleted && (isBuyer || isSeller) && !rekberRatingSubmitted && !rekberRatingOpen && <button type="button" className="chat-rating-trigger" onClick={() => setRekberRatingOpen(true)}>☆ <span>{isBuyer ? "Beri rating produk & Midman (MM)" : "Beri rating Midman (MM)"}</span></button>}
       {rekberRatingOpen && <section className="direct-rating-popup rekber-rating-popup" aria-label="Beri rating Rekber">
-        <div className="direct-rating-popup-head"><strong>{isBuyer ? "Nilai produk dan pihak ketiga" : "Nilai pihak ketiga"}</strong><span>Rating hanya dapat dikirim satu kali.</span></div>
+        <div className="direct-rating-popup-head"><strong>{isBuyer ? "Nilai produk dan Midman (MM)" : "Nilai Midman (MM)"}</strong><span>Rating hanya dapat dikirim satu kali.</span></div>
         {isBuyer && <><small>Rating produk</small><div className="direct-rating-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={`product-${value}`} className={value <= rekberProductRating ? "is-selected" : ""} onClick={() => setRekberProductRating(value)} aria-label={`${value} bintang produk`}>★</button>)}</div></>}
-        <small>Rating pihak ketiga</small><div className="direct-rating-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={`third-party-${value}`} className={value <= rekberThirdPartyRating ? "is-selected" : ""} onClick={() => setRekberThirdPartyRating(value)} aria-label={`${value} bintang pihak ketiga`}>★</button>)}</div>
+        <small>Rating Midman (MM)</small><div className="direct-rating-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={`third-party-${value}`} className={value <= rekberThirdPartyRating ? "is-selected" : ""} onClick={() => setRekberThirdPartyRating(value)} aria-label={`${value} bintang Midman (MM)`}>★</button>)}</div>
         <input value={rekberRatingComment} onChange={(e) => setRekberRatingComment(e.target.value)} placeholder="Komentar singkat (opsional)" />
         <button type="button" className="btn btn-primary btn-full" disabled={busyAction || !rekberThirdPartyRating || (isBuyer && !rekberProductRating)} onClick={submitRekberRating}>{busyAction ? "Menyimpan..." : "Kirim rating"}</button>
       </section>}
@@ -590,33 +639,33 @@ export default function ChatThread() {
         </section>
       )}
 
-      {sellerCanSendQris && <button type="button" className="chat-qris-trigger" disabled={busyAction || qrisBusy} onClick={handleGiveQris} title="Berikan QRIS kepada pembeli">▣ <span>{currentProfile?.qris_url ? "Berikan QRIS" : "Siapkan & berikan QRIS"}</span></button>}
-      {sellerCanRequestRating && <button type="button" className="chat-rating-trigger" disabled={busyAction} onClick={requestRating} title="Minta rating pembeli">☆ <span>Minta rating</span></button>}
+      {sellerCanSendQris && <button type="button" className="chat-qris-trigger" disabled={busyAction || qrisBusy} onClick={handleGiveQris} title="Berikan QRIS kepada Buyer">▣ <span>{currentProfile?.qris_url ? "Berikan QRIS" : "Siapkan & berikan QRIS"}</span></button>}
+      {sellerCanRequestRating && <button type="button" className="chat-rating-trigger" disabled={busyAction} onClick={requestRating} title="Minta rating Buyer">☆ <span>Minta rating</span></button>}
       {waitingForBuyerRating && !ratingOpen && <button type="button" className="chat-rating-trigger" onClick={() => setRatingOpen(true)}>☆ <span>Beri rating produk</span></button>}
       {sellerCanComplete && <button type="button" className="chat-done-trigger" disabled={busyAction} onClick={openDoneFlow}>DONE</button>}
 
       {qrisUploadOpen && (
         <div className="direct-action-modal" role="dialog" aria-modal="true" aria-label="Siapkan QRIS toko">
           <div className="direct-action-modal-card qris-upload-modal">
-            <h3>Siapkan QRIS toko</h3>
-            <p>Upload QRIS satu kali. Setelah ditetapkan, QRIS ini tersimpan sebagai QR toko dan langsung dikirim ke pembeli. Permintaan rating dilakukan seller melalui tombol terpisah setelah QRIS terkirim.</p>
+            <h3>{qrisUploadMode === "midman" ? "Upload QRIS Midman (MM)" : "Siapkan QRIS Seller"}</h3>
+            <p>{qrisUploadMode === "midman" ? "QRIS Midman disimpan untuk dikirim otomatis kepada Buyer saat Rekening Bersama diaktifkan." : "Upload QRIS satu kali. Setelah ditetapkan, QRIS ini tersimpan sebagai QR toko."}</p>
             <label className="qris-file-picker">{qrisPreviewUrl ? <img src={qrisPreviewUrl} alt="Pratinjau QRIS" /> : <span>Ketuk untuk memilih gambar QRIS</span>}<input type="file" accept="image/*" onChange={chooseQrisFile} /></label>
             {qrisError && <p className="form-error" role="alert">{qrisError}</p>}
-            <div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => { setQrisUploadOpen(false); resetQrisUpload(); }}>Batal</button><button type="button" className="btn btn-primary" disabled={!qrisFile || qrisBusy} onClick={handleGiveQris}>{qrisBusy ? "Menyiapkan..." : "Tetapkan QR toko & kirim"}</button></div>
+            <div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => { setQrisUploadOpen(false); resetQrisUpload(); }}>Batal</button><button type="button" className="btn btn-primary" disabled={!qrisFile || qrisBusy} onClick={qrisUploadMode === "midman" ? handleMidmanQris : handleGiveQris}>{qrisBusy ? "Menyiapkan..." : qrisUploadMode === "midman" ? "Simpan QRIS Midman" : "Tetapkan QR toko"}</button></div>
           </div>
         </div>
       )}
 
       {doneConfirmOpen && (
         <div className="direct-action-modal" role="dialog" aria-modal="true">
-          <div className="direct-action-modal-card"><h3>Selesaikan transaksi?</h3><p>Pastikan item sudah diterima dan pembeli sudah memberikan rating. Setelah DONE, transaksi akan masuk ke riwayat.</p><label><input type="checkbox" checked={skipDoneConfirm} onChange={(e) => setSkipDoneConfirm(e.target.checked)} /> Jangan tampilkan lagi</label><div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => setDoneConfirmOpen(false)}>Batal</button><button type="button" className="btn btn-primary" onClick={continueDoneFlow}>Lanjut</button></div></div>
+          <div className="direct-action-modal-card"><h3>Selesaikan transaksi?</h3><p>Pastikan item sudah diterima dan Buyer sudah memberikan rating. Setelah DONE, transaksi akan masuk ke riwayat.</p><label><input type="checkbox" checked={skipDoneConfirm} onChange={(e) => setSkipDoneConfirm(e.target.checked)} /> Jangan tampilkan lagi</label><div className="direct-action-modal-actions"><button type="button" className="btn btn-outline" onClick={() => setDoneConfirmOpen(false)}>Batal</button><button type="button" className="btn btn-primary" onClick={continueDoneFlow}>Lanjut</button></div></div>
         </div>
       )}
       {pricePromptOpen && (
         <div className="direct-action-modal" role="dialog" aria-modal="true">
           <div className="direct-action-modal-card">
             <h3>Harga dan jumlah barang</h3>
-            <p>Masukkan jumlah barang dan harga total yang akan dicatat untuk pembeli serta penjual.</p>
+            <p>Masukkan jumlah barang dan harga total yang akan dicatat untuk Buyer serta Seller.</p>
             <label className="done-price-field">Jumlah barang<input type="number" min="1" step="1" inputMode="numeric" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} placeholder="Contoh: 2" /></label>
             <label className="done-price-field">Harga total<input type="number" min="1" inputMode="numeric" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value)} placeholder="Contoh: 100000" /></label>
             {Number(itemQuantity) > 0 && Number(finalPrice) > 0 && <div className="done-price-ratio"><strong>Harga : jumlah</strong><span>{Number(finalPrice).toLocaleString("id-ID")} : {Number(itemQuantity).toLocaleString("id-ID")} = {(Number(finalPrice) / Number(itemQuantity)).toLocaleString("id-ID", { maximumFractionDigits: 2 })} per barang</span><small>Rasio dasar 1:1 — harga per barang dihitung dari harga total dibagi jumlah barang.</small></div>}
@@ -628,7 +677,7 @@ export default function ChatThread() {
       {moderationNotice && <div className="chat-moderation-warning" role="alert">{moderationNotice}</div>}
       {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
       <div className={`chat-composer-shell ${chatLocked ? "is-locked" : ""}`}>
-        {isRekberThirdParty && isActiveRekber && <div className="whisper-composer-target"><span>Tujuan whisper:</span><button type="button" className={thirdPartyTarget === "seller" ? "is-active" : ""} onClick={() => setThirdPartyTarget("seller")}>Penjual</button><button type="button" className={thirdPartyTarget === "buyer" ? "is-active" : ""} onClick={() => setThirdPartyTarget("buyer")}>Pembeli</button></div>}
+        {isRekberThirdParty && isActiveRekber && <div className="whisper-composer-target"><span>Tujuan whisper:</span><button type="button" className={thirdPartyTarget === "seller" ? "is-active" : ""} onClick={() => setThirdPartyTarget("seller")}>Seller</button><button type="button" className={thirdPartyTarget === "buyer" ? "is-active" : ""} onClick={() => setThirdPartyTarget("buyer")}>Buyer</button></div>}
         <form className="chat-input-bar" onSubmit={sendMessage}>
           <AttachmentButton userId={user.id} onUploaded={sendAttachment} disabled={chatLocked} />
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder={chatLocked ? "Beri rating sebelum chat..." : "Tulis pesan..."} aria-label="Tulis pesan" disabled={chatLocked} />

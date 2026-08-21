@@ -15,7 +15,7 @@ const WORKFLOW_LABELS = {
 };
 
 function roleLabel(role) {
-  return role === "buyer" ? "Pembeli" : role === "seller" ? "Penjual" : role === "midman" ? "Midman" : role === "third_party" ? "Pihak ketiga" : "Peserta";
+  return role === "buyer" ? "Buyer" : role === "seller" ? "Seller" : role === "midman" || role === "third_party" ? "Midman (MM)" : "Peserta";
 }
 
 export default function RekberRoom() {
@@ -130,29 +130,29 @@ export default function RekberRoom() {
 
       <section className="rekber-workflow-card">
         <div className="rekber-workflow-heading"><div><span className="section-kicker">Rekber 3 pihak</span><h2>Alur penyerahan aman</h2></div><strong>{WORKFLOW_LABELS[workflowStatus] || workflowStatus}</strong></div>
-        <p className="rekber-workflow-note">Pembeli menyerahkan dana dan penjual menyerahkan item kepada pihak ketiga. Setelah keduanya dikonfirmasi, pihak ketiga melepas item kepada pembeli dan dana kepada penjual.</p>
+        <p className="rekber-workflow-note">Buyer menyerahkan dana dan Seller menyerahkan item kepada Midman (MM). Setelah keduanya dikonfirmasi, Midman (MM) melepas item kepada Buyer dan dana kepada Seller.</p>
         <div className="rekber-role-grid">
           {members.map((member) => <div key={member.id} className={`rekber-role-card ${member.role}`}><strong>{roleLabel(member.role)}</strong><span>{member.profile?.display_name || "Pengguna"}</span>{member.profile?.is_midman && <RoleBadge profile={member.profile} />}</div>)}
         </div>
         {isEscrowOperator && active && (
           <div className="rekber-midman-actions">
-            <p className="thread-item-sub">Kontrol pihak ketiga</p>
+            <p className="thread-item-sub">Kontrol Midman (MM)</p>
             <div className="rekber-action-grid">
-              {group.funds_status !== "held" && <button className="btn btn-outline" disabled={workflowBusy} onClick={() => updateWorkflow("confirm_funds")}>Konfirmasi dana dipegang pihak ketiga</button>}
-              {group.item_status !== "held" && <button className="btn btn-outline" disabled={workflowBusy} onClick={() => updateWorkflow("confirm_item")}>Konfirmasi item dipegang pihak ketiga</button>}
+              {group.funds_status !== "held" && <button className="btn btn-outline" disabled={workflowBusy} onClick={() => updateWorkflow("confirm_funds")}>Konfirmasi dana dipegang Midman (MM)</button>}
+              {group.item_status !== "held" && <button className="btn btn-outline" disabled={workflowBusy} onClick={() => updateWorkflow("confirm_item")}>Konfirmasi item dipegang Midman (MM)</button>}
               {group.funds_status === "held" && group.item_status === "held" && <button className="btn btn-primary" disabled={workflowBusy} onClick={() => updateWorkflow("release")}>Lepaskan dana & item</button>}
             </div>
           </div>
         )}
-        <div className="rekber-status-lines"><span>Dana: <b>{group.funds_status === "held" ? "Dipegang pihak ketiga" : "Menunggu konfirmasi"}</b></span><span>Item: <b>{group.item_status === "held" ? "Dipegang pihak ketiga" : "Menunggu konfirmasi"}</b></span></div>
+        <div className="rekber-status-lines"><span>Dana: <b>{group.funds_status === "held" ? "Dipegang Midman (MM)" : "Menunggu konfirmasi"}</b></span><span>Item: <b>{group.item_status === "held" ? "Dipegang Midman (MM)" : "Menunggu konfirmasi"}</b></span></div>
         {workflowError && <p className="form-error">{workflowError}</p>}
       </section>
 
-      {showReview && <div className="container review-form-box"><h3 style={{ fontSize: 14.5, marginBottom: 8 }}>Beri penilaian untuk penjual</h3><StarInput value={reviewRating} onChange={setReviewRating} /><textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} placeholder="Ulasan (opsional)" rows={2} style={{ marginTop: 8 }} /><button className="btn btn-primary" onClick={submitReview} style={{ marginTop: 8 }}>Kirim Penilaian</button></div>}
+      {showReview && <div className="container review-form-box"><h3 style={{ fontSize: 14.5, marginBottom: 8 }}>Beri penilaian untuk Seller</h3><StarInput value={reviewRating} onChange={setReviewRating} /><textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} placeholder="Ulasan (opsional)" rows={2} style={{ marginTop: 8 }} /><button className="btn btn-primary" onClick={submitReview} style={{ marginTop: 8 }}>Kirim Penilaian</button></div>}
 
       <div className="chat-messages">
         <div className="chat-day-label">Chat Rekber</div>
-        {messages.map((message) => { const isThirdPartyMessage = message.sender_id === group.midman_id || message.sender_id === group.third_party_id; return <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${isThirdPartyMessage ? "is-rekber-third-party" : ""}`}><div className="chat-bubble">{isThirdPartyMessage && <small className="chat-rekber-sender-label">⚖️ {message.sender_id === user.id ? "Kamu · Pihak ketiga" : "Midman / Pihak ketiga"}</small>}{message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <img src={message.attachment_url} alt="Lampiran pesan" className="chat-attachment-media" />) : <span>{message.content}</span>}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div></div>; })}
+        {messages.map((message) => { const isThirdPartyMessage = message.sender_id === group.midman_id || message.sender_id === group.third_party_id; return <div key={message.id} className={`chat-message-row ${message.sender_id === user.id ? "is-mine" : "is-theirs"} ${isThirdPartyMessage ? "is-rekber-third-party" : ""}`}><div className="chat-bubble">{isThirdPartyMessage && <small className="chat-rekber-sender-label">⚖️ {message.sender_id === user.id ? "Kamu · Midman (MM)" : "Midman (MM)"}</small>}{message.attachment_url ? (message.attachment_type === "video" ? <video src={message.attachment_url} controls className="chat-attachment-media" /> : <img src={message.attachment_url} alt="Lampiran pesan" className="chat-attachment-media" />) : <span>{message.content}</span>}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div></div>; })}
         <div ref={bottomRef} />
       </div>
       {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
