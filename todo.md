@@ -18,3 +18,6 @@
 - [x] Ambil katalog aktif dan toko publik langsung di gateway server agar konteks Gemini tidak bergantung pada pemuatan browser.
 - [x] Uji production menggunakan data publik database Storichi yang sebenarnya.
 - [x] Hapus chip pilihan cepat Asisten Storichi yang terpotong di atas composer pada Chrome Android.
+- [ ] Buat wrapper APK Android ringan yang memuat website production Storichi secara sinkron.
+- [ ] Batasi notifikasi push wrapper hanya untuk chat pelanggan baru, balasan chat, dan undangan Rekber.
+- [ ] Uji izin notifikasi, deep link notifikasi, dan proses build APK Android.

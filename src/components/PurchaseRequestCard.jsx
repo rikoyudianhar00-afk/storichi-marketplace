@@ -131,6 +131,7 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
     setBusy(false);
     if (inviteError || !data) return setError(inviteError?.message || "Undangan Midman (MM) gagal dikirim.");
     setInvitation(data);
+    void supabase.functions.invoke("send-rekber-invite-push", { body: { invitationId: data.id } });
     setShowPicker(false);
     setSelectedProfileId("");
     onUpdate?.({ ...request, rekber_invitation_id: data.id });
@@ -143,6 +144,7 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
     setBusy(false);
     if (inviteError || !data) return setError(inviteError?.message || "Pengajuan Midman (MM) gagal dikirim. Jalankan migrasi Rekber terbaru.");
     setInvitation(data);
+    void supabase.functions.invoke("send-rekber-invite-push", { body: { invitationId: data.id } });
     setShowPicker(false);
     setSelectedProfileId("");
     onUpdate?.({ ...request, rekber_invitation_id: data.id });
@@ -158,6 +160,7 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
       setInvitation((current) => current ? { ...current, status: "declined" } : current);
       return;
     }
+    void supabase.functions.invoke("send-rekber-invite-push", { body: { invitationId: invitation.id } });
     setInvitation((current) => current ? { ...current, status: "buyer_approved", buyer_approved_at: new Date().toISOString() } : current);
   }
 

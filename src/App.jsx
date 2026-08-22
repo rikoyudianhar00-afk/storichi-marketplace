@@ -28,6 +28,7 @@ import Notifications from "./pages/Notifications";
 import Transactions from "./pages/Transactions";
 import ChatNotificationToast from "./components/ChatNotificationToast";
 import StorichiAssistant from "./components/StorichiAssistant";
+import NativePushBridge from "./components/NativePushBridge";
 import { useAuth } from "./context/AuthContext";
 
 export default function App() {
@@ -61,6 +62,7 @@ export default function App() {
     <>
       <Navbar />
       <ChatNotificationToast userId={user?.id} />
+      <NativePushBridge user={user} />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/kategori/:slug" element={<CategoryPage />} />
