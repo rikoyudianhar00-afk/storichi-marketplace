@@ -21,3 +21,5 @@
 - [ ] Buat wrapper APK Android ringan yang memuat website production Storichi secara sinkron.
 - [ ] Batasi notifikasi push wrapper hanya untuk chat pelanggan baru, balasan chat, dan undangan Rekber.
 - [ ] Uji izin notifikasi, deep link notifikasi, dan proses build APK Android.
+- [x] Masukkan source wrapper Android Storichi ke repository marketplace tanpa memasukkan `google-services.json`, token, atau private key.
+- [x] Dokumentasikan cara mengatur Firebase dan membangun APK dari source wrapper dalam repository.
