@@ -27,6 +27,7 @@ import Wishlist from "./pages/Wishlist";
 import Notifications from "./pages/Notifications";
 import Transactions from "./pages/Transactions";
 import ChatNotificationToast from "./components/ChatNotificationToast";
+import StorichiAssistant from "./components/StorichiAssistant";
 import { useAuth } from "./context/AuthContext";
 
 export default function App() {
@@ -90,6 +91,7 @@ export default function App() {
       </Routes>
       {showFooter && <Footer />}
       <BottomNav />
+      <StorichiAssistant />
     </>
   );
 }
