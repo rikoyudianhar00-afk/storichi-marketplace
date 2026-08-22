@@ -6,7 +6,10 @@ function isGoogleGenerativeApi(baseUrl) {
 }
 
 function cleanModelName(value) {
-  return String(value || "").replace(/^models\//i, "").replace(/:generateContent.*$/i, "").split(/[?#]/)[0].trim();
+  const source = String(value || "").trim().replace(/^['"]|['"]$/g, "");
+  const pathModel = source.match(/models\/([^:/?#]+)/i);
+  if (pathModel?.[1]) return pathModel[1];
+  return source.replace(/^models\//i, "").replace(/:generateContent.*$/i, "").split(/[?#]/)[0].trim();
 }
 
 function getGoogleGenerateUrl(baseUrl, model) {
@@ -68,6 +71,7 @@ export default async function handler(req, res) {
       return res.status(502).json({
         error: "Layanan AI belum merespons dengan baik.",
         code: `${isGoogle ? "GEMINI" : "AI_PROVIDER"}_HTTP_${upstream.status}`,
+        ...(isGoogle ? { configuredModel: model } : {}),
         ...(detail ? { detail } : {}),
       });
     }
