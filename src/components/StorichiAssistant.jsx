@@ -130,7 +130,15 @@ export default function StorichiAssistant() {
       if (response.ok) {
         const data = await response.json();
         answer = { answer: data.answer, products: data.productIds ? catalog.filter((product) => data.productIds.includes(product.id)) : [] };
-      } else throw new Error("AI server tidak tersedia");
+      } else {
+        const failure = await response.json().catch(() => ({}));
+        if (failure?.code?.startsWith("AI_PROVIDER_") || failure?.code === "AI_PROVIDER_MODEL_MISMATCH") {
+          answer = {
+            answer: `${failure.error || "Konfigurasi model AI belum sesuai."}${failure.guidance ? ` ${failure.guidance}` : ""}`,
+            products: [],
+          };
+        } else throw new Error("AI server tidak tersedia");
+      }
     } catch {
       answer = createLocalAnswer({ message, products: catalog });
     } finally {
