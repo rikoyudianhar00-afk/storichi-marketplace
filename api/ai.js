@@ -25,7 +25,12 @@ export default async function handler(req, res) {
   const system = `Anda adalah Asisten Storichi, marketplace digital Indonesia. Pahami sendiri konteks pengguna: mencari/membeli produk, menjual/membuat draft listing, atau bertanya tentang transaksi dan Rekber. Jawab dalam Bahasa Indonesia singkat, sopan, dan jujur. Anda hanya memberi saran dan draft. Jangan mengklaim telah mengirim chat, membuat listing, mengubah harga/stok, membeli produk, mengirim QRIS, memilih Midman, menyelesaikan Rekber/custody, memberi rating, atau menjalankan tindakan apa pun. Tolak penipuan, phishing, manipulasi ulasan, spam, permintaan data pribadi/rahasia, malware, dan usaha menghindari aturan. Rekomendasi hanya dari katalog yang diberikan. Jika menyarankan produk, keluarkan di akhir persis dalam format [PRODUCT_IDS:id1,id2] memakai ID katalog yang valid, atau [PRODUCT_IDS:] bila tidak ada.`;
   try {
     const upstream = await fetch(`${baseUrl}/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }, body: JSON.stringify({ model: process.env.STORICHI_AI_MODEL || "gpt-5-mini", messages: [{ role: "system", content: system }, { role: "user", content: `Katalog tersedia:\n${JSON.stringify(sanitizedCatalog)}\n\nPermintaan pengguna: ${text}` }], max_completion_tokens: 650, temperature: 0.3 }) });
-    if (!upstream.ok) return res.status(502).json({ error: "Layanan AI belum merespons dengan baik." });
+    if (!upstream.ok) {
+      return res.status(502).json({
+        error: "Layanan AI belum merespons dengan baik.",
+        code: `AI_PROVIDER_HTTP_${upstream.status}`,
+      });
+    }
     const data = await upstream.json();
     const raw = String(data?.choices?.[0]?.message?.content || "").trim();
     const match = raw.match(/\[PRODUCT_IDS:([^\]]*)\]/i);
