@@ -8,6 +8,7 @@ const GEMINI_MODEL_ALIASES = {
 };
 const SEARCH_STOP_WORDS = new Set(["aku", "anda", "apa", "atau", "bagi", "bisa", "buat", "cari", "dengan", "dan", "dari", "di", "ingin", "itu", "ke", "kami", "kamu", "mau", "paling", "produk", "saya", "sebuah", "serta", "toko", "untuk", "yang"]);
 const DATABASE_PAGE_SIZE = 500;
+const STORICHI_PUBLIC_SUPABASE_URL = "https://dzoveptvtpoybdwwciit.supabase.co";
 
 function isGoogleGenerativeApi(baseUrl) {
   return /generativelanguage\.googleapis\.com|aiplatform\.googleapis\.com/i.test(baseUrl);
@@ -79,10 +80,14 @@ function sanitizeStore(store, productCount) {
   };
 }
 
-function getSupabaseConfig() {
+function getSupabaseConfig(publicSupabase) {
   const url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
   const anonKey = String(process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "");
-  return url && anonKey ? { url, anonKey } : null;
+  if (url && anonKey) return { url, anonKey };
+  const browserUrl = String(publicSupabase?.url || "").replace(/\/$/, "");
+  const browserKey = String(publicSupabase?.anonKey || "");
+  if (browserUrl === STORICHI_PUBLIC_SUPABASE_URL && /^sb_publishable_[A-Za-z0-9_-]{20,}$/.test(browserKey)) return { url: browserUrl, anonKey: browserKey };
+  return null;
 }
 
 async function fetchSupabaseJson(url, anonKey) {
@@ -115,8 +120,8 @@ async function fetchPublicStoresForProducts(config, products) {
   return stores.filter((store) => store.product_count > 0);
 }
 
-async function loadPublicMarketplaceContext() {
-  const config = getSupabaseConfig();
+async function loadPublicMarketplaceContext(publicSupabase) {
+  const config = getSupabaseConfig(publicSupabase);
   if (!config) throw new Error("Supabase server configuration unavailable");
   const products = await fetchAllPublicProducts(config);
   const stores = await fetchPublicStoresForProducts(config, products);
@@ -162,7 +167,7 @@ export default async function handler(req, res) {
 
   let publicContext;
   try {
-    publicContext = await loadPublicMarketplaceContext();
+    publicContext = await loadPublicMarketplaceContext(req.body?.publicSupabase);
   } catch {
     return res.status(503).json({ error: "Katalog publik Storichi sedang tidak dapat dijangkau. Silakan coba lagi sebentar.", code: "PUBLIC_CATALOG_UNAVAILABLE" });
   }

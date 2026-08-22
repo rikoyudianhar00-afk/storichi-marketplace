@@ -41,7 +41,13 @@ export default function StorichiAssistant() {
       const response = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({
+          message,
+          publicSupabase: {
+            url: import.meta.env.VITE_SUPABASE_URL,
+            anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+        }),
       });
       if (response.ok) {
         const data = await response.json();
