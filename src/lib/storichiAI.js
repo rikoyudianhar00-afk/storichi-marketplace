@@ -50,7 +50,10 @@ export function createLocalAnswer({ message, mode = "buyer", products = [] }) {
   const blocked = safetyReply(message);
   if (blocked) return { answer: blocked, products: [] };
   const lower = String(message || "").toLocaleLowerCase("id");
-  if (mode === "seller" || /(?:judul|deskripsi|listing|jual|produk saya|stok)/i.test(lower)) {
+  if (/(?:^(?:hai|halo|hi)$|selamat (?:pagi|siang|sore|malam))/i.test(lower)) {
+    return { answer: "Halo. Ceritakan kebutuhan Anda: saya dapat membantu mencari produk, menjelaskan transaksi dan Rekber, atau membuat draft listing untuk dijual.", products: [] };
+  }
+  if (/(?:judul|deskripsi|listing|jual|produk saya|stok)/i.test(lower)) {
     return { answer: sellerDraft(message), products: [] };
   }
   if (/(?:rekber|midman|mm|qris|custody)/i.test(lower)) {
@@ -61,5 +64,5 @@ export function createLocalAnswer({ message, mode = "buyer", products = [] }) {
     const labels = recommended.slice(0, 3).map((product) => `**${product.name}** (${formatRupiah(product.price_from)})`).join(", ");
     return { answer: `Saya menemukan pilihan yang paling relevan: ${labels}. Buka kartu produk untuk memeriksa Seller, detail, rating, dan stok sebelum mengajukan pembelian.`, products: recommended };
   }
-  return { answer: "Ceritakan produk yang dicari, game atau kategori, kisaran harga, dan jumlahnya. Saya akan membantu menyaring katalog Storichi tanpa melakukan pembelian atau mengirim pesan atas nama Anda.", products: [] };
+  return { answer: products.length ? "Saya belum menemukan produk yang cocok dari katalog saat ini. Coba tulis game/kategori, kisaran harga, atau nama item yang lebih spesifik." : "Saya sedang memuat katalog Storichi. Sambil menunggu, tulis game atau kategori, kisaran harga, dan jumlah yang Anda perlukan.", products: [] };
 }
