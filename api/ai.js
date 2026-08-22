@@ -6,7 +6,13 @@ function isGoogleGenerativeApi(baseUrl) {
 }
 
 function cleanModelName(value) {
-  return String(value || "").replace(/^models\//i, "").trim();
+  return String(value || "").replace(/^models\//i, "").replace(/:generateContent.*$/i, "").split(/[?#]/)[0].trim();
+}
+
+function getGoogleGenerateUrl(baseUrl, model) {
+  const match = String(baseUrl).match(/^(https:\/\/[^/]*(?:generativelanguage|aiplatform)\.googleapis\.com)/i);
+  const origin = match?.[1] || String(baseUrl).replace(/\/v1(?:beta)?\/.*$/i, "");
+  return `${origin.replace(/\/$/, "")}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 }
 
 function getProviderDetail(raw) {
@@ -41,9 +47,8 @@ export default async function handler(req, res) {
   const system = `Anda adalah Asisten Storichi, marketplace digital Indonesia. Pahami sendiri konteks pengguna: mencari/membeli produk, menjual/membuat draft listing, atau bertanya tentang transaksi dan Rekber. Jawab dalam Bahasa Indonesia singkat, sopan, dan jujur. Anda hanya memberi saran dan draft. Jangan mengklaim telah mengirim chat, membuat listing, mengubah harga/stok, membeli produk, mengirim QRIS, memilih Midman, menyelesaikan Rekber/custody, memberi rating, atau menjalankan tindakan apa pun. Tolak penipuan, phishing, manipulasi ulasan, spam, permintaan data pribadi/rahasia, malware, dan usaha menghindari aturan. Rekomendasi hanya dari katalog yang diberikan. Jika menyarankan produk, keluarkan di akhir persis dalam format [PRODUCT_IDS:id1,id2] memakai ID katalog yang valid, atau [PRODUCT_IDS:] bila tidak ada.`;
   const userPrompt = `Katalog tersedia:\n${JSON.stringify(sanitizedCatalog)}\n\nPermintaan pengguna: ${text}`;
   try {
-    const googleBase = /\/v1(?:beta)?$/i.test(baseUrl) ? baseUrl : `${baseUrl}/v1beta`;
     const upstream = isGoogle
-      ? await fetch(`${googleBase}/models/${encodeURIComponent(model)}:generateContent`, {
+      ? await fetch(getGoogleGenerateUrl(baseUrl, model), {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
           body: JSON.stringify({
