@@ -111,6 +111,9 @@ export default function ChatThread() {
         if (active) setLoading(false);
         return;
       }
+      if (isDirectParticipant) {
+        await supabase.rpc("set_chat_thread_state", { p_thread_id: threadId, p_action: "restore" });
+      }
       const participantId = isDirectParticipant
         ? (threadData.user_a === user.id ? threadData.user_b : threadData.user_a)
         : (req?.seller_id || threadData.user_a);
