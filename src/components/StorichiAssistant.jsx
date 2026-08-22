@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
-import { createLocalAnswer, safetyReply } from "../lib/storichiAI";
+import { safetyReply } from "../lib/storichiAI";
 
 const STARTERS = [
   "Cari top up game paling sesuai",
@@ -132,15 +132,19 @@ export default function StorichiAssistant() {
         answer = { answer: data.answer, products: data.productIds ? catalog.filter((product) => data.productIds.includes(product.id)) : [] };
       } else {
         const failure = await response.json().catch(() => ({}));
-        if (failure?.code?.startsWith("AI_PROVIDER_") || failure?.code === "AI_PROVIDER_MODEL_MISMATCH") {
+        const providerProblem = failure?.code?.startsWith("AI_PROVIDER_") || failure?.code?.startsWith("GEMINI_");
+        if (providerProblem || failure?.error) {
           answer = {
-            answer: `${failure.error || "Konfigurasi model AI belum sesuai."}${failure.guidance ? ` ${failure.guidance}` : ""}`,
+            answer: `${failure.error || "Layanan Gemini belum siap digunakan."}${failure.guidance ? ` ${failure.guidance}` : ""} Saya tidak akan menggantinya dengan jawaban template—silakan coba lagi beberapa saat lagi.`,
             products: [],
           };
         } else throw new Error("AI server tidak tersedia");
       }
     } catch {
-      answer = createLocalAnswer({ message, products: catalog });
+      answer = {
+        answer: "AI online sedang tidak dapat dijangkau. Saya tidak akan menggantinya dengan jawaban template; silakan periksa koneksi Anda lalu coba lagi.",
+        products: [],
+      };
     } finally {
       setBusy(false);
     }
