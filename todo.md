@@ -23,3 +23,4 @@
 - [ ] Uji izin notifikasi, deep link notifikasi, dan proses build APK Android.
 - [x] Masukkan source wrapper Android Storichi ke repository marketplace tanpa memasukkan `google-services.json`, token, atau private key.
 - [x] Dokumentasikan cara mengatur Firebase dan membangun APK dari source wrapper dalam repository.
+- [ ] Tambahkan dan verifikasi `storichi://auth/callback` pada Supabase Auth Redirect URLs untuk wrapper Android.

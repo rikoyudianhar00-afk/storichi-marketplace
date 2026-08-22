@@ -3,10 +3,13 @@ import { ActivityIndicator, BackHandler, Linking, Platform, Pressable, StyleShee
 import { SafeAreaView } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
+import * as WebBrowser from "expo-web-browser";
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from "react-native-webview";
 
 const STORICHI_URL = "https://storichi-marketplace.vercel.app/";
 const STORICHI_HOST = "storichi-marketplace.vercel.app";
+
+WebBrowser.maybeCompleteAuthSession();
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
@@ -74,8 +77,7 @@ export default function StorichiWrapperScreen() {
 
   useEffect(() => {
     if (!authCallback || loading || failed) return;
-    const destination = authCallback.replace(/^storichi:\/\/auth\/callback/i, `${STORICHI_URL}akun`);
-    webViewRef.current?.injectJavaScript(`window.location.replace(${JSON.stringify(destination)}); true;`);
+    webViewRef.current?.injectJavaScript(`window.dispatchEvent(new CustomEvent("storichi:native-auth-callback", { detail: ${JSON.stringify(authCallback)} })); true;`);
     setAuthCallback(null);
   }, [authCallback, loading, failed]);
 
@@ -112,8 +114,16 @@ export default function StorichiWrapperScreen() {
   }
 
   function handleMessage(event: WebViewMessageEvent) {
-    let message: { type?: string } = {};
+    let message: { type?: string; url?: string } = {};
     try { message = JSON.parse(event.nativeEvent.data); } catch { return; }
+    if (message.type === "storichi-google-auth-url" && typeof message.url === "string") {
+      void WebBrowser.openAuthSessionAsync(message.url, "storichi://auth/callback")
+        .then((result) => {
+          if (result.type === "success" && result.url) setAuthCallback(result.url);
+        })
+        .catch(() => undefined);
+      return;
+    }
     if (message.type !== "storichi-user-context") return;
     void getExpoPushToken().then((token) => {
       if (!token) return;

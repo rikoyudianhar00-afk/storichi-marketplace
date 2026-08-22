@@ -22,6 +22,27 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    async function acceptNativeCallback(event) {
+      const callbackUrl = event.detail;
+      if (typeof callbackUrl !== "string" || !callbackUrl.startsWith("storichi://auth/callback")) return;
+      try {
+        const url = new URL(callbackUrl);
+        const query = url.searchParams;
+        const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
+        const code = query.get("code");
+        const accessToken = fragment.get("access_token");
+        const refreshToken = fragment.get("refresh_token");
+        if (code) await supabase.auth.exchangeCodeForSession(code);
+        else if (accessToken && refreshToken) await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      } catch {
+        // Callback tidak valid dibiarkan tanpa mengubah sesi aplikasi.
+      }
+    }
+    window.addEventListener("storichi:native-auth-callback", acceptNativeCallback);
+    return () => window.removeEventListener("storichi:native-auth-callback", acceptNativeCallback);
+  }, []);
+
+  useEffect(() => {
     if (!session?.user) {
       setProfile(null);
       return;
@@ -63,10 +84,16 @@ export function AuthProvider({ children }) {
 
   async function signInWithGoogle() {
     const isNativeWrapper = typeof window !== "undefined" && Boolean(window.ReactNativeWebView);
-    await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: isNativeWrapper ? "storichi://auth/callback" : window.location.origin },
+      options: {
+        redirectTo: isNativeWrapper ? "storichi://auth/callback" : window.location.origin,
+        skipBrowserRedirect: isNativeWrapper,
+      },
     });
+    if (!error && isNativeWrapper && data?.url) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "storichi-google-auth-url", url: data.url }));
+    }
   }
 
   async function signOut() {
