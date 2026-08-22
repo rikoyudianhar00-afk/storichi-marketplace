@@ -1118,3 +1118,47 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Direct purchase composer follows the mobile keyboard and stays above bottom navigation. */
+.chat-thread-page:not(.is-rekber-active-chat) .chat-composer-shell {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: 9;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 0;
+  background: linear-gradient(to bottom, rgba(246, 248, 252, .18), rgba(246, 248, 252, .98) 22%);
+}
+.chat-thread-page:not(.is-rekber-active-chat) .chat-input-bar {
+  scroll-margin-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 600px) {
+  .chat-thread-page:not(.is-rekber-active-chat) .chat-composer-shell {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    padding: 6px 0;
+  }
+}
+
+/* Every chat composer follows the mobile keyboard; Rekber and direct purchase keep separate message flows. */
+.chat-thread-page .chat-composer-shell {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: 9;
+  scroll-margin-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+}
+.chat-thread-page .chat-input-bar input,
+.chat-thread-page .whisper-panel-composer input {
+  scroll-margin-top: 76px;
+  scroll-margin-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+}
+.chat-thread-page .whisper-panel-composer {
+  scroll-margin-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+}
+.chat-thread-page.is-keyboard-composer-active .chat-composer-shell {
+  z-index: 12;
+}
+@media (max-width: 600px) {
+  .chat-thread-page .chat-composer-shell {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+}

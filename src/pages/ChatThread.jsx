@@ -177,6 +177,34 @@ export default function ChatThread() {
     };
   }, [request?.rekber_group_id, user?.id]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return undefined;
+    const handleViewportResize = () => {
+      const activeElement = document.activeElement;
+      if (activeElement?.matches?.(".chat-input-bar input, .whisper-panel-composer input")) {
+        window.setTimeout(() => activeElement.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+      }
+    };
+    window.visualViewport.addEventListener("resize", handleViewportResize);
+    return () => window.visualViewport.removeEventListener("resize", handleViewportResize);
+  }, []);
+
+  function handleComposerFocus(event) {
+    const page = document.querySelector(".chat-thread-page");
+    page?.classList.add("is-keyboard-composer-active");
+    const composer = event.currentTarget.closest(".chat-composer-shell, .whisper-panel");
+    window.setTimeout(() => (composer || event.currentTarget).scrollIntoView({ block: "center", behavior: "smooth" }), 120);
+  }
+
+  function handleComposerBlur() {
+    window.setTimeout(() => {
+      const activeElement = document.activeElement;
+      if (!activeElement?.matches?.(".chat-input-bar input, .whisper-panel-composer input")) {
+        document.querySelector(".chat-thread-page")?.classList.remove("is-keyboard-composer-active");
+      }
+    }, 180);
+  }
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   function openLightbox(url) {
@@ -628,7 +656,7 @@ export default function ChatThread() {
         </div>
         <form className="whisper-panel-composer" onSubmit={(event) => { event.preventDefault(); sendWhisperText(target, textValue, setTextValue); }}>
           <AttachmentButton userId={user.id} onUploaded={(attachment) => sendWhisperAttachment(target, attachment)} disabled={chatCompleted} />
-          <input value={textValue} onChange={(event) => setTextValue?.(event.target.value)} placeholder={`Pesan untuk ${title}`} maxLength={2000} disabled={chatCompleted} aria-label={`Pesan whisper untuk ${title}`} />
+          <input value={textValue} onChange={(event) => setTextValue?.(event.target.value)} onFocus={handleComposerFocus} onBlur={handleComposerBlur} placeholder={`Pesan untuk ${title}`} maxLength={2000} disabled={chatCompleted} aria-label={`Pesan whisper untuk ${title}`} />
           <button type="submit" className="whisper-panel-send" disabled={chatCompleted || !textValue.trim()} aria-label={`Kirim pesan ke ${title}`}>Kirim</button>
         </form>
       </>}
@@ -692,7 +720,7 @@ export default function ChatThread() {
       <div className={`chat-composer-shell ${chatLocked ? "is-locked" : ""}`}>
         <form className="chat-input-bar" onSubmit={sendMessage}>
           <AttachmentButton userId={user.id} onUploaded={sendAttachment} disabled={chatLocked} />
-          <input value={text} onChange={(e) => setText(e.target.value)} placeholder={chatLocked ? "Beri rating sebelum chat..." : "Tulis pesan..."} aria-label="Tulis pesan" disabled={chatLocked} />
+          <input value={text} onChange={(e) => setText(e.target.value)} onFocus={handleComposerFocus} onBlur={handleComposerBlur} placeholder={chatLocked ? "Beri rating sebelum chat..." : "Tulis pesan..."} aria-label="Tulis pesan" disabled={chatLocked} />
           <button type="submit" className="chat-send-button" disabled={chatLocked || !text.trim()} aria-label="Kirim pesan">↑</button>
         </form>
       </div>
