@@ -17,3 +17,4 @@
 - [x] Perbaiki regresi Asisten yang menyatakan katalog kosong meskipun produk publik tersedia di beranda.
 - [x] Ambil katalog aktif dan toko publik langsung di gateway server agar konteks Gemini tidak bergantung pada pemuatan browser.
 - [x] Uji production menggunakan data publik database Storichi yang sebenarnya.
+- [x] Hapus chip pilihan cepat Asisten Storichi yang terpotong di atas composer pada Chrome Android.

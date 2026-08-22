@@ -3,13 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { safetyReply } from "../lib/storichiAI";
 
-const STARTERS = [
-  "Cari top up game paling sesuai",
-  "Tampilkan produk harga termurah",
-  "Jelaskan alur Rekber yang aman",
-  "Buat draft listing produk saya",
-];
-
 function storeRole(store) {
   if (store.is_owner) return "Owner";
   if (store.is_verified) return "Verified Seller";
@@ -76,7 +69,6 @@ export default function StorichiAssistant() {
       <section className="storichi-ai-panel">
         <header className="storichi-ai-head"><div className="storichi-ai-brand"><img src="/storichi-logo.jpg" alt="" /><div><strong>Asisten Storichi</strong><small>Rekomendasi dengan persetujuan Anda</small></div></div><button type="button" className="storichi-ai-close" onClick={() => setOpen(false)} aria-label="Tutup">×</button></header>
         <div className="storichi-ai-messages" aria-live="polite">{messages.map((entry) => <article className={`storichi-ai-message ${entry.role}`} key={entry.id}><p>{entry.text}</p>{entry.products?.length > 0 && <div className="storichi-ai-products">{entry.products.map((product) => <button type="button" key={product.id} onClick={() => { setOpen(false); navigate(`/produk/${product.slug || product.id}`); }}><b>{product.name}</b><span>{Number(product.price_from || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 })}</span></button>)}</div>}{entry.stores?.length > 0 && <div className="storichi-ai-stores">{entry.stores.map((store) => <button type="button" key={store.id} onClick={() => { setOpen(false); navigate(`/toko/${store.id}`); }}><b>{store.display_name || "Toko Storichi"}</b><span>{storeRole(store)} · {store.product_count || 0} produk aktif</span></button>)}</div>}</article>)}{busy && <article className="storichi-ai-message assistant"><p>Mencari dari katalog dan toko publik Storichi…</p></article>}</div>
-        <div className="storichi-ai-starters">{STARTERS.map((starter) => <button type="button" key={starter} onClick={() => send(starter)} disabled={busy}>{starter}</button>)}</div>
         <form className="storichi-ai-composer" onSubmit={(event) => { event.preventDefault(); send(); }}><textarea value={input} onChange={(event) => setInput(event.target.value)} maxLength={900} rows={2} placeholder="Ceritakan produk, toko, transaksi, atau listing yang Anda butuhkan…" /><button type="submit" disabled={busy || !input.trim()}>Kirim</button></form>
         <p className="storichi-ai-note">AI membaca katalog dan toko yang bersifat publik langsung dari database. Data privat, chat, QRIS, email, serta tindakan pembelian atau perubahan data tidak digunakan tanpa persetujuan Anda.</p>
       </section>
