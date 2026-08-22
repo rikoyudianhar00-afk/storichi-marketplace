@@ -1083,3 +1083,38 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
 .rekber-completed-overlay::before { content: "REKBER SELESAI"; position: absolute; top: 18px; right: -46px; width: 190px; padding: 5px 0; transform: rotate(25deg); background: #f4c531; color: #5b4300; font-size: 9px; font-weight: 900; letter-spacing: .06em; text-align: center; box-shadow: 0 2px 8px rgba(121, 87, 0, .18); }
 .rekber-completed-overlay .chat-completed-mark { width: 38px; height: 38px; font-size: 23px; background: #d7a900; color: #fff; }
 .rekber-completed-overlay strong { font-size: 12px; }
+
+/* Direct-purchase controls must follow the chat composer, not overlap it. */
+.chat-thread-page:not(.is-rekber-active-chat) {
+  height: auto !important;
+  min-height: calc(var(--storichi-viewport-height, 100dvh) - 74px);
+  overflow: visible !important;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+.chat-thread-page:not(.is-rekber-active-chat) .chat-messages {
+  flex: 0 0 auto;
+  min-height: 220px;
+  max-height: none;
+  overflow: visible;
+}
+.chat-thread-page:not(.is-rekber-active-chat) .chat-composer-shell {
+  position: static;
+  flex: 0 0 auto;
+}
+.chat-thread-page:not(.is-rekber-active-chat) .chat-qris-trigger,
+.chat-thread-page:not(.is-rekber-active-chat) .chat-rating-trigger,
+.chat-thread-page:not(.is-rekber-active-chat) .chat-done-trigger {
+  position: static;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100% - 32px, 720px);
+  margin: 8px auto;
+  bottom: auto;
+}
+@media (max-width: 600px) {
+  .chat-thread-page:not(.is-rekber-active-chat) {
+    min-height: calc(var(--storichi-viewport-height, 100dvh) - 58px);
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+}
