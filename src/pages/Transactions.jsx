@@ -27,10 +27,12 @@ export default function Transactions() {
     let active = true;
     async function load() {
       const requestSelect = "*, product:products(id, slug, name, image_url, category), buyer:profiles!purchase_requests_buyer_id_fkey(id, display_name, avatar_url), seller:profiles!purchase_requests_seller_id_fkey(id, display_name, avatar_url, is_seller, is_verified, is_midman, is_owner), rekber_group:rekber_groups(id, code, third_party_id, third_party_kind, buyer_id, seller_id, status, completed_at, custody_completed_at, activated_at)";
-      const [{ data: ownRequests }, { data: completedGroups }] = await Promise.all([
-        supabase.from("purchase_requests").select(requestSelect).or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`).eq("status", "completed").order("completed_at", { ascending: false }),
-        supabase.from("rekber_groups").select("id, purchase_request_id, third_party_id, third_party_kind, buyer_id, seller_id, status, completed_at, custody_completed_at, activated_at").or(`buyer_id.eq.${user.id},seller_id.eq.${user.id},third_party_id.eq.${user.id}`).eq("status", "completed"),
+      const [{ data: ownRequests, error: ownRequestsError }, { data: completedGroups, error: completedGroupsError }] = await Promise.all([
+        supabase.from("purchase_requests").select(requestSelect).or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`).eq("status", "completed").order("completed_at", { ascending: false }).limit(100),
+        supabase.from("rekber_groups").select("id, purchase_request_id, third_party_id, third_party_kind, buyer_id, seller_id, status, completed_at, custody_completed_at, released_at, activated_at").or(`buyer_id.eq.${user.id},seller_id.eq.${user.id},third_party_id.eq.${user.id}`).eq("status", "completed").order("completed_at", { ascending: false }).limit(100),
       ]);
+      if (ownRequestsError) console.warn("Riwayat direct purchase gagal dimuat:", ownRequestsError.message);
+      if (completedGroupsError) console.warn("Riwayat Rekber gagal dimuat:", completedGroupsError.message);
       const groupRequestIds = [...new Set((completedGroups || []).map((group) => group.purchase_request_id).filter(Boolean))];
       const groupByRequestId = new Map((completedGroups || []).filter((group) => group.purchase_request_id).map((group) => [group.purchase_request_id, group]));
       const { data: rekberRequests } = groupRequestIds.length
@@ -47,7 +49,7 @@ export default function Transactions() {
       const thirdPartyById = new Map((thirdPartyProfiles || []).map((profile) => [profile.id, profile]));
       const rows = rawRows.map((item) => {
         const rekberGroup = item.rekber_group || groupByRequestId.get(item.id) || null;
-        return { ...item, rekber_group: rekberGroup, thirdParty: thirdPartyById.get(rekberGroup?.third_party_id) || null };
+        return { ...item, rekber_group: rekberGroup, thirdParty: thirdPartyById.get(rekberGroup?.third_party_id) || null, completed_at: item.completed_at || rekberGroup?.completed_at || rekberGroup?.custody_completed_at || rekberGroup?.released_at };
       });
       const grouped = (messages || []).reduce((acc, message) => {
         acc[message.thread_id] = [...(acc[message.thread_id] || []), message];
@@ -60,7 +62,11 @@ export default function Transactions() {
       }
     }
     load();
-    return () => { active = false; };
+    const channel = supabase.channel(`transactions_${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_requests" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_groups" }, load)
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
   }, [user]);
 
   if (!user) return <main className="container empty-state"><h2>Masuk untuk melihat transaksi</h2><p>Riwayat pembelian dan penjualanmu akan tersimpan di sini.</p></main>;

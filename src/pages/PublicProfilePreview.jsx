@@ -10,21 +10,24 @@ export default function PublicProfilePreview() {
   const { userId } = useParams();
   const [profile, setProfile] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [midmanReviews, setMidmanReviews] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      const [{ data: profileData }, { data: reviewData }, { data: productData }] = await Promise.all([
+      const [{ data: profileData }, { data: reviewData }, { data: productData }, { data: midmanReviewData }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-        supabase.from("seller_reviews").select("id, rating, comment, created_at, reviewer:reviewer_id(display_name, avatar_url)").eq("seller_id", userId).order("created_at", { ascending: false }),
+        supabase.from("seller_reviews").select("id, rating, created_at, reviewer:reviewer_id(display_name, avatar_url)").eq("seller_id", userId).order("created_at", { ascending: false }),
         supabase.from("products").select("*").eq("seller_id", userId).eq("is_active", true).gt("stock", 0).order("created_at", { ascending: false }).limit(6),
+        supabase.from("rekber_third_party_reviews").select("id, rating, created_at").eq("third_party_id", userId).order("created_at", { ascending: false }),
       ]);
       const nextProducts = await enrichProducts(productData || []);
       if (active) {
         setProfile(profileData);
         setReviews(reviewData || []);
+        setMidmanReviews(midmanReviewData || []);
         setProducts(nextProducts);
         setLoading(false);
       }
@@ -48,6 +51,7 @@ export default function PublicProfilePreview() {
       </div>
 
       {isSeller && <section className="public-profile-rating"><div><span className="section-kicker">Rating toko</span><h2>{rating ? rating.toFixed(1) : "Belum ada"} <span>/ 5</span></h2></div><div><StarDisplay rating={rating} count={reviews.length} /><small>{reviews.length ? `${reviews.length} ulasan` : "Belum ada ulasan"}</small></div></section>}
+      {midmanReviews.length > 0 && <section className="public-profile-rating public-profile-midman-rating"><div><span className="section-kicker">Rating Midman (MM)</span><h2>{(midmanReviews.reduce((total, review) => total + Number(review.rating || 0), 0) / midmanReviews.length).toFixed(1)} <span>/ 5</span></h2></div><div><StarDisplay rating={midmanReviews.reduce((total, review) => total + Number(review.rating || 0), 0) / midmanReviews.length} count={midmanReviews.length} /><small>{midmanReviews.length} penilaian sebagai Midman (MM)</small></div></section>}
       {isSeller && <section className="public-profile-products"><div className="shop-toolbar"><div><h2>Pratinjau produk</h2><span>Produk aktif yang terlihat publik</span></div><Link to={`/toko/${profile.id}`} className="see-all">Lihat toko →</Link></div><ProductList items={products} emptyText="Belum ada produk aktif." /></section>}
       {!isSeller && <div className="empty-state public-profile-empty"><p>Profil ini belum memiliki toko publik.</p></div>}
     </main>

@@ -27,7 +27,6 @@ export default function ChatThread() {
   const [moderationNotice, setModerationNotice] = useState("");
   const [ratingOpen, setRatingOpen] = useState(true);
   const [selectedRating, setSelectedRating] = useState(0);
-  const [ratingComment, setRatingComment] = useState("");
   const [busyAction, setBusyAction] = useState(false);
   const [doneConfirmOpen, setDoneConfirmOpen] = useState(false);
   const [pricePromptOpen, setPricePromptOpen] = useState(false);
@@ -57,7 +56,6 @@ export default function ChatThread() {
   const [rekberRatingOpen, setRekberRatingOpen] = useState(false);
   const [rekberProductRating, setRekberProductRating] = useState(0);
   const [rekberThirdPartyRating, setRekberThirdPartyRating] = useState(0);
-  const [rekberRatingComment, setRekberRatingComment] = useState("");
   const [rekberRatingSubmitted, setRekberRatingSubmitted] = useState(false);
   const [rekberThirdPartyProfile, setRekberThirdPartyProfile] = useState(null);
   const [rekberBuyerProfile, setRekberBuyerProfile] = useState(null);
@@ -181,16 +179,34 @@ export default function ChatThread() {
   }, [request?.rekber_group_id, user?.id]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !window.visualViewport) return undefined;
-    const handleViewportResize = () => {
-      const activeElement = document.activeElement;
-      if (activeElement?.matches?.(".chat-input-bar input, .whisper-panel-composer input")) {
-        activateComposerForElement(activeElement);
-        window.setTimeout(() => activeElement.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+    if (typeof window === "undefined") return undefined;
+    const inputSelector = ".chat-input-bar input, .whisper-panel-composer input";
+    const syncKeyboardViewport = () => {
+      const viewport = window.visualViewport;
+      const keyboardHeight = viewport ? Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop)) : 0;
+      document.documentElement.style.setProperty("--storichi-keyboard-height", `${keyboardHeight}px`);
+      if (document.activeElement?.matches?.(inputSelector) && keyboardHeight > 40) {
+        document.body.classList.add("chat-keyboard-open");
+      } else if (keyboardHeight <= 40 && !document.activeElement?.matches?.(inputSelector)) {
+        document.body.classList.remove("chat-keyboard-open");
       }
     };
-    window.visualViewport.addEventListener("resize", handleViewportResize);
-    return () => window.visualViewport.removeEventListener("resize", handleViewportResize);
+    const handleViewportResize = () => {
+      syncKeyboardViewport();
+      const activeElement = document.activeElement;
+      if (activeElement?.matches?.(inputSelector)) {
+        activateComposerForElement(activeElement);
+      }
+    };
+    syncKeyboardViewport();
+    window.visualViewport?.addEventListener("resize", handleViewportResize);
+    window.visualViewport?.addEventListener("scroll", handleViewportResize);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleViewportResize);
+      window.visualViewport?.removeEventListener("scroll", handleViewportResize);
+      document.body.classList.remove("chat-keyboard-open");
+      document.documentElement.style.removeProperty("--storichi-keyboard-height");
+    };
   }, []);
 
   function activateComposerForElement(element) {
@@ -199,12 +215,18 @@ export default function ChatThread() {
     page?.classList.add("is-keyboard-composer-active");
     page?.querySelectorAll?.(".is-keyboard-active").forEach((item) => item.classList.remove("is-keyboard-active"));
     composer?.classList.add("is-keyboard-active");
+    document.body.classList.add("chat-keyboard-open");
     return composer;
   }
 
   function handleComposerFocus(event) {
     const composer = activateComposerForElement(event.currentTarget);
-    window.setTimeout(() => (composer || event.currentTarget).scrollIntoView({ block: "center", behavior: "smooth" }), 120);
+    window.setTimeout(() => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const viewportBottom = window.visualViewport?.height || window.innerHeight;
+      if (rect.bottom > viewportBottom - 12 || rect.top < 0) event.currentTarget.scrollIntoView({ block: "nearest", behavior: "auto" });
+      composer?.classList.add("is-keyboard-active");
+    }, 80);
   }
 
   function handleComposerBlur() {
@@ -212,6 +234,9 @@ export default function ChatThread() {
       const activeElement = document.activeElement;
       if (!activeElement?.matches?.(".chat-input-bar input, .whisper-panel-composer input")) {
         document.querySelector(".chat-thread-page")?.classList.remove("is-keyboard-composer-active");
+        document.querySelectorAll(".is-keyboard-active").forEach((item) => item.classList.remove("is-keyboard-active"));
+        document.body.classList.remove("chat-keyboard-open");
+        document.documentElement.style.setProperty("--storichi-keyboard-height", "0px");
       }
     }, 180);
   }
@@ -475,52 +500,37 @@ export default function ChatThread() {
   }
 
   async function handleMidmanQris() {
-    if (!isRekberThirdParty || !rekberGroup?.id) return;
-    setQrisUploadMode("midman");
-    if (!qrisFile) {
-      setQrisUploadOpen(true);
+    if (!isRekberThirdParty || !rekberGroup?.id || !currentProfile?.qris_url) {
+      setQrisError("Tambahkan QRIS Midman terlebih dahulu melalui halaman Akun.");
       return;
     }
     setQrisBusy(true);
     setQrisError("");
-    try {
-      const uploadFile = await compressImageForChat(qrisFile, 100 * 1024);
-      if (uploadFile.size > 100 * 1024) {
-        setQrisError("QRIS masih terlalu besar setelah dikompres. Pilih gambar lain.");
-        return;
-      }
-      const path = `${user.id}/midman-qris-${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.jpg`;
-      const { error: uploadError } = await supabase.storage.from("chat-attachments").upload(path, uploadFile, { contentType: "image/jpeg", upsert: false });
-      if (uploadError) {
-        setQrisError("QRIS Midman gagal diunggah.");
-        return;
-      }
-      const { data: publicData } = supabase.storage.from("chat-attachments").getPublicUrl(path);
-      const { data: group, error: qrisErrorResult } = await supabase.rpc("set_rekber_midman_qris", { p_group_id: rekberGroup.id, p_qris_url: publicData.publicUrl });
-      if (qrisErrorResult) {
-        setQrisError(qrisErrorResult.message || "QRIS Midman gagal disimpan.");
-        return;
-      }
-      setRekberGroup(group);
-      setQrisUploadOpen(false);
-      resetQrisUpload();
-    } catch {
-      setQrisError("QRIS Midman tidak dapat diproses. Pilih gambar yang valid.");
-    } finally {
-      setQrisBusy(false);
-    }
+    const { data: group, error } = await supabase.rpc("set_rekber_midman_qris", { p_group_id: rekberGroup.id, p_qris_url: currentProfile.qris_url });
+    setQrisBusy(false);
+    if (error) return setQrisError(error.message || "QRIS Midman dari Akun gagal dipakai.");
+    setRekberGroup(group);
   }
 
   async function activateSharedAccount() {
     if (!isRekberThirdParty || !rekberGroup?.id) return;
-    if (!rekberGroup.midman_qris_url) {
-      setQrisUploadMode("midman");
-      setQrisUploadOpen(true);
-      return;
-    }
     setBusyAction(true);
     setChatError("");
-    const { data, error } = await supabase.rpc("activate_rekber_account", { p_group_id: rekberGroup.id, p_qris_url: rekberGroup.midman_qris_url });
+    let activeGroup = rekberGroup;
+    if (!activeGroup.midman_qris_url && currentProfile?.qris_url) {
+      const { data: savedGroup, error: saveError } = await supabase.rpc("set_rekber_midman_qris", { p_group_id: activeGroup.id, p_qris_url: currentProfile.qris_url });
+      if (saveError) {
+        setBusyAction(false);
+        return setChatError(saveError.message || "QRIS Midman dari Akun gagal dipakai.");
+      }
+      activeGroup = savedGroup;
+      setRekberGroup(savedGroup);
+    }
+    if (!activeGroup.midman_qris_url) {
+      setBusyAction(false);
+      return setChatError("Tambahkan QRIS Midman terlebih dahulu melalui halaman Akun.");
+    }
+    const { data, error } = await supabase.rpc("activate_rekber_account", { p_group_id: activeGroup.id, p_qris_url: activeGroup.midman_qris_url });
     setBusyAction(false);
     if (error) return setChatError(error.message || "Rekening bersama gagal diaktifkan.");
     setRekberGroup(data);
@@ -590,8 +600,8 @@ export default function ChatThread() {
     setChatError("");
     const rpcName = isBuyer ? "submit_rekber_buyer_rating" : "submit_rekber_seller_rating";
     const args = isBuyer
-      ? { p_group_id: rekberGroup.id, p_product_rating: rekberProductRating, p_third_party_rating: rekberThirdPartyRating, p_comment: rekberRatingComment.trim() || null }
-      : { p_group_id: rekberGroup.id, p_third_party_rating: rekberThirdPartyRating, p_comment: rekberRatingComment.trim() || null };
+      ? { p_group_id: rekberGroup.id, p_product_rating: rekberProductRating, p_third_party_rating: rekberThirdPartyRating }
+      : { p_group_id: rekberGroup.id, p_third_party_rating: rekberThirdPartyRating };
     const { error } = await supabase.rpc(rpcName, args);
     setBusyAction(false);
     if (error) return setChatError(error.message || "Rating Rekber gagal disimpan.");
@@ -599,20 +609,18 @@ export default function ChatThread() {
     setRekberRatingSubmitted(true);
     setRekberProductRating(0);
     setRekberThirdPartyRating(0);
-    setRekberRatingComment("");
   }
 
   async function submitRating() {
     if (!selectedRating) return setChatError("Pilih bintang terlebih dahulu.");
     setBusyAction(true);
     setChatError("");
-    const { error } = await supabase.rpc("submit_direct_rating", { p_request_id: request.id, p_rating: selectedRating, p_comment: ratingComment.trim() || null });
+    const { error } = await supabase.rpc("submit_direct_rating", { p_request_id: request.id, p_rating: selectedRating });
     setBusyAction(false);
     if (error) return setChatError(error.message || "Rating gagal disimpan.");
-    setRequest((prev) => ({ ...prev, buyer_rating: selectedRating, buyer_rating_comment: ratingComment, rating_requested_at: null }));
+    setRequest((prev) => ({ ...prev, buyer_rating: selectedRating, buyer_rating_comment: null, rating_requested_at: null }));
     setRatingOpen(false);
     setSelectedRating(0);
-    setRatingComment("");
   }
 
   function openDoneFlow() {
@@ -749,7 +757,7 @@ export default function ChatThread() {
 
       {isActiveRekber && <section className="rekber-chat-control-card" aria-label="Kontrol Rekber di chat">
         <div className="rekber-chat-control-heading"><strong>Rekening Bersama</strong><span>{rekberGroup.activated_at ? "Aktif" : "Menunggu aktivasi Midman (MM)"}</span></div>
-        {isRekberThirdParty && !rekberGroup.activated_at && <><p className="rekber-chat-control-note">Upload QRIS Midman (MM) terlebih dahulu. Saat rekening bersama diaktifkan, QRIS ini otomatis dikirim ke Buyer.</p>{!rekberGroup.midman_qris_url && <button type="button" className="chat-qris-trigger" disabled={qrisBusy} onClick={handleMidmanQris}>▣ <span>Upload QRIS Midman (MM)</span></button>}<button type="button" className="btn btn-primary btn-full" disabled={busyAction || !rekberGroup.midman_qris_url} onClick={activateSharedAccount}>{busyAction ? "Mengaktifkan..." : "Aktifkan Rekening Bersama"}</button></>}
+        {isRekberThirdParty && !rekberGroup.activated_at && <><p className="rekber-chat-control-note">QRIS Midman (MM) diambil dari QRIS yang tersimpan di Akun dan otomatis dikirim ke Buyer saat Rekening Bersama diaktifkan.</p>{!rekberGroup.midman_qris_url && currentProfile?.qris_url && <button type="button" className="chat-qris-trigger" disabled={qrisBusy} onClick={handleMidmanQris}>▣ <span>Pakai QRIS dari Akun</span></button>}{!rekberGroup.midman_qris_url && !currentProfile?.qris_url && <Link to="/akun" className="chat-qris-trigger">▣ <span>Tambah QRIS di Akun</span></Link>}<button type="button" className="btn btn-primary btn-full" disabled={busyAction || (!rekberGroup.midman_qris_url && !currentProfile?.qris_url)} onClick={activateSharedAccount}>{busyAction ? "Mengaktifkan..." : "Aktifkan Rekening Bersama"}</button></>}
         {isRekberThirdParty && rekberGroup.activated_at && <p className="rekber-chat-control-note">Whispering aktif dengan Midman (MM). QRIS Midman sudah dikirim otomatis ke Buyer.</p>}
         {!isRekberThirdParty && rekberGroup.activated_at && rekberGroup.custody_requested_at && rekberGroup.qris_to_third_party_sent_at && ((isBuyer && !rekberGroup.buyer_done_at) || (isSeller && !rekberGroup.seller_done_at)) && <button type="button" className="btn btn-outline btn-full" disabled={busyAction} onClick={markRekberDone}>{busyAction ? "Menyimpan..." : "Saya setuju menyelesaikan transaksi"}</button>}
         {isRekberThirdParty && rekberGroup.activated_at && !rekberGroup.custody_requested_at && <button type="button" className="btn btn-primary btn-full" disabled={busyAction} onClick={requestRekberCustody}>{busyAction ? "Mengirim QRIS Seller..." : "Pengamanan dana/item selesai"}</button>}
@@ -765,7 +773,6 @@ export default function ChatThread() {
         <div className="direct-rating-popup-head"><strong>{isBuyer ? "Nilai produk dan Midman (MM)" : "Nilai Midman (MM)"}</strong><span>Rating hanya dapat dikirim satu kali.</span></div>
         {isBuyer && <><small>Rating produk</small><div className="direct-rating-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={`product-${value}`} className={value <= rekberProductRating ? "is-selected" : ""} onClick={() => setRekberProductRating(value)} aria-label={`${value} bintang produk`}>★</button>)}</div></>}
         <small>Rating Midman (MM)</small><div className="direct-rating-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={`third-party-${value}`} className={value <= rekberThirdPartyRating ? "is-selected" : ""} onClick={() => setRekberThirdPartyRating(value)} aria-label={`${value} bintang Midman (MM)`}>★</button>)}</div>
-        <input value={rekberRatingComment} onChange={(e) => setRekberRatingComment(e.target.value)} placeholder="Komentar singkat (opsional)" />
         <button type="button" className="btn btn-primary btn-full" disabled={busyAction || !rekberThirdPartyRating || (isBuyer && !rekberProductRating)} onClick={submitRekberRating}>{busyAction ? "Menyimpan..." : "Kirim rating"}</button>
       </section>}
 
@@ -782,7 +789,6 @@ export default function ChatThread() {
           <div className="direct-rating-stars">
             {[1, 2, 3, 4, 5].map((value) => <button type="button" key={value} className={value <= selectedRating ? "is-selected" : ""} onClick={() => setSelectedRating(value)} aria-label={`${value} bintang`}>★</button>)}
           </div>
-          {selectedRating > 0 && <input value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Komentar singkat (opsional)" />}
           <button type="button" className="btn btn-primary btn-full" disabled={!selectedRating || busyAction} onClick={submitRating}>{busyAction ? "Menyimpan..." : "Kirim rating"}</button>
         </section>
       )}

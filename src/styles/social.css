@@ -1247,3 +1247,96 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
     height: calc(82px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+
+/* ---------- Universal mobile keyboard composer ---------- */
+@media (max-width: 860px) {
+  .chat-thread-page {
+    height: auto !important;
+    min-height: calc(100dvh - 74px) !important;
+    overflow: visible !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .chat-thread-page .chat-messages {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    flex: none !important;
+  }
+
+  body.chat-keyboard-open .bottom-nav {
+    bottom: var(--storichi-keyboard-height, 0px);
+    z-index: 70;
+  }
+
+  body.chat-keyboard-open .chat-thread-page .chat-composer-shell.is-keyboard-active {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--storichi-keyboard-height, 0px);
+    z-index: 90;
+    width: 100%;
+    margin: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(255, 255, 255, .98);
+    box-shadow: 0 -8px 24px rgba(20, 35, 80, .16);
+  }
+
+  body.chat-keyboard-open .chat-thread-page .chat-composer-shell.is-keyboard-active .chat-input-bar {
+    position: static;
+    width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  body.chat-keyboard-open .chat-thread-page .whisper-panel.is-keyboard-active .whisper-panel-composer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--storichi-keyboard-height, 0px);
+    z-index: 90;
+    width: 100%;
+    margin: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(255, 255, 255, .98);
+    box-shadow: 0 -8px 24px rgba(20, 35, 80, .16);
+  }
+}
+
+@media (max-width: 600px) {
+  .chat-thread-page {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+
+/* ---------- Keyboard-safe composer and mobile bottom navigation ---------- */
+@media (max-width: 860px) {
+  body.chat-keyboard-open .bottom-nav {
+    bottom: var(--storichi-keyboard-height, 0px) !important;
+    z-index: 70;
+  }
+
+  body.chat-keyboard-open .chat-thread-page .chat-composer-shell.is-keyboard-active,
+  body.chat-keyboard-open .chat-thread-page .whisper-panel.is-keyboard-active .whisper-panel-composer {
+    position: fixed !important;
+    left: 0;
+    right: 0;
+    bottom: var(--storichi-keyboard-height, 0px) !important;
+    z-index: 90;
+    width: 100% !important;
+    max-width: none;
+    margin: 0 !important;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, .98);
+    box-shadow: 0 -8px 24px rgba(20, 35, 80, .16);
+  }
+
+  body.chat-keyboard-open .chat-thread-page .chat-composer-shell.is-keyboard-active .chat-input-bar,
+  body.chat-keyboard-open .chat-thread-page .whisper-panel.is-keyboard-active .whisper-panel-composer {
+    position: static !important;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}

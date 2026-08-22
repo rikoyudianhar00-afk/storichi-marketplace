@@ -4,6 +4,10 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { enrichProducts } from "../lib/catalog";
 
+function isSoldOut(product) {
+  return Number(product?.stock ?? 1) <= 0 || product?.is_active === false || Boolean(product?.sold_out_at);
+}
+
 export default function Wishlist() {
   const { user, signInWithGoogle } = useAuth();
   const [items, setItems] = useState([]);
@@ -23,6 +27,15 @@ export default function Wishlist() {
       if (active) {
         setItems(enriched);
         setLoading(false);
+        const soldProductIds = enriched.filter(isSoldOut).map((product) => product.id).filter(Boolean);
+        if (soldProductIds.length && typeof window !== "undefined") {
+          const key = `storichi_wishlist_sold_seen_${user.id}`;
+          let seenIds = [];
+          try { seenIds = JSON.parse(window.localStorage.getItem(key) || "[]"); } catch { seenIds = []; }
+          const nextSeenIds = [...new Set([...(Array.isArray(seenIds) ? seenIds : []), ...soldProductIds])];
+          window.localStorage.setItem(key, JSON.stringify(nextSeenIds));
+        }
+        if (typeof window !== "undefined") window.dispatchEvent(new Event("storichi:wishlist-opened"));
       }
     }
     load();
@@ -45,7 +58,9 @@ export default function Wishlist() {
   return (
     <main className="container wishlist-page">
       <div className="wishlist-heading"><div><span className="section-kicker">Koleksi tersimpan</span><h1 className="page-title">Wishlist ♡</h1><p>{items.length} produk tersimpan</p></div></div>
-      {loading ? <div className="skeleton" style={{ height: 220 }} /> : !items.length ? <div className="empty-state"><p>Belum ada produk di wishlist.</p><Link className="btn btn-primary" to="/">Jelajahi produk</Link></div> : <div className="wishlist-list">{items.map((product) => <article className={`wishlist-item ${Number(product.stock ?? 1) <= 0 || product.is_active === false ? "is-sold" : ""}`} key={product.wishlist_id}><Link to={`/produk/${product.slug}`} className="wishlist-item-main"><div className="wishlist-item-thumb">{product.image_url ? <img src={product.image_url} alt="" /> : <span>{product.name?.[0] || "P"}</span>}{(Number(product.stock ?? 1) <= 0 || product.is_active === false) && <span className="sold-ribbon">HABIS</span>}</div><div className="wishlist-item-copy"><strong>{product.name}</strong><span>{product.category || "Produk digital"}</span><b>Rp{Number(product.price_from || 0).toLocaleString("id-ID")}</b></div></Link><button type="button" className="wishlist-remove" onClick={() => removeWishlist(product)} aria-label={`Hapus ${product.name} dari wishlist`}>♥</button></article>)}</div>}
+      {loading ? <div className="skeleton" style={{ height: 220 }} /> : !items.length ? <div className="empty-state"><p>Belum ada produk di wishlist.</p><Link className="btn btn-primary" to="/">Jelajahi produk</Link></div> : <div className="wishlist-list">{items.map((product) => <article className={`wishlist-item ${isSoldOut(product) ? "is-sold" : ""}`}
+ key={product.wishlist_id}><Link to={`/produk/${product.slug}`} className="wishlist-item-main"><div className="wishlist-item-thumb">{product.image_url ? <img src={product.image_url} alt="" /> : <span>{product.name?.[0] || "P"}</span>}{isSoldOut(product) && <span className="sold-ribbon">HABIS</span>}
+</div><div className="wishlist-item-copy"><strong>{product.name}</strong><span>{product.category || "Produk digital"}</span><b>Rp{Number(product.price_from || 0).toLocaleString("id-ID")}</b></div></Link><button type="button" className="wishlist-remove" onClick={() => removeWishlist(product)} aria-label={`Hapus ${product.name} dari wishlist`}>♥</button></article>)}</div>}
     </main>
   );
 }

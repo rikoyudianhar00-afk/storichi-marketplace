@@ -21,21 +21,22 @@ export default function ShopPage() {
   const [priceAscending, setPriceAscending] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sellerReviews, setSellerReviews] = useState([]);
+  const [midmanReviews, setMidmanReviews] = useState([]);
   const [eligiblePurchases, setEligiblePurchases] = useState([]);
   const [selectedPurchaseId, setSelectedPurchaseId] = useState("");
   const [storeRating, setStoreRating] = useState(0);
-  const [storeReviewComment, setStoreReviewComment] = useState("");
   const [reviewBusy, setReviewBusy] = useState(false);
   const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
     let active = true;
     async function load() {
-      const [{ data: profileData }, { data: rawProducts }, { count: followerCount }, { data: reviewData }] = await Promise.all([
+      const [{ data: profileData }, { data: rawProducts }, { count: followerCount }, { data: reviewData }, { data: midmanReviewData }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", sellerId).maybeSingle(),
         supabase.from("products").select("*").eq("seller_id", sellerId).order("created_at", { ascending: false }),
         supabase.from("seller_follows").select("follower_id", { count: "exact", head: true }).eq("seller_id", sellerId),
-        supabase.from("seller_reviews").select("id, rating, comment, purchase_request_id, created_at, reviewer:reviewer_id(display_name, avatar_url)").eq("seller_id", sellerId).order("created_at", { ascending: false }),
+        supabase.from("seller_reviews").select("id, rating, purchase_request_id, created_at, reviewer:reviewer_id(display_name, avatar_url)").eq("seller_id", sellerId).order("created_at", { ascending: false }),
+        supabase.from("rekber_third_party_reviews").select("id, rating, created_at, reviewer:reviewer_id(display_name, avatar_url)").eq("third_party_id", sellerId).order("created_at", { ascending: false }),
       ]);
       const activeRawProducts = (rawProducts || []).filter((product) => product.is_active !== false && Number(product.stock || 0) > 0 && !product.sold_out_at);
       const soldRawProducts = (rawProducts || []).filter((product) => product.is_active === false || Number(product.stock || 0) <= 0 || Boolean(product.sold_out_at));
@@ -62,6 +63,7 @@ export default function ShopPage() {
         setFollowers(followerCount || 0);
         setFollowing(isFollowing);
         setSellerReviews(reviewData || []);
+        setMidmanReviews(midmanReviewData || []);
         setEligiblePurchases(nextEligiblePurchases);
         setSelectedPurchaseId(nextEligiblePurchases[0]?.id || "");
         setLoading(false);
@@ -103,17 +105,16 @@ export default function ShopPage() {
     }
     setReviewBusy(true);
     setReviewError("");
-    const { data, error } = await supabase.rpc("submit_store_review", { p_seller_id: sellerId, p_purchase_request_id: selectedPurchaseId, p_rating: storeRating, p_comment: storeReviewComment.trim() || null });
+    const { data, error } = await supabase.rpc("submit_store_review", { p_seller_id: sellerId, p_purchase_request_id: selectedPurchaseId, p_rating: storeRating });
     setReviewBusy(false);
     if (error) {
       setReviewError(error.message || "Rating toko gagal disimpan.");
       return;
     }
-    setSellerReviews((current) => [{ ...(data || {}), rating: storeRating, comment: storeReviewComment.trim(), reviewer: { display_name: profile?.display_name || "Kamu", avatar_url: profile?.avatar_url } }, ...current]);
+    setSellerReviews((current) => [{ ...(data || {}), rating: storeRating, reviewer: { display_name: profile?.display_name || "Kamu", avatar_url: profile?.avatar_url } }, ...current]);
     setEligiblePurchases((current) => current.filter((purchase) => purchase.id !== selectedPurchaseId));
     setSelectedPurchaseId(eligiblePurchases.find((purchase) => purchase.id !== selectedPurchaseId)?.id || "");
     setStoreRating(0);
-    setStoreReviewComment("");
   }
 
   if (loading) return <main className="container"><div className="skeleton" style={{ height: 260, marginTop: 24 }} /></main>;
@@ -130,7 +131,8 @@ export default function ShopPage() {
         </section>
       </div>
       <section className="shop-rating-card" aria-labelledby="shop-rating-title"><div><span className="section-kicker">Rating toko</span><h2 id="shop-rating-title">{sellerRating ? sellerRating.toFixed(1) : "Belum ada"} <span>/ 5</span></h2></div><div><StarDisplay rating={sellerRating} count={sellerReviews.length} /><p>{sellerReviews.length ? `${sellerReviews.length} ulasan toko` : "Belum ada ulasan toko"}</p></div></section>
-      {sellerReviews.length > 0 && <section className="shop-review-list" aria-label="Ulasan toko"><h2>Ulasan terbaru</h2>{sellerReviews.slice(0, 5).map((review) => <article className="shop-review-item" key={review.id}><div className="shop-review-item-head"><strong>{review.reviewer?.display_name || "Pembeli"}</strong><StarDisplay rating={review.rating} /></div>{review.comment && <p>{review.comment}</p>}</article>)}</section>}
+      {sellerReviews.length > 0 && <section className="shop-review-list" aria-label="Ulasan toko"><h2>Ulasan terbaru</h2>{sellerReviews.slice(0, 5).map((review) => <article className="shop-review-item" key={review.id}><div className="shop-review-item-head"><strong>{review.reviewer?.display_name || "Pembeli"}</strong><StarDisplay rating={review.rating} /></div></article>)}</section>}
+      {midmanReviews.length > 0 && <section className="shop-rating-card shop-midman-rating-card" aria-labelledby="midman-rating-title"><div><span className="section-kicker">Rating Midman (MM)</span><h2 id="midman-rating-title">{(midmanReviews.reduce((total, review) => total + Number(review.rating || 0), 0) / midmanReviews.length).toFixed(1)} <span>/ 5</span></h2></div><div><StarDisplay rating={midmanReviews.reduce((total, review) => total + Number(review.rating || 0), 0) / midmanReviews.length} count={midmanReviews.length} /><p>{midmanReviews.length} penilaian sebagai Midman (MM)</p></div></section>}
       <div className="shop-toolbar"><div><h2>Produk toko</h2><span>{searchTerm ? `${visibleProducts.length} produk cocok dengan “${searchTerm}”` : "Temukan item pilihan seller"}</span></div></div>
       <div className="shop-sort-tabs" role="tablist" aria-label="Urutkan produk toko">
         <button type="button" className={sort === "popular" ? "is-active" : ""} onClick={() => setSort("popular")}>Populer</button>
@@ -152,7 +154,6 @@ export default function ShopPage() {
           <p>Rating ini khusus untuk pelayanan dan kepercayaan toko, bukan untuk kualitas produk tertentu.</p>
           <select value={selectedPurchaseId} onChange={(event) => setSelectedPurchaseId(event.target.value)} aria-label="Pilih transaksi untuk rating toko"><option value="">Pilih transaksi selesai</option>{eligiblePurchases.map((purchase) => <option key={purchase.id} value={purchase.id}>{purchase.product?.name || "Transaksi"} · {new Date(purchase.completed_at).toLocaleDateString("id-ID")}</option>)}</select>
           <div className="shop-store-review-stars" aria-label="Pilih rating toko">{[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" className={value <= storeRating ? "is-selected" : ""} onClick={() => setStoreRating(value)} aria-label={`${value} bintang untuk toko`}>★</button>)}</div>
-          <textarea value={storeReviewComment} onChange={(event) => setStoreReviewComment(event.target.value)} placeholder="Bagaimana pelayanan toko ini? (opsional)" rows={3} />
           {reviewError && <p className="form-error" role="alert">{reviewError}</p>}
           <button type="submit" className="btn btn-primary" disabled={reviewBusy || !selectedPurchaseId || !storeRating}>{reviewBusy ? "Menyimpan..." : "Kirim rating toko"}</button>
         </form> : <p>{sellerReviews.some((review) => review.reviewer?.display_name === profile?.display_name) ? "Terima kasih, kamu sudah memberi rating toko dari transaksi yang tersedia." : "Rating toko hanya tersedia setelah kamu menyelesaikan transaksi dengan seller ini."}</p>}

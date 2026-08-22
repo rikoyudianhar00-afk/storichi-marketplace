@@ -23,10 +23,15 @@ export default function BottomNav() {
     }
     let active = true;
     const refresh = async () => {
-      const [{ count: wishlistTotal }, { data: invitationRows }] = await Promise.all([
-        supabase.from("product_wishlists").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      const [{ data: wishlistRows }, { data: invitationRows }] = await Promise.all([
+        supabase.from("product_wishlists").select("product_id, product:products(id, stock, is_active, sold_out_at)").eq("user_id", user.id),
         supabase.from("rekber_invitations").select("id, purchase_request_id").eq("third_party_id", user.id).or("status.eq.buyer_approved,and(status.eq.pending,third_party_kind.in.(midman,verified))"),
       ]);
+      const soldWishlistIds = (wishlistRows || []).filter((row) => row.product && (Number(row.product.stock ?? 1) <= 0 || row.product.is_active === false || Boolean(row.product.sold_out_at))).map((row) => row.product_id);
+      let seenWishlistIds = [];
+      try { seenWishlistIds = JSON.parse(window.localStorage.getItem(`storichi_wishlist_sold_seen_${user.id}`) || "[]"); } catch { seenWishlistIds = []; }
+      const seenWishlistSet = new Set(Array.isArray(seenWishlistIds) ? seenWishlistIds : []);
+      const unseenSoldWishlistCount = soldWishlistIds.filter((productId) => !seenWishlistSet.has(productId)).length;
       const requestIds = [...new Set((invitationRows || []).map((row) => row.purchase_request_id).filter(Boolean))];
       const { data: completedGroups } = requestIds.length
         ? await supabase.from("rekber_groups").select("purchase_request_id").in("purchase_request_id", requestIds).eq("status", "completed")
@@ -34,16 +39,21 @@ export default function BottomNav() {
       const completedRequestIds = new Set((completedGroups || []).map((group) => group.purchase_request_id));
       const visibleInvitationCount = (invitationRows || []).filter((row) => !completedRequestIds.has(row.purchase_request_id)).length;
       if (active) {
-        setWishlistCount(wishlistTotal || 0);
+        setWishlistCount(unseenSoldWishlistCount);
         setRekberInvitationCount(visibleInvitationCount);
       }
     };
     refresh();
+    const handleWishlistOpened = () => refresh();
+    window.addEventListener("storichi:wishlist-opened", handleWishlistOpened);
     const channel = supabase.channel(`wishlist_badge_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "product_wishlists", filter: `user_id=eq.${user.id}` }, refresh).subscribe();
+    const productChannel = supabase.channel(`wishlist_product_badge_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "products" }, refresh).subscribe();
     const rekberChannel = supabase.channel(`rekber_invitation_badge_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `third_party_id=eq.${user.id}` }, refresh).subscribe();
     return () => {
       active = false;
+      window.removeEventListener("storichi:wishlist-opened", handleWishlistOpened);
       supabase.removeChannel(channel);
+      supabase.removeChannel(productChannel);
       supabase.removeChannel(rekberChannel);
     };
   }, [user]);
