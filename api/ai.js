@@ -26,8 +26,10 @@ export default async function handler(req, res) {
   try {
     const upstream = await fetch(`${baseUrl}/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }, body: JSON.stringify({ model: process.env.STORICHI_AI_MODEL || "gpt-5-mini", messages: [{ role: "system", content: system }, { role: "user", content: `Katalog tersedia:\n${JSON.stringify(sanitizedCatalog)}\n\nPermintaan pengguna: ${text}` }], max_completion_tokens: 650 }) });
     if (!upstream.ok) {
-      const providerError = await upstream.json().catch(() => ({}));
-      const detail = String(providerError?.error?.message || providerError?.message || "").replace(/(?:sk|key)-[A-Za-z0-9_-]+/gi, "[redacted]").slice(0, 260);
+      const providerRaw = await upstream.text().catch(() => "");
+      let providerError = {};
+      try { providerError = JSON.parse(providerRaw); } catch { providerError = {}; }
+      const detail = String(providerError?.error?.message || providerError?.message || providerRaw || "").replace(/(?:sk|key)-[A-Za-z0-9_-]+/gi, "[redacted]").replace(/\s+/g, " ").slice(0, 260);
       return res.status(502).json({
         error: "Layanan AI belum merespons dengan baik.",
         code: `AI_PROVIDER_HTTP_${upstream.status}`,
