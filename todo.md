@@ -14,3 +14,6 @@
 - [x] Hapus seluruh input suara, text-to-speech, status suara, dan tombol mikrofon dari Asisten Storichi.
 - [x] Perluas konteks AI ke katalog aktif dan toko yang informasinya bersifat publik tanpa mengirim data privat pengguna.
 - [x] Uji pencarian AI lintas produk dan toko publik serta pastikan kartu hasil dapat dibuka dengan benar.
+- [ ] Perbaiki regresi Asisten yang menyatakan katalog kosong meskipun produk publik tersedia di beranda.
+- [ ] Ambil katalog aktif dan toko publik langsung di gateway server agar konteks Gemini tidak bergantung pada pemuatan browser.
+- [ ] Uji production menggunakan data publik database Storichi yang sebenarnya.
