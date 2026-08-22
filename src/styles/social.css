@@ -1247,18 +1247,3 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
     height: calc(82px + env(safe-area-inset-bottom, 0px));
   }
 }
-
-/* Extra upward/downward gesture at chat bottom temporarily hides the mobile footer. */
-@media (max-width: 860px) {
-  .bottom-nav {
-    transition: transform 180ms ease, opacity 180ms ease;
-  }
-  body.chat-footer-hidden .bottom-nav {
-    transform: translateY(100%);
-    opacity: 0;
-    pointer-events: none;
-  }
-  body.chat-footer-hidden .chat-thread-page {
-    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-}

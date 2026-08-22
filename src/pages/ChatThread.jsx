@@ -193,36 +193,6 @@ export default function ChatThread() {
     return () => window.visualViewport.removeEventListener("resize", handleViewportResize);
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    let touchStartY = 0;
-    const isAtBottom = () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 3;
-    const showFooter = () => document.body.classList.remove("chat-footer-hidden");
-    const hideFooter = () => document.body.classList.add("chat-footer-hidden");
-    const handleScroll = () => { if (window.scrollY < document.documentElement.scrollHeight - window.innerHeight - 8) showFooter(); };
-    const handleWheel = (event) => { if (event.deltaY > 0 && isAtBottom()) hideFooter(); else if (event.deltaY < 0) showFooter(); };
-    const handleTouchStart = (event) => { touchStartY = event.touches[0]?.clientY || 0; };
-    const handleTouchMove = (event) => {
-      const currentY = event.touches[0]?.clientY || touchStartY;
-      if (isAtBottom() && touchStartY - currentY > 12) hideFooter();
-      else if (currentY - touchStartY > 12) showFooter();
-    };
-    const handlePointerDown = (event) => { if (event.clientY > window.innerHeight - 110) showFooter(); };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("wheel", handleWheel, { passive: true });
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: true });
-    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
-    return () => {
-      showFooter();
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, []);
-
   function activateComposerForElement(element) {
     const page = document.querySelector(".chat-thread-page");
     const composer = element?.closest?.(".chat-composer-shell, .whisper-panel");

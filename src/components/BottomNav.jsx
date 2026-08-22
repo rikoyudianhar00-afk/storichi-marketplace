@@ -23,13 +23,19 @@ export default function BottomNav() {
     }
     let active = true;
     const refresh = async () => {
-      const [{ count: wishlistTotal }, { count: invitationTotal }] = await Promise.all([
+      const [{ count: wishlistTotal }, { data: invitationRows }] = await Promise.all([
         supabase.from("product_wishlists").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("rekber_invitations").select("id", { count: "exact", head: true }).eq("third_party_id", user.id).or("status.eq.buyer_approved,and(status.eq.pending,third_party_kind.in.(midman,verified))"),
+        supabase.from("rekber_invitations").select("id, purchase_request_id").eq("third_party_id", user.id).or("status.eq.buyer_approved,and(status.eq.pending,third_party_kind.in.(midman,verified))"),
       ]);
+      const requestIds = [...new Set((invitationRows || []).map((row) => row.purchase_request_id).filter(Boolean))];
+      const { data: completedGroups } = requestIds.length
+        ? await supabase.from("rekber_groups").select("purchase_request_id").in("purchase_request_id", requestIds).eq("status", "completed")
+        : { data: [] };
+      const completedRequestIds = new Set((completedGroups || []).map((group) => group.purchase_request_id));
+      const visibleInvitationCount = (invitationRows || []).filter((row) => !completedRequestIds.has(row.purchase_request_id)).length;
       if (active) {
         setWishlistCount(wishlistTotal || 0);
-        setRekberInvitationCount(invitationTotal || 0);
+        setRekberInvitationCount(visibleInvitationCount);
       }
     };
     refresh();

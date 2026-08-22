@@ -7,6 +7,11 @@ function invitationRole(invitation) {
   return invitation.third_party_kind === "regular" ? "Midman (MM)" : invitation.third_party_kind === "verified" ? "Verified MM" : "⚖️ Midman (MM)";
 }
 
+function formatProcessDate(value) {
+  if (!value) return "Tanggal proses belum tersedia";
+  return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
 export default function RekberList() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -32,7 +37,7 @@ export default function RekberList() {
     setLoading(true);
     const [{ data: directGroups, error: groupError }, { data: pendingInvitations, error: invitationError }] = await Promise.all([
       supabase.from("rekber_groups").select("*").or(`buyer_id.eq.${user.id},seller_id.eq.${user.id},third_party_id.eq.${user.id}`).order("created_at", { ascending: false }),
-      supabase.from("rekber_invitations").select("*, purchase_request:purchase_requests(thread_id), buyer:profiles!rekber_invitations_buyer_id_fkey(id, display_name, avatar_url), seller:profiles!rekber_invitations_seller_id_fkey(id, display_name, avatar_url)").eq("third_party_id", user.id).or("status.in.(buyer_approved,accepted),and(status.eq.pending,third_party_kind.in.(midman,verified))").order("created_at", { ascending: false }),
+      supabase.from("rekber_invitations").select("*, purchase_request:purchase_requests(id, thread_id, rekber_group_id), buyer:profiles!rekber_invitations_buyer_id_fkey(id, display_name, avatar_url), seller:profiles!rekber_invitations_seller_id_fkey(id, display_name, avatar_url)").eq("third_party_id", user.id).or("status.in.(buyer_approved,accepted),and(status.eq.pending,third_party_kind.in.(midman,verified))").order("created_at", { ascending: false }),
     ]);
     const groupRequestIds = [...new Set((directGroups || []).map((group) => group.purchase_request_id).filter(Boolean))];
     const { data: groupRequests } = groupRequestIds.length ? await supabase.from("purchase_requests").select("id, thread_id").in("id", groupRequestIds) : { data: [] };
@@ -41,8 +46,10 @@ export default function RekberList() {
     if (groupError) setError("Lobby Rekber belum dapat dimuat.");
     if (invitationError) setError("Notifikasi undangan belum dapat dimuat. Coba buka ulang halaman Rekber.");
     if (!groupError && !invitationError) setError("");
+    const completedRequestIds = new Set(enrichedGroups.filter((group) => group.status === "completed").map((group) => group.purchase_request_id).filter(Boolean));
+    const visibleInvitations = (pendingInvitations || []).filter((invitation) => !completedRequestIds.has(invitation.purchase_request_id));
     setGroups(enrichedGroups);
-    setInvitations(pendingInvitations || []);
+    setInvitations(visibleInvitations);
     setLoading(false);
   }
 
@@ -76,7 +83,7 @@ export default function RekberList() {
       <p className="page-subtitle">Undangan Midman (MM) dan lobby Rekber kamu tampil di sini.</p>
       {error && <p className="form-error rekber-invitation-error">{error}</p>}
       {invitations.length > 0 && <section className="rekber-invitation-section"><div className="rekber-list-section-heading"><div><span className="section-kicker">Notifikasi</span><h2>Undangan Midman (MM)</h2></div><span className="notification-count-badge">{invitations.length}</span></div>{invitations.map((invitation) => <article className="rekber-invitation-card" key={invitation.id}><div className="rekber-invitation-avatar">{invitation.seller?.avatar_url ? <img src={invitation.seller.avatar_url} alt="" /> : <span>{invitation.seller?.display_name?.[0] || "S"}</span>}</div><div className="rekber-invitation-copy"><strong>{invitation.seller?.display_name || "Seller"} mengundangmu sebagai {invitationRole(invitation)}</strong><span>Buyer: {invitation.buyer?.display_name || "Buyer"}</span><small>{invitation.status === "pending" && invitation.third_party_kind !== "regular" ? "Undangan menunggu persetujuan Midman (MM)." : invitation.third_party_approved_at ? "Undangan diterima. Buka chat transaksi untuk melanjutkan." : "Undangan muncul setelah Buyer menyetujui pengajuan Midman (MM)."}</small><div className="rekber-invitation-actions">{invitation.third_party_approved_at && invitation.purchase_request?.thread_id ? <button className="btn btn-primary" onClick={() => navigate(`/chat/${invitation.purchase_request.thread_id}`)}>Buka Chat Transaksi</button> : <button className="btn btn-primary" disabled={busyId === invitation.id} onClick={() => respondInvitation(invitation, true)}>{busyId === invitation.id ? "Memproses..." : "Terima undangan"}</button>}{!invitation.third_party_approved_at && <button className="btn btn-outline" disabled={busyId === invitation.id} onClick={() => respondInvitation(invitation, false)}>Tolak</button>}</div></div></article>)}</section>}
-                {loading ? <div className="skeleton" style={{ height: 120 }} /> : groups.length === 0 ? <div className="empty-state"><p>{invitations.length ? "Selesaikan persetujuan undangan Midman (MM) untuk masuk ke chat transaksi." : "Belum ada lobby Rekber. Mulai dari chat setelah Seller menyetujui permintaan beli."}</p><Link to="/chat" className="btn btn-primary" style={{ marginTop: 12 }}>Buka Chat</Link></div> : <section className="rekber-groups-section"><div className="rekber-list-section-heading"><div><span className="section-kicker">Transaksi</span><h2>Lobby kamu</h2></div></div><div className="rekber-group-list">{groups.map((group) => <Link key={group.id} to={group.purchase_request?.thread_id ? `/chat/${group.purchase_request.thread_id}` : `/rekber/${group.id}`} className={`rekber-group-item ${group.status === "completed" ? "is-rekber-completed" : ""}`}><div><div className="thread-item-title">{group.name}</div><div className="thread-item-sub">Kode: {group.code}</div></div><span className={`status-pill status-${group.status}`}>{group.status === "active" ? "Aktif" : group.status === "completed" ? "Selesai" : "Batal"}</span>{group.status === "completed" && <div className="rekber-completed-overlay" aria-label="Rekber selesai"><span className="chat-completed-mark" aria-hidden="true">✓</span><strong>Selesai</strong></div>}</Link>)}</div></section>}
+                {loading ? <div className="skeleton" style={{ height: 120 }} /> : groups.length === 0 ? <div className="empty-state"><p>{invitations.length ? "Selesaikan persetujuan undangan Midman (MM) untuk masuk ke chat transaksi." : "Belum ada lobby Rekber. Mulai dari chat setelah Seller menyetujui permintaan beli."}</p><Link to="/chat" className="btn btn-primary" style={{ marginTop: 12 }}>Buka Chat</Link></div> : <section className="rekber-groups-section"><div className="rekber-list-section-heading"><div><span className="section-kicker">Transaksi</span><h2>Lobby kamu</h2></div></div><div className="rekber-group-list">{groups.map((group) => <Link key={group.id} to={group.purchase_request?.thread_id ? `/chat/${group.purchase_request.thread_id}` : `/rekber/${group.id}`} className={`rekber-group-item ${group.status === "completed" ? "is-rekber-completed" : ""}`}><div><div className="thread-item-title">{group.name}</div><div className="thread-item-sub">Kode: {group.code}</div>{group.status === "completed" && <div className="thread-item-sub rekber-process-date">Tanggal proses: {formatProcessDate(group.custody_completed_at || group.updated_at || group.created_at)}</div>}</div><span className={`status-pill status-${group.status}`}>{group.status === "active" ? "Aktif" : group.status === "completed" ? "Selesai" : "Batal"}</span>{group.status === "completed" && <div className="rekber-completed-overlay" aria-label="Rekber selesai"><span className="chat-completed-mark" aria-hidden="true">✓</span><strong>Selesai</strong></div>}</Link>)}</div></section>}
 
     </main>
   );
