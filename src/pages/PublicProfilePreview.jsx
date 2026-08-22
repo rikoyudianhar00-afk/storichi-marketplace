@@ -33,7 +33,12 @@ export default function PublicProfilePreview() {
       }
     }
     if (userId) load();
-    return () => { active = false; };
+    const channel = userId ? supabase.channel(`profile-preview-live-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "seller_reviews", filter: `seller_id=eq.${userId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_third_party_reviews", filter: `third_party_id=eq.${userId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `seller_id=eq.${userId}` }, load)
+      .subscribe() : null;
+    return () => { active = false; if (channel) supabase.removeChannel(channel); };
   }, [userId]);
 
   if (loading) return <main className="container"><div className="skeleton public-profile-preview-skeleton" /></main>;

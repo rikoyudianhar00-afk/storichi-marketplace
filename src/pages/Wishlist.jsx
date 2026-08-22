@@ -40,9 +40,11 @@ export default function Wishlist() {
     }
     load();
     const channel = supabase.channel(`wishlist_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "product_wishlists", filter: `user_id=eq.${user.id}` }, load).subscribe();
+    const productChannel = supabase.channel(`wishlist_products_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "products" }, load).subscribe();
     return () => {
       active = false;
       supabase.removeChannel(channel);
+      supabase.removeChannel(productChannel);
     };
   }, [user]);
 

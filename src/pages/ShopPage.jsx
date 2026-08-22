@@ -70,7 +70,12 @@ export default function ShopPage() {
       }
     }
     load();
-    return () => { active = false; };
+    const channel = supabase.channel(`shop-live-${sellerId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "seller_reviews", filter: `seller_id=eq.${sellerId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_third_party_reviews", filter: `third_party_id=eq.${sellerId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `seller_id=eq.${sellerId}` }, load)
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
   }, [sellerId, user]);
 
   const productSort = sort === "newest" ? "newest" : sort === "best" ? PRODUCT_SORTS.TOP_SALES : sort === "price" ? (priceAscending ? PRODUCT_SORTS.PRICE_LOW : PRODUCT_SORTS.PRICE_HIGH) : "popular";
