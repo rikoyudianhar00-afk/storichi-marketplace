@@ -788,6 +788,10 @@ input[type="checkbox"], input[type="radio"] {
 .storichi-ai-products button { display: grid; gap: 3px; padding: 9px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink-900); text-align: left; }
 .storichi-ai-products b { font-size: 12px; }
 .storichi-ai-products span { color: var(--blue-600); font-size: 11px; font-weight: 800; }
+.storichi-ai-stores { display: grid; gap: 7px; margin-top: 9px; }
+.storichi-ai-stores button { display: grid; gap: 3px; width: 100%; padding: 9px; border: 1px solid #d6e4f5; border-radius: 10px; background: #f8fbff; color: var(--ink-900); text-align: left; }
+.storichi-ai-stores b { font-size: 12px; }
+.storichi-ai-stores span { color: var(--ink-500); font-size: 11px; font-weight: 800; }
 .storichi-ai-starters { display: flex; gap: 7px; overflow-x: auto; padding: 0 14px 10px; }
 .storichi-ai-starters button { flex: 0 0 auto; min-height: 29px; border: 1px solid #cdd9ff; border-radius: 999px; background: #eef2ff; color: var(--navy-900); font-size: 10px; font-weight: 700; }
 .storichi-ai-login { margin: 0 14px 8px; color: var(--accent-amber); font-size: 11px; font-weight: 700; }
@@ -796,8 +800,5 @@ input[type="checkbox"], input[type="radio"] {
 .storichi-ai-composer textarea:focus { border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(36,84,255,.1); }
 .storichi-ai-composer button { min-width: 58px; min-height: 42px; border: 0; border-radius: 13px; background: var(--blue-600); color: #fff; font-size: 11px; font-weight: 900; }
 .storichi-ai-composer button:disabled { cursor: not-allowed; opacity: .45; }
-.storichi-ai-composer .storichi-ai-mic { min-width: 42px; padding: 0; background: var(--navy-900); font-size: 22px; line-height: 1; }
-.storichi-ai-voice-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 29px; padding: 0 14px 8px; background: #fff; color: var(--ink-500); font-size: 10px; line-height: 1.35; }
-.storichi-ai-voice-status button { flex: 0 0 auto; border: 0; background: transparent; color: var(--blue-600); font-size: 10px; font-weight: 900; }
 .storichi-ai-note { margin: 0; padding: 0 14px calc(10px + env(safe-area-inset-bottom)); background: #fff; color: var(--ink-500); font-size: 9px; line-height: 1.4; }
 @media (min-width: 760px) { .storichi-ai-bubble { bottom: 26px; } .storichi-ai-layer { place-items: end; padding: 0 28px 24px 0; } .storichi-ai-panel { width: min(440px, calc(100% - 32px)); max-height: min(700px, calc(100vh - 48px)); border-radius: 24px; } }

@@ -44,7 +44,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Gunakan POST." });
   const clientKey = String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "anonymous").split(",")[0].trim();
   if (!allowRequest(clientKey)) return res.status(429).json({ error: "Terlalu banyak permintaan. Coba lagi sebentar." });
-  const { message, catalog = [] } = req.body || {};
+  const { message, catalog = [], stores = [] } = req.body || {};
   const text = String(message || "").trim();
   if (!text || text.length > 900) return res.status(400).json({ error: "Pesan harus berisi maksimal 900 karakter." });
   if (BLOCKED.some((pattern) => pattern.test(text))) return res.status(400).json({ error: "Permintaan tidak dapat diproses karena berisiko melanggar keamanan atau aturan marketplace." });
@@ -53,9 +53,10 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(503).json({ error: "AI belum dikonfigurasi pada server." });
   const isGoogle = isGoogleGenerativeApi(baseUrl);
   const model = cleanModelName(process.env.STORICHI_AI_MODEL || (isGoogle ? "gemini-3.5-flash-lite" : "gpt-5-mini"));
-  const sanitizedCatalog = Array.isArray(catalog) ? catalog.slice(0, 20).map((product) => ({ id: String(product.id || ""), name: String(product.name || "").slice(0, 100), description: String(product.description || "").slice(0, 220), category: String(product.category || "").slice(0, 50), game_name: String(product.game_name || "").slice(0, 60), price_from: Number(product.price_from || 0), stock: Number(product.stock || 0), sales_count: Number(product.sales_count || 0) })) : [];
-  const system = `Anda adalah Asisten Storichi, marketplace digital Indonesia. Pahami sendiri konteks pengguna: mencari/membeli produk, menjual/membuat draft listing, atau bertanya tentang transaksi dan Rekber. Jawab dalam Bahasa Indonesia singkat, sopan, dan jujur. Anda hanya memberi saran dan draft. Jangan mengklaim telah mengirim chat, membuat listing, mengubah harga/stok, membeli produk, mengirim QRIS, memilih Midman, menyelesaikan Rekber/custody, memberi rating, atau menjalankan tindakan apa pun. Tolak penipuan, phishing, manipulasi ulasan, spam, permintaan data pribadi/rahasia, malware, dan usaha menghindari aturan. Rekomendasi hanya dari katalog yang diberikan. Jika menyarankan produk, keluarkan di akhir persis dalam format [PRODUCT_IDS:id1,id2] memakai ID katalog yang valid, atau [PRODUCT_IDS:] bila tidak ada.`;
-  const userPrompt = `Katalog tersedia:\n${JSON.stringify(sanitizedCatalog)}\n\nPermintaan pengguna: ${text}`;
+  const sanitizedCatalog = Array.isArray(catalog) ? catalog.slice(0, 80).map((product) => ({ id: String(product.id || ""), name: String(product.name || "").slice(0, 100), description: String(product.description || "").slice(0, 220), category: String(product.category || "").slice(0, 50), game_name: String(product.game_name || "").slice(0, 60), price_from: Number(product.price_from || 0), stock: Number(product.stock || 0), sales_count: Number(product.sales_count || 0), like_count: Number(product.like_count || 0), view_count: Number(product.view_count || 0), seller_id: String(product.seller_id || "") })) : [];
+  const sanitizedStores = Array.isArray(stores) ? stores.slice(0, 40).map((store) => ({ id: String(store.id || ""), display_name: String(store.display_name || "").slice(0, 100), bio: String(store.bio || "").slice(0, 240), is_verified: Boolean(store.is_verified), is_midman: Boolean(store.is_midman), is_owner: Boolean(store.is_owner), product_count: Number(store.product_count || 0) })) : [];
+  const system = `Anda adalah Asisten Storichi, marketplace digital Indonesia. Pahami sendiri konteks pengguna: mencari/membeli produk, mencari toko, menjual/membuat draft listing, atau bertanya tentang transaksi dan Rekber. Jawab dalam Bahasa Indonesia singkat, sopan, dan jujur. Anda hanya memberi saran dan draft. Jangan mengklaim telah mengirim chat, membuat listing, mengubah harga/stok, membeli produk, mengirim QRIS, memilih Midman, menyelesaikan Rekber/custody, memberi rating, atau menjalankan tindakan apa pun. Tolak penipuan, phishing, manipulasi ulasan, spam, permintaan data pribadi/rahasia, malware, dan usaha menghindari aturan. Rekomendasi produk hanya dari katalog publik yang diberikan dan rekomendasi toko hanya dari toko publik yang diberikan. Jangan meminta atau menebak email, QRIS, password, nomor telepon, isi chat, atau data privat. Jika menyarankan produk, keluarkan di akhir persis dalam format [PRODUCT_IDS:id1,id2] memakai ID katalog yang valid, atau [PRODUCT_IDS:] bila tidak ada. Jika menyarankan toko, keluarkan setelahnya persis dalam format [STORE_IDS:id1,id2] memakai ID toko yang valid, atau [STORE_IDS:] bila tidak ada.`;
+  const userPrompt = `Katalog produk publik yang relevan:\n${JSON.stringify(sanitizedCatalog)}\n\nToko publik yang relevan:\n${JSON.stringify(sanitizedStores)}\n\nPermintaan pengguna: ${text}`;
   try {
     const upstream = isGoogle
       ? await fetch(getGoogleGenerateUrl(baseUrl, model), {
@@ -85,9 +86,11 @@ export default async function handler(req, res) {
     const data = await upstream.json();
     const raw = String(isGoogle ? data?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("\n") : data?.choices?.[0]?.message?.content || "").trim();
     const match = raw.match(/\[PRODUCT_IDS:([^\]]*)\]/i);
+    const storeMatch = raw.match(/\[STORE_IDS:([^\]]*)\]/i);
     const productIds = match ? match[1].split(",").map((id) => id.trim()).filter((id) => sanitizedCatalog.some((product) => product.id === id)) : [];
-    const answer = raw.replace(/\s*\[PRODUCT_IDS:[^\]]*\]/ig, "").trim() || "Saya belum dapat menyusun jawaban. Coba jelaskan kebutuhan Anda dengan lebih spesifik.";
-    return res.status(200).json({ answer, productIds });
+    const storeIds = storeMatch ? storeMatch[1].split(",").map((id) => id.trim()).filter((id) => sanitizedStores.some((store) => store.id === id)) : [];
+    const answer = raw.replace(/\s*\[(?:PRODUCT|STORE)_IDS:[^\]]*\]/ig, "").trim() || "Saya belum dapat menyusun jawaban. Coba jelaskan kebutuhan Anda dengan lebih spesifik.";
+    return res.status(200).json({ answer, productIds, storeIds });
   } catch {
     return res.status(502).json({ error: "Layanan AI belum dapat dihubungi." });
   }
