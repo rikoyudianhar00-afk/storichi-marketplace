@@ -1201,3 +1201,35 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
     bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Direct purchase uses a persistent WhatsApp-style composer; Rekber remains in document flow. */
+.chat-thread-page:not(.is-rekber-active-chat) .chat-composer-shell {
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: 50 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100% !important;
+  min-height: 58px;
+  margin: 0 !important;
+  padding: 6px 0 !important;
+  background: rgba(246, 248, 252, .98) !important;
+  box-shadow: 0 -8px 24px rgba(20, 35, 80, .14);
+}
+.chat-thread-page:not(.is-rekber-active-chat) .chat-composer-shell .chat-input-bar {
+  position: static !important;
+  width: min(100%, 752px) !important;
+  margin: 0 auto !important;
+  box-shadow: none !important;
+}
+.chat-thread-page:not(.is-rekber-active-chat) {
+  padding-bottom: calc(154px + env(safe-area-inset-bottom, 0px)) !important;
+}
+@media (max-width: 600px) {
+  .chat-thread-page:not(.is-rekber-active-chat) .chat-composer-shell {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+}
