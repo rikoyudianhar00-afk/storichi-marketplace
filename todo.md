@@ -13,4 +13,4 @@
 - [x] Sesuaikan gateway AI ke format Google Generative API untuk Gemini Flash Lite tanpa mengubah variable pengguna.
 - [x] Hapus seluruh input suara, text-to-speech, status suara, dan tombol mikrofon dari Asisten Storichi.
 - [x] Perluas konteks AI ke katalog aktif dan toko yang informasinya bersifat publik tanpa mengirim data privat pengguna.
-- [ ] Uji pencarian AI lintas produk dan toko publik serta pastikan kartu hasil dapat dibuka dengan benar.
+- [x] Uji pencarian AI lintas produk dan toko publik serta pastikan kartu hasil dapat dibuka dengan benar.
