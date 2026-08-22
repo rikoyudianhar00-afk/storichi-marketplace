@@ -1401,3 +1401,25 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
     box-shadow: 0 -8px 24px rgba(20, 35, 80, .18) !important;
   }
 }
+
+
+/* ---------- Complete transaction history cards ---------- */
+.transaction-rekber-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding: 10px; border: 1px solid #ead782; border-radius: 12px; background: #fff9d8; }
+.transaction-rekber-meta span, .transaction-participant-meta { display: grid; gap: 3px; min-width: 0; }
+.transaction-rekber-meta small, .transaction-participant-meta small { color: #8a6900; font-size: 10px; }
+.transaction-rekber-meta strong, .transaction-participant-meta strong { color: #5b4300; font-size: 11px; overflow-wrap: anywhere; }
+.transaction-participant-meta { padding: 8px 10px; border-radius: 10px; background: #f5f7fc; }
+.transaction-participant-meta small { color: var(--ink-500); }
+.transaction-participant-meta strong { color: var(--ink-700); }
+.transaction-chat-lines div { align-items: flex-start; }
+.transaction-chat-lines div > span { display: grid; min-width: 0; gap: 2px; white-space: normal; overflow-wrap: anywhere; }
+.transaction-chat-lines div > span strong { color: var(--ink-700); font-size: 10px; }
+.transaction-chat-lines div > span em { color: var(--blue-600); font-size: 9px; font-style: normal; font-weight: 700; }
+.transaction-chat-lines div > span a { color: var(--blue-600); text-decoration: underline; }
+.transaction-mm-rating { display: inline-flex; align-items: center; gap: 4px; color: #8a6900 !important; }
+.transaction-mm-rating .is-filled { color: var(--accent-amber); }
+.transaction-mm-rating b { color: #5b4300; font-size: 10px; }
+@media (max-width: 600px) {
+  .transaction-rekber-meta { grid-template-columns: 1fr; }
+  .transaction-chat-lines div { grid-template-columns: minmax(0, 1fr) auto; }
+}
