@@ -1,5 +1,11 @@
 const BLOCKED = [/(?:abaikan|ignore).{0,80}(?:instruksi|aturan|system|sistem|prompt)/i, /(?:jailbreak|prompt injection|developer message|system prompt)/i, /(?:spam|broadcast).{0,40}(?:chat|pesan|message)/i, /(?:rating|ulasan).{0,50}(?:palsu|fake|manipulasi|beli)/i, /(?:phishing|malware|keylogger|doxx|data pribadi|nomor kartu)/i, /(?:curi|bypass|retas|hack).{0,80}(?:akun|password|qr|qris|pembayaran)/i];
 const attempts = new Map();
+const GEMINI_MODEL_ALIASES = {
+  "gemini 3.5 flash lite": "gemini-3.5-flash-lite",
+  "gemini 3.5 flash-lite": "gemini-3.5-flash-lite",
+  "gemini 3.5 flash": "gemini-3.5-flash",
+  "gemini 2.5 flash lite": "gemini-2.5-flash-lite",
+};
 
 function isGoogleGenerativeApi(baseUrl) {
   return /generativelanguage\.googleapis\.com|aiplatform\.googleapis\.com/i.test(baseUrl);
@@ -9,7 +15,8 @@ function cleanModelName(value) {
   const source = String(value || "").trim().replace(/^['"]|['"]$/g, "");
   const pathModel = source.match(/models\/([^:/?#]+)/i);
   if (pathModel?.[1]) return pathModel[1];
-  return source.replace(/^models\//i, "").replace(/:generateContent.*$/i, "").split(/[?#]/)[0].trim();
+  const normalized = source.replace(/^models\//i, "").replace(/:generateContent.*$/i, "").split(/[?#]/)[0].trim();
+  return GEMINI_MODEL_ALIASES[normalized.toLowerCase()] || normalized;
 }
 
 function getGoogleGenerateUrl(baseUrl, model) {
