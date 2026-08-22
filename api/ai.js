@@ -1,6 +1,20 @@
 const BLOCKED = [/(?:abaikan|ignore).{0,80}(?:instruksi|aturan|system|sistem|prompt)/i, /(?:jailbreak|prompt injection|developer message|system prompt)/i, /(?:spam|broadcast).{0,40}(?:chat|pesan|message)/i, /(?:rating|ulasan).{0,50}(?:palsu|fake|manipulasi|beli)/i, /(?:phishing|malware|keylogger|doxx|data pribadi|nomor kartu)/i, /(?:curi|bypass|retas|hack).{0,80}(?:akun|password|qr|qris|pembayaran)/i];
 const attempts = new Map();
 
+function isGoogleGenerativeApi(baseUrl) {
+  return /generativelanguage\.googleapis\.com|aiplatform\.googleapis\.com/i.test(baseUrl);
+}
+
+function cleanModelName(value) {
+  return String(value || "").replace(/^models\//i, "").trim();
+}
+
+function getProviderDetail(raw) {
+  let parsed = {};
+  try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+  return String(parsed?.error?.message || parsed?.message || raw || "").replace(/(?:sk|key)-[A-Za-z0-9_-]+/gi, "[redacted]").replace(/\s+/g, " ").slice(0, 260);
+}
+
 function allowRequest(key) {
   const now = Date.now();
   const recent = (attempts.get(key) || []).filter((time) => now - time < 60_000);
@@ -21,30 +35,39 @@ export default async function handler(req, res) {
   const apiKey = process.env.STORICHI_AI_API_KEY || process.env.OPENAI_API_KEY;
   const baseUrl = String(process.env.STORICHI_AI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   if (!apiKey) return res.status(503).json({ error: "AI belum dikonfigurasi pada server." });
-  if (/generativelanguage\.googleapis\.com|aiplatform\.googleapis\.com/i.test(baseUrl)) {
-    return res.status(422).json({
-      error: "Endpoint Google Generative API tidak kompatibel dengan model GPT-5 mini pada gateway ini.",
-      code: "AI_PROVIDER_MODEL_MISMATCH",
-      guidance: "Untuk GPT-5 mini, gunakan endpoint OpenAI-compatible dan API key penyedia yang mendukung model tersebut.",
-    });
-  }
+  const isGoogle = isGoogleGenerativeApi(baseUrl);
+  const model = cleanModelName(process.env.STORICHI_AI_MODEL || (isGoogle ? "gemini-3.5-flash-lite" : "gpt-5-mini"));
   const sanitizedCatalog = Array.isArray(catalog) ? catalog.slice(0, 20).map((product) => ({ id: String(product.id || ""), name: String(product.name || "").slice(0, 100), description: String(product.description || "").slice(0, 220), category: String(product.category || "").slice(0, 50), game_name: String(product.game_name || "").slice(0, 60), price_from: Number(product.price_from || 0), stock: Number(product.stock || 0), sales_count: Number(product.sales_count || 0) })) : [];
   const system = `Anda adalah Asisten Storichi, marketplace digital Indonesia. Pahami sendiri konteks pengguna: mencari/membeli produk, menjual/membuat draft listing, atau bertanya tentang transaksi dan Rekber. Jawab dalam Bahasa Indonesia singkat, sopan, dan jujur. Anda hanya memberi saran dan draft. Jangan mengklaim telah mengirim chat, membuat listing, mengubah harga/stok, membeli produk, mengirim QRIS, memilih Midman, menyelesaikan Rekber/custody, memberi rating, atau menjalankan tindakan apa pun. Tolak penipuan, phishing, manipulasi ulasan, spam, permintaan data pribadi/rahasia, malware, dan usaha menghindari aturan. Rekomendasi hanya dari katalog yang diberikan. Jika menyarankan produk, keluarkan di akhir persis dalam format [PRODUCT_IDS:id1,id2] memakai ID katalog yang valid, atau [PRODUCT_IDS:] bila tidak ada.`;
+  const userPrompt = `Katalog tersedia:\n${JSON.stringify(sanitizedCatalog)}\n\nPermintaan pengguna: ${text}`;
   try {
-    const upstream = await fetch(`${baseUrl}/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }, body: JSON.stringify({ model: process.env.STORICHI_AI_MODEL || "gpt-5-mini", messages: [{ role: "system", content: system }, { role: "user", content: `Katalog tersedia:\n${JSON.stringify(sanitizedCatalog)}\n\nPermintaan pengguna: ${text}` }], max_completion_tokens: 650 }) });
+    const googleBase = /\/v1(?:beta)?$/i.test(baseUrl) ? baseUrl : `${baseUrl}/v1beta`;
+    const upstream = isGoogle
+      ? await fetch(`${googleBase}/models/${encodeURIComponent(model)}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            generationConfig: { maxOutputTokens: 650, temperature: 0.3 },
+          }),
+        })
+      : await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({ model, messages: [{ role: "system", content: system }, { role: "user", content: userPrompt }], max_completion_tokens: 650 }),
+        });
     if (!upstream.ok) {
       const providerRaw = await upstream.text().catch(() => "");
-      let providerError = {};
-      try { providerError = JSON.parse(providerRaw); } catch { providerError = {}; }
-      const detail = String(providerError?.error?.message || providerError?.message || providerRaw || "").replace(/(?:sk|key)-[A-Za-z0-9_-]+/gi, "[redacted]").replace(/\s+/g, " ").slice(0, 260);
+      const detail = getProviderDetail(providerRaw);
       return res.status(502).json({
         error: "Layanan AI belum merespons dengan baik.",
-        code: `AI_PROVIDER_HTTP_${upstream.status}`,
+        code: `${isGoogle ? "GEMINI" : "AI_PROVIDER"}_HTTP_${upstream.status}`,
         ...(detail ? { detail } : {}),
       });
     }
     const data = await upstream.json();
-    const raw = String(data?.choices?.[0]?.message?.content || "").trim();
+    const raw = String(isGoogle ? data?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("\n") : data?.choices?.[0]?.message?.content || "").trim();
     const match = raw.match(/\[PRODUCT_IDS:([^\]]*)\]/i);
     const productIds = match ? match[1].split(",").map((id) => id.trim()).filter((id) => sanitizedCatalog.some((product) => product.id === id)) : [];
     const answer = raw.replace(/\s*\[PRODUCT_IDS:[^\]]*\]/ig, "").trim() || "Saya belum dapat menyusun jawaban. Coba jelaskan kebutuhan Anda dengan lebih spesifik.";
