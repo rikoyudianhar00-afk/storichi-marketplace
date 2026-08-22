@@ -97,7 +97,7 @@ async function fetchSupabaseJson(url, anonKey) {
 }
 
 async function fetchAllPublicProducts(config) {
-  const fields = "id,slug,name,description,category,game_name,price_from,stock,sales_count,like_count,view_count,seller_id";
+  const fields = "*";
   const rows = [];
   for (let offset = 0; ; offset += DATABASE_PAGE_SIZE) {
     const params = new URLSearchParams({ select: fields, is_active: "eq.true", stock: "gt.0", order: "sales_count.desc,like_count.desc", limit: String(DATABASE_PAGE_SIZE), offset: String(offset) });
@@ -113,7 +113,7 @@ async function fetchPublicStoresForProducts(config, products) {
   const stores = [];
   for (let start = 0; start < sellerIds.length; start += 80) {
     const ids = sellerIds.slice(start, start + 80);
-    const params = new URLSearchParams({ select: "id,display_name,bio,is_verified,is_midman,is_owner", id: `in.(${ids.join(",")})` });
+    const params = new URLSearchParams({ select: "*", id: `in.(${ids.join(",")})` });
     const page = await fetchSupabaseJson(`${config.url}/rest/v1/profiles?${params.toString()}`, config.anonKey);
     stores.push(...page.map((store) => sanitizeStore(store, productCounts.get(store.id))));
   }
