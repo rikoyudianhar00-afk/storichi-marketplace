@@ -222,9 +222,7 @@ export default function ChatThread() {
   function handleComposerFocus(event) {
     const composer = activateComposerForElement(event.currentTarget);
     window.setTimeout(() => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const viewportBottom = window.visualViewport?.height || window.innerHeight;
-      if (rect.bottom > viewportBottom - 12 || rect.top < 0) event.currentTarget.scrollIntoView({ block: "nearest", behavior: "auto" });
+      /* Do not scroll the page: the active composer is promoted above the footer. */
       composer?.classList.add("is-keyboard-active");
     }, 80);
   }
