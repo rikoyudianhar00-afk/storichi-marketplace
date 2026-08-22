@@ -735,6 +735,7 @@ export default function ChatThread() {
           <button type="submit" className="chat-send-button" disabled={chatLocked || !text.trim()} aria-label="Kirim pesan">↑</button>
         </form>
       </div>
+      {!isActiveRekber && <div className="chat-composer-footer-spacer" aria-hidden="true" />}
 
       {isWhispering && <section className={`whisper-overlay ${isRekberThirdParty ? "whisper-overlay-third-party" : "whisper-overlay-party"}`} aria-label="Layer whisper Rekber" aria-live="polite">
         <div className="whisper-overlay-label"><strong>Layer whisper Rekber</strong><span>Chat utama tetap tersimpan di bawah.</span></div>

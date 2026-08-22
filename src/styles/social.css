@@ -1233,3 +1233,17 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
     bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Real document space below the direct composer equals the mobile bottom navigation height. */
+.chat-composer-footer-spacer {
+  display: block;
+  width: 100%;
+  height: calc(82px + env(safe-area-inset-bottom, 0px));
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+@media (max-width: 600px) {
+  .chat-composer-footer-spacer {
+    height: calc(82px + env(safe-area-inset-bottom, 0px));
+  }
+}
