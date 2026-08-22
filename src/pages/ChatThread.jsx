@@ -182,6 +182,7 @@ export default function ChatThread() {
     const handleViewportResize = () => {
       const activeElement = document.activeElement;
       if (activeElement?.matches?.(".chat-input-bar input, .whisper-panel-composer input")) {
+        activateComposerForElement(activeElement);
         window.setTimeout(() => activeElement.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
       }
     };
@@ -189,10 +190,17 @@ export default function ChatThread() {
     return () => window.visualViewport.removeEventListener("resize", handleViewportResize);
   }, []);
 
-  function handleComposerFocus(event) {
+  function activateComposerForElement(element) {
     const page = document.querySelector(".chat-thread-page");
+    const composer = element?.closest?.(".chat-composer-shell, .whisper-panel");
     page?.classList.add("is-keyboard-composer-active");
-    const composer = event.currentTarget.closest(".chat-composer-shell, .whisper-panel");
+    page?.querySelectorAll?.(".is-keyboard-active").forEach((item) => item.classList.remove("is-keyboard-active"));
+    composer?.classList.add("is-keyboard-active");
+    return composer;
+  }
+
+  function handleComposerFocus(event) {
+    const composer = activateComposerForElement(event.currentTarget);
     window.setTimeout(() => (composer || event.currentTarget).scrollIntoView({ block: "center", behavior: "smooth" }), 120);
   }
 
