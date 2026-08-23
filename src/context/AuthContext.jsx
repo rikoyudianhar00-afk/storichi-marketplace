@@ -25,9 +25,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let processingCallback = null;
 
-    function notifyNative(type) {
+    function notifyNative(type, detail = {}) {
       if (!window.ReactNativeWebView) return;
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type, ...detail }));
     }
 
     async function acceptNativeCallback(eventOrCallback) {
@@ -63,10 +63,14 @@ export function AuthProvider({ children }) {
       if (typeof idToken !== "string" || !idToken) return;
       try {
         const result = await supabase.auth.signInWithIdToken({ provider: "google", token: idToken });
-        if (result.error || !result.data.session) throw result.error || new Error("Sesi Google native tidak terbentuk");
+        const establishedSession = result.data.session || (await supabase.auth.getSession()).data.session;
+        if (result.error || !establishedSession) throw result.error || new Error("Sesi Google native tidak terbentuk");
+        setSession(establishedSession);
+        await syncProfile(establishedSession.user);
+        window.sessionStorage.setItem("storichi.native-google-session", "ready");
         notifyNative("storichi-native-auth-complete");
       } catch (error) {
-        notifyNative("storichi-native-auth-failed");
+        notifyNative("storichi-native-auth-failed", { reason: error?.message || "Sesi Google tidak dapat dibuat" });
         console.warn("Google Sign-In native tidak dapat membentuk sesi", error?.message || "unknown");
       }
     }
