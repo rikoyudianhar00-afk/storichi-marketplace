@@ -50,6 +50,10 @@
   gap: 10px;
 }
 
+.navbar-desktop-links {
+  display: none;
+}
+
 .icon-btn {
   width: 38px;
   height: 38px;
@@ -390,24 +394,26 @@
 .navbar-drawer-empty { padding: 9px 12px; color: var(--ink-500); font-size: 13px; font-style: italic; }
 
 @media (min-width: 861px) {
-  .navbar {
-    width: min(1180px, calc(100% - 40px));
-    margin: 14px auto 0;
-    padding: 0 12px;
-    border: 1px solid rgba(255, 255, 255, .12);
+  .navbar-menu-btn { display: grid; }
+  .navbar-drawer { position: fixed; top: 60px; left: max(20px, calc((100vw - 1180px) / 2)); min-height: min(620px, calc(100dvh - 80px)); max-height: calc(100dvh - 80px); border-radius: 0 0 18px 18px; }
+  .bottom-nav {
+    display: block;
+    right: auto;
+    bottom: 18px;
+    left: 50%;
+    width: min(480px, calc(100% - 40px));
+    padding: 8px 12px;
+    transform: translateX(-50%);
+    border: 1px solid rgba(18, 51, 132, .14);
     border-radius: 18px;
-    background: rgba(7, 25, 77, .92);
-    box-shadow: 0 16px 34px rgba(4, 13, 42, .18);
-    backdrop-filter: blur(18px) saturate(150%);
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 18px 42px rgba(7, 25, 77, .2);
+    backdrop-filter: blur(16px) saturate(145%);
   }
-  .navbar-top { height: 56px; }
-  .navbar-menu-btn { display: grid; order: -1; }
-  .navbar-logo { margin-right: 0; }
-  .navbar-desktop-links { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
-  .navbar-desktop-links a { padding: 8px 10px; border-radius: 9px; color: rgba(255,255,255,.8); font-size: 13px; font-weight: 700; text-decoration: none; }
-  .navbar-desktop-links a:hover { color: #fff; background: rgba(255,255,255,.1); }
-  .navbar-actions { margin-left: auto; }
-  .navbar-drawer { position: fixed; top: 86px; left: max(20px, calc((100vw - 1180px) / 2)); min-height: min(620px, calc(100dvh - 106px)); max-height: calc(100dvh - 106px); border: 1px solid rgba(20,85,245,.12); border-radius: 18px; box-shadow: 0 24px 60px rgba(4,13,42,.24); }
+  .bottom-nav-inner { gap: 4px; }
+  .bottom-nav-item { padding: 6px 4px; border-radius: 11px; }
+  .bottom-nav-item:hover { background: var(--blue-50); color: var(--blue-600); }
+  body { padding-bottom: 96px; }
 }
 
 /* ---------- Cross-device press feedback ---------- */
