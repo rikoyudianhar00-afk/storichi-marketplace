@@ -10,3 +10,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Wrapper Android tidak dapat mengandalkan PKCE verifier milik WebView setelah
+// Google selesai pada Custom Tab. Client ini meminta token implisit agar
+// callback `storichi://` membawa access_token serta refresh_token yang dapat
+// diterapkan kembali oleh client utama di dalam WebView.
+export const nativeOAuth = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: "implicit",
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+});
