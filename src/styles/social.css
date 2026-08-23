@@ -920,6 +920,23 @@ input[type="checkbox"], input[type="radio"] {
 @media (max-width: 600px) { .whisper-layout-party .whisper-panel-single { width: calc(100% - 8px); flex-basis: min(58vh, 420px); } }
 
 .account-qris-card, .account-recovery-card { margin-top: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface, #fff); box-shadow: 0 8px 24px rgba(22, 34, 74, .07); }
+.account-security-card { margin-top: 16px; padding: 16px; border: 1px solid rgba(36,84,255,.22); border-radius: 16px; background: var(--surface, #fff); box-shadow: 0 8px 24px rgba(22,34,74,.07); }
+.account-security-card > .btn { margin-top: 14px; }
+.authenticator-enrollment { display: grid; justify-items: center; gap: 10px; margin-top: 14px; padding: 14px; border-radius: 14px; background: rgba(36,84,255,.05); text-align: center; }
+.authenticator-enrollment p { margin: 0; color: var(--ink-500); font-size: 13px; line-height: 1.45; }
+.authenticator-enrollment img { width: 180px; height: 180px; padding: 8px; border-radius: 10px; background: #fff; }
+.authenticator-enrollment details { width: 100%; color: var(--ink-500); font-size: 12px; }
+.authenticator-enrollment code { display: block; overflow-wrap: anywhere; margin-top: 8px; color: var(--ink-900); font-size: 11px; }
+.authenticator-code-form, .device-key-form { display: grid; gap: 10px; margin-top: 14px; text-align: left; }
+.authenticator-code-form label, .device-key-form label { color: var(--ink-700); font-size: 12px; font-weight: 800; }
+.authenticator-code-form input, .device-key-form input { min-height: 48px; border: 1px solid var(--border); border-radius: 12px; background: #fff; color: var(--ink-900); font-weight: 800; letter-spacing: .16em; text-align: center; }
+.authenticator-code-form input { max-width: 220px; }
+.device-key-form { width: min(100%, 360px); margin: 20px auto 0; }
+.device-key-form small { color: var(--ink-500); font-size: 11.5px; line-height: 1.4; }
+.device-key-login p { max-width: 390px; margin-left: auto; margin-right: auto; }
+.device-key-issued { display: grid; gap: 7px; margin-top: 14px; padding: 14px; border: 1px solid rgba(36,84,255,.25); border-radius: 14px; background: rgba(36,84,255,.06); text-align: center; }
+.device-key-issued strong { color: var(--blue-700); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 21px; letter-spacing: .14em; }
+.device-key-issued span { color: var(--ink-500); font-size: 12px; line-height: 1.4; }
 .account-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .account-section-heading h3 { margin: 0 0 4px; font-size: 16px; }
 .account-section-heading p { margin: 0; color: var(--ink-500); font-size: 13px; line-height: 1.45; }

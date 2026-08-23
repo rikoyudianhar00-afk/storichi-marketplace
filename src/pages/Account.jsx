@@ -4,6 +4,8 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import RoleBadge from "../components/RoleBadge";
 import ImageCropModal from "../components/ImageCropModal";
+import DeviceKeyLogin from "../components/DeviceKeyLogin";
+import DeviceSecurityPanel from "../components/DeviceSecurityPanel";
 import { MAX_IMAGE_SIZE_BYTES, validateImageFile } from "../lib/image";
 
 export default function Account() {
@@ -23,6 +25,12 @@ export default function Account() {
   const [tagEmail, setTagEmail] = useState("");
   const [tagType, setTagType] = useState("is_verified");
   const [tagMsg, setTagMsg] = useState("");
+
+  const isNativeWrapper = typeof window !== "undefined" && Boolean(window.ReactNativeWebView);
+
+  if (!user && isNativeWrapper) {
+    return <DeviceKeyLogin />;
+  }
 
   if (!user) {
     return (
@@ -243,6 +251,8 @@ export default function Account() {
         <button type="button" className="btn btn-outline account-danger-button" onClick={neutralizeAccount} disabled={neutralizing}>{neutralizing ? "Menetralkan..." : "Netralisasi Akun"}</button>
         {recoveryMessage && <p className="account-recovery-message" role="status">{recoveryMessage}</p>}
       </section>
+
+      <DeviceSecurityPanel />
 
       {profile?.is_owner && (
         <div className="owner-panel">

@@ -136,11 +136,6 @@ export function AuthProvider({ children }) {
   }
 
   async function signInWithGoogle() {
-    const isNativeWrapper = typeof window !== "undefined" && Boolean(window.ReactNativeWebView);
-    if (isNativeWrapper) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "storichi-native-google-sign-in" }));
-      return;
-    }
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -151,13 +146,26 @@ export function AuthProvider({ children }) {
     if (!error && data?.url) window.location.assign(data.url);
   }
 
+  async function signInWithDeviceKey(code) {
+    const { data, error } = await supabase.functions.invoke("mobile-device-link", { body: { action: "claim", code } });
+    if (error || !data?.tokenHash) throw new Error(data?.error || error?.message || "Kunci autentikasi tidak dapat digunakan.");
+    const result = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: "email" });
+    if (result.error || !result.data.session) throw result.error || new Error("Sesi aplikasi belum dapat dibuat.");
+    setSession(result.data.session);
+    await syncProfile(result.data.session.user);
+    if (typeof window !== "undefined" && window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "storichi-device-key-auth-complete", userId: result.data.session.user.id }));
+    }
+    return result.data.session;
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, loading, signInWithGoogle, signOut, refreshProfile }}
+      value={{ session, user: session?.user ?? null, profile, loading, signInWithGoogle, signInWithDeviceKey, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>
