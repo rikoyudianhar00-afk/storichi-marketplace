@@ -309,7 +309,7 @@
 .ad-banner-track { display: flex; gap: 12px; width: 100%; height: 100%; transition: transform 260ms cubic-bezier(.23,1,.32,1); will-change: transform; }
 .ad-banner-track .ad-banner-link { flex: 0 0 100%; min-height: 0; }
 @media (min-width: 861px) {
-  .ad-banner-section { width: min(900px, 78vw); margin: 22px auto 26px; }
+  .ad-banner-section { width: min(620px, 54vw); margin: 18px auto 22px; }
   .ad-banner-frame, .ad-banner-skeleton { border-radius: 20px; }
 }
 @media (max-width: 600px) { .shop-avatar { width: 52px; height: 52px; flex-basis: 52px; } .shop-hero { padding: 14px; } }
