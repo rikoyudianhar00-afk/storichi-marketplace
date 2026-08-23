@@ -69,6 +69,20 @@ export default function RekberRoom() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
+  function handleComposerFocus(event) {
+    event.currentTarget.closest(".chat-input-bar")?.classList.add("is-keyboard-active");
+    document.body.classList.add("chat-keyboard-open");
+  }
+
+  function handleComposerBlur() {
+    window.setTimeout(() => {
+      if (!document.activeElement?.matches?.(".rekber-room-page .chat-input-bar input")) {
+        document.body.classList.remove("chat-keyboard-open");
+        document.querySelector(".rekber-room-page .chat-input-bar")?.classList.remove("is-keyboard-active");
+      }
+    }, 180);
+  }
+
   async function sendMessage(e) {
     e.preventDefault();
     if (!text.trim() || !user) return;
@@ -156,7 +170,7 @@ export default function RekberRoom() {
         <div ref={bottomRef} />
       </div>
       {chatError && <div className="chat-moderation-notice" role="alert">{chatError}</div>}
-      {active ? <form className="chat-input-bar" onSubmit={sendMessage}><AttachmentButton userId={user.id} onUploaded={sendAttachment} /><input value={text} onChange={(e) => setText(e.target.value)} placeholder="Tulis pesan ke peserta Rekber..." aria-label="Tulis pesan" /><button type="submit" className="chat-send-button" disabled={!text.trim()} aria-label="Kirim pesan">↑</button></form> : <p className="rekber-closed-note">Lobby ini sudah {group.status === "completed" ? "selesai" : "dibatalkan"}.</p>}
+      {active ? <form className="chat-input-bar" onSubmit={sendMessage}><AttachmentButton userId={user.id} onUploaded={sendAttachment} /><input value={text} onChange={(e) => setText(e.target.value)} onFocus={handleComposerFocus} onBlur={handleComposerBlur} placeholder="Tulis pesan ke peserta Rekber..." aria-label="Tulis pesan" /><button type="submit" className="chat-send-button" disabled={!text.trim()} aria-label="Kirim pesan">↑</button></form> : <p className="rekber-closed-note">Lobby ini sudah {group.status === "completed" ? "selesai" : "dibatalkan"}.</p>}
       {isCreator && active && <button className="rekber-cancel-button" type="button" onClick={cancelLobby}>Batalkan lobby</button>}
     </main>
   );
