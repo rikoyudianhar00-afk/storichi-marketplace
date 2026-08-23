@@ -8,6 +8,7 @@ import { moderateMessage } from "../lib/moderation";
 import { compressImageForChat, validateImageFile } from "../lib/image";
 import ImageLightbox from "../components/ImageLightbox";
 import { supabase } from "../lib/supabase";
+import { dispatchNativePush } from "../lib/nativePush";
 
 function formatMessageTime(value) {
   return new Date(value).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
@@ -119,7 +120,10 @@ export default function ChatThread() {
         supabase.from("chat_messages").select("*").eq("thread_id", threadId).order("created_at", { ascending: true }),
         supabase.from("profiles").select("id, display_name, avatar_url, bio, qris_url, is_verified, is_owner, is_seller").eq("id", participantId).maybeSingle(),
       ]);
-      await markChatThreadRead(user.id, threadId);
+      await Promise.all([
+        markChatThreadRead(user.id, threadId),
+        supabase.from("user_notifications").update({ read_at: new Date().toISOString() }).eq("recipient_id", user.id).eq("href", `/chat/${threadId}`).is("read_at", null),
+      ]);
       if (active) {
         setThread(threadData);
         setParticipant(profile);
@@ -136,7 +140,10 @@ export default function ChatThread() {
     const messageChannel = supabase.channel(`chat_thread_${threadId}`).on("postgres_changes", { event: "*", schema: "public", table: "chat_messages", filter: `thread_id=eq.${threadId}` }, (payload) => {
       if (payload.eventType === "INSERT") {
         setMessages((prev) => (prev.some((message) => message.id === payload.new.id) ? prev : [...prev, payload.new]));
-        if (payload.new.sender_id !== user.id) markChatThreadRead(user.id, threadId);
+        if (payload.new.sender_id !== user.id) {
+          void markChatThreadRead(user.id, threadId);
+          void supabase.from("user_notifications").update({ read_at: new Date().toISOString() }).eq("recipient_id", user.id).eq("href", `/chat/${threadId}`).is("read_at", null);
+        }
       } else if (payload.eventType === "UPDATE") {
         setMessages((prev) => prev.map((message) => (message.id === payload.new.id ? { ...message, ...payload.new } : message)));
       }
@@ -307,7 +314,7 @@ export default function ChatThread() {
       return undefined;
     }
     let active = true;
-    supabase.from("rekber_third_party_reviews").select("id").eq("group_id", rekberGroup.id).eq("reviewer_id", user.id).maybeSingle().then(({ data }) => {
+    supabase.from("rekber_third_party_rating_locks").select("reviewer_id").eq("reviewer_id", user.id).eq("third_party_id", rekberGroup.third_party_id).maybeSingle().then(({ data }) => {
       if (active) setRekberRatingSubmitted(Boolean(data));
     });
     return () => { active = false; };
@@ -320,11 +327,11 @@ export default function ChatThread() {
     }
     let active = true;
     const loadReviews = async () => {
-      const { data } = await supabase.from("rekber_third_party_reviews").select("id, reviewer_id").eq("group_id", rekberGroup.id).in("reviewer_id", [rekberGroup.buyer_id, rekberGroup.seller_id]);
+      const { data } = await supabase.from("rekber_third_party_rating_locks").select("reviewer_id").eq("third_party_id", rekberGroup.third_party_id).in("reviewer_id", [rekberGroup.buyer_id, rekberGroup.seller_id]);
       if (active) setRekberReviewCount((data || []).length);
     };
     loadReviews();
-    const reviewChannel = supabase.channel(`rekber-reviews-${rekberGroup.id}`).on("postgres_changes", { event: "*", schema: "public", table: "rekber_third_party_reviews", filter: `group_id=eq.${rekberGroup.id}` }, loadReviews).subscribe();
+    const reviewChannel = supabase.channel(`rekber-reviews-${rekberGroup.id}`).on("postgres_changes", { event: "*", schema: "public", table: "rekber_third_party_rating_locks", filter: `third_party_id=eq.${rekberGroup.third_party_id}` }, loadReviews).subscribe();
     return () => { active = false; supabase.removeChannel(reviewChannel); };
   }, [rekberGroup?.id, rekberGroup?.buyer_id, rekberGroup?.seller_id, rekberGroup?.midman_rating_requested_at]);
 
@@ -374,8 +381,9 @@ export default function ChatThread() {
     }
     setChatError("");
     setText("");
-    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: result.value, visibility: "main" });
+    const { data: message, error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: result.value, visibility: "main" }).select("id").single();
     if (error) setChatError("Pesan gagal dikirim. Coba lagi.");
+    else void dispatchNativePush({ event: "chat-message", messageId: message.id });
   }
 
   async function sendWhisperText(target, value, clear) {
@@ -386,22 +394,27 @@ export default function ChatThread() {
       return;
     }
     setChatError("");
-    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: result.value, visibility: `${target}_whisper` });
-    if (error) setChatError("Pesan whisper gagal dikirim. Coba lagi.");
-    else clear("");
+    const { data: message, error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: result.value, visibility: `${target}_whisper` }).select("id").single();
+    if (error) setChatError("Pesan whisper gagal dikirim.");
+    else {
+      clear("");
+      void dispatchNativePush({ event: "chat-message", messageId: message.id });
+    }
   }
 
   async function sendWhisperAttachment(target, { url, type, sizeBytes }) {
     if (!isWhispering || chatCompleted || !user) return;
-    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type, attachment_size_bytes: sizeBytes || null, visibility: `${target}_whisper` });
+    const { data: message, error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type, attachment_size_bytes: sizeBytes || null, visibility: `${target}_whisper` }).select("id").single();
     if (error) setChatError("Lampiran whisper gagal dikirim.");
+    else void dispatchNativePush({ event: "chat-message", messageId: message.id });
   }
 
   async function sendAttachment({ url, type, sizeBytes }) {
     if (!user || chatLocked) return;
     setChatError("");
-    const { error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type, attachment_size_bytes: sizeBytes || null, visibility: "main" });
+    const { data: message, error } = await supabase.from("chat_messages").insert({ thread_id: threadId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type, attachment_size_bytes: sizeBytes || null, visibility: "main" }).select("id").single();
     if (error) setChatError("Lampiran gagal dikirim.");
+    else void dispatchNativePush({ event: "chat-message", messageId: message.id });
   }
 
   async function requestRating() {
@@ -411,6 +424,7 @@ export default function ChatThread() {
     setBusyAction(false);
     if (error) return setChatError(error.message || "Permintaan rating gagal dikirim.");
     setRequest((prev) => ({ ...prev, rating_requested_at: new Date().toISOString() }));
+    void dispatchNativePush({ event: "direct-rating-request", purchaseRequestId: request.id });
   }
 
   function chooseQrisFile(event) {
@@ -542,6 +556,7 @@ export default function ChatThread() {
     setBusyAction(false);
     if (error) return setChatError(error.message || "Pengamanan dana/item belum dapat diminta.");
     setRekberGroup(data);
+    void dispatchNativePush({ event: "rekber-custody-request", groupId: rekberGroup.id });
   }
 
   async function markRekberDone() {
@@ -552,6 +567,7 @@ export default function ChatThread() {
     setBusyAction(false);
     if (error) return setChatError(error.message || "Konfirmasi penyelesaian gagal disimpan.");
     setRekberGroup(data);
+    void dispatchNativePush({ event: "rekber-party-done", groupId: rekberGroup.id });
   }
 
   async function requestRekberRating() {
@@ -562,6 +578,7 @@ export default function ChatThread() {
     setBusyAction(false);
     if (error) return setChatError(error.message || "Permintaan rating gagal dikirim.");
     setRekberGroup(data);
+    void dispatchNativePush({ event: "rekber-rating-request", groupId: rekberGroup.id });
   }
 
   function openRekberCustodyFlow() {
