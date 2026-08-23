@@ -3,9 +3,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, serviceRoleKey);
+const allowedOrigin = "https://storichi-marketplace.vercel.app";
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+function corsHeaders(request: Request) {
+  const origin = request.headers.get("origin");
+  return {
+    "Access-Control-Allow-Origin": origin === allowedOrigin ? origin : allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json",
+    Vary: "Origin",
+  };
+}
+
+const json = (request: Request, body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: corsHeaders(request) });
 
 type PushEvent =
   | { event: "chat-message"; messageId: string }
@@ -190,15 +202,16 @@ async function notifyMobile(notice: Notice) {
 }
 
 Deno.serve(async (request) => {
-  if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
+  if (request.method !== "POST") return json(request, { error: "Method Not Allowed" }, 405);
   const accessToken = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: auth } = await supabase.auth.getUser(accessToken);
-  if (!auth.user?.id) return json({ error: "Unauthorized" }, 401);
+  if (!auth.user?.id) return json(request, { error: "Unauthorized" }, 401);
 
   const event = await request.json().catch(() => null) as PushEvent | null;
-  if (!event?.event) return json({ error: "Event tidak valid" }, 400);
+  if (!event?.event) return json(request, { error: "Event tidak valid" }, 400);
   const notice = await resolveNotice(event, auth.user.id);
-  if (!notice) return json({ skipped: true });
+  if (!notice) return json(request, { skipped: true });
   const result = await notifyMobile(notice);
-  return json({ skipped: false, ...result });
+  return json(request, { skipped: false, ...result });
 });
