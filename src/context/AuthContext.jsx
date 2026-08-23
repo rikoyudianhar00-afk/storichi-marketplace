@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { nativeOAuth, supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 const NATIVE_CALLBACK_STORAGE_KEY = "storichi.native-oauth-callback";
@@ -48,8 +48,6 @@ export function AuthProvider({ children }) {
             ? await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
             : { data: { session: null }, error: new Error("Callback OAuth tidak memuat kredensial sesi") };
         if (result.error || !result.data.session) throw result.error || new Error("Sesi OAuth tidak terbentuk");
-        window.localStorage.removeItem(NATIVE_CALLBACK_STORAGE_KEY);
-        window.sessionStorage.removeItem(NATIVE_CALLBACK_STORAGE_KEY);
         window.__storichiNativeAuthCallback = null;
         notifyNative("storichi-native-auth-complete");
       } catch (error) {
@@ -118,7 +116,8 @@ export function AuthProvider({ children }) {
 
   async function signInWithGoogle() {
     const isNativeWrapper = typeof window !== "undefined" && Boolean(window.ReactNativeWebView);
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const oauthClient = isNativeWrapper ? nativeOAuth : supabase;
+    const { data, error } = await oauthClient.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: isNativeWrapper ? "storichi://auth/callback" : window.location.origin,
