@@ -6,6 +6,7 @@ import { StarInput } from "../components/Stars";
 import AttachmentButton from "../components/AttachmentButton";
 import { moderateMessage } from "../lib/moderation";
 import { supabase } from "../lib/supabase";
+import { dispatchNativePush } from "../lib/nativePush";
 
 const WORKFLOW_LABELS = {
   waiting_for_deposit: "Menunggu dana dan item diserahkan",
@@ -93,14 +94,16 @@ export default function RekberRoom() {
     }
     setChatError("");
     setText("");
-    const { error } = await supabase.from("rekber_messages").insert({ group_id: groupId, sender_id: user.id, content: result.value });
+    const { data: message, error } = await supabase.from("rekber_messages").insert({ group_id: groupId, sender_id: user.id, content: result.value }).select("id").single();
     if (error) setChatError("Pesan gagal dikirim.");
+    else void dispatchNativePush({ event: "rekber-message", messageId: message.id });
   }
 
   async function sendAttachment({ url, type }) {
     if (!user) return;
-    const { error } = await supabase.from("rekber_messages").insert({ group_id: groupId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type });
+    const { data: message, error } = await supabase.from("rekber_messages").insert({ group_id: groupId, sender_id: user.id, content: type === "video" ? "Video" : "Gambar", attachment_url: url, attachment_type: type }).select("id").single();
     if (error) setChatError("Lampiran gagal dikirim.");
+    else void dispatchNativePush({ event: "rekber-message", messageId: message.id });
   }
 
   async function updateWorkflow(action) {
