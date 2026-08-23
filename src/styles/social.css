@@ -1419,6 +1419,35 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
   }
 }
 
+/* Android WebView uses resize mode: the layout viewport ends at the keyboard.
+   A focused composer must therefore sit at viewport bottom, not add keyboard height. */
+@media (max-width: 860px) {
+  body.chat-keyboard-open .bottom-nav {
+    display: none !important;
+  }
+
+  body.chat-keyboard-open .chat-thread-page .chat-composer-shell.is-keyboard-active,
+  body.chat-keyboard-open .chat-thread-page .whisper-panel.is-keyboard-active .whisper-panel-composer,
+  body.chat-keyboard-open .rekber-room-page .chat-input-bar.is-keyboard-active {
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    bottom: 0 !important;
+    z-index: 1200 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none !important;
+    box-sizing: border-box;
+  }
+
+  body.chat-keyboard-open .chat-thread-page .chat-composer-shell.is-keyboard-active,
+  body.chat-keyboard-open .rekber-room-page .chat-input-bar.is-keyboard-active {
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    background: rgba(255, 255, 255, .99) !important;
+    box-shadow: 0 -8px 24px rgba(20, 35, 80, .18) !important;
+  }
+}
+
 
 /* ---------- Complete transaction history cards ---------- */
 .transaction-rekber-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding: 10px; border: 1px solid #ead782; border-radius: 12px; background: #fff9d8; }
