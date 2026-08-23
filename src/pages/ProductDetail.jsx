@@ -6,6 +6,7 @@ import RoleBadge from "../components/RoleBadge";
 import { StarDisplay } from "../components/Stars";
 import ProductShareMenu from "../components/ProductShareMenu";
 import ImageLightbox from "../components/ImageLightbox";
+import { dispatchNativePush } from "../lib/nativePush";
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -140,16 +141,17 @@ export default function ProductDetail() {
       thread = newThread;
     }
 
-    const { error: messageError } = await supabase.from("chat_messages").insert({
+    const { data: firstMessage, error: messageError } = await supabase.from("chat_messages").insert({
       thread_id: thread.id,
       sender_id: user.id,
       content: `Halo, saya mau beli produk "${product.name}".`,
-    });
+    }).select("id").single();
     if (messageError) {
       setRequesting(false);
       setRequestError(messageError.message || "Pesan pembelian belum dapat dikirim. Coba lagi.");
       return;
     }
+    void dispatchNativePush({ event: "chat-message", messageId: firstMessage.id });
 
     const { data: existingRequest, error: existingRequestError } = await supabase
       .from("purchase_requests")
