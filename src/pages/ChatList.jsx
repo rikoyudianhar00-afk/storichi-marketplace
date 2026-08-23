@@ -71,10 +71,11 @@ export default function ChatList({ archivedOnly = false }) {
         return;
       }
 
-      const [{ data: profiles }, { data: messages }, { data: notifications }, { data: requests }] = await Promise.all([
+      const [{ data: profiles }, { data: messages }, { data: notifications }, { data: approvalNotifications }, { data: requests }] = await Promise.all([
         supabase.from("profiles").select("id, display_name, avatar_url, is_verified, is_owner").in("id", [...new Set(list.flatMap((thread) => [thread.user_a, thread.user_b]))]),
         supabase.from("chat_messages").select("id, thread_id, content, sender_id, created_at, attachment_type").in("thread_id", ids).order("created_at", { ascending: false }),
         supabase.from("chat_notifications").select("id, thread_id").eq("recipient_id", user.id).is("read_at", null).in("thread_id", ids),
+        supabase.from("user_notifications").select("href").eq("recipient_id", user.id).is("read_at", null).in("href", ids.map((id) => `/chat/${id}`)),
         supabase.from("purchase_requests").select("id, thread_id, status, created_at").in("thread_id", ids).order("created_at", { ascending: false }),
       ]);
       const profileMap = new Map((profiles || []).map((profile) => [profile.id, profile]));
@@ -82,6 +83,10 @@ export default function ChatList({ archivedOnly = false }) {
       (messages || []).forEach((message) => { if (!latestMap.has(message.thread_id)) latestMap.set(message.thread_id, message); });
       const unreadMap = new Map();
       (notifications || []).forEach((notification) => unreadMap.set(notification.thread_id, (unreadMap.get(notification.thread_id) || 0) + 1));
+      (approvalNotifications || []).forEach((notification) => {
+        const threadId = String(notification.href || "").replace(/^\/chat\//, "");
+        if (threadId) unreadMap.set(threadId, (unreadMap.get(threadId) || 0) + 1);
+      });
       const requestMap = new Map();
       (requests || []).forEach((request) => { if (!requestMap.has(request.thread_id)) requestMap.set(request.thread_id, request); });
       const next = list.map((thread) => {
@@ -108,10 +113,11 @@ export default function ChatList({ archivedOnly = false }) {
     load();
     const channel = supabase.channel(`chat_inbox_${user.id}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, load).subscribe();
     const requestChannel = supabase.channel(`chat_request_inbox_${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "purchase_requests" }, load).subscribe();
-    const invitationChannel = supabase.channel(`chat_invitation_inbox_${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `buyer_id=eq.${user.id}` }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `seller_id=eq.${user.id}` }, load)
-      .subscribe();
+      const invitationChannel = supabase.channel(`chat_invitation_inbox_${user.id}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `buyer_id=eq.${user.id}` }, load)
+        .on("postgres_changes", { event: "*", schema: "public", table: "rekber_invitations", filter: `seller_id=eq.${user.id}` }, load)
+        .on("postgres_changes", { event: "*", schema: "public", table: "user_notifications", filter: `recipient_id=eq.${user.id}` }, load)
+        .subscribe();
     return () => {
       active = false;
       supabase.removeChannel(channel);
