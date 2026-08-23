@@ -67,8 +67,8 @@ export function AuthProvider({ children }) {
         if (result.error || !establishedSession) throw result.error || new Error("Sesi Google native tidak terbentuk");
         setSession(establishedSession);
         await syncProfile(establishedSession.user);
-        window.sessionStorage.setItem("storichi.native-google-session", "ready");
-        notifyNative("storichi-native-auth-complete");
+        window.sessionStorage.setItem("storichi.native-google-session", establishedSession.user.id);
+        notifyNative("storichi-native-auth-complete", { userId: establishedSession.user.id });
       } catch (error) {
         notifyNative("storichi-native-auth-failed", { reason: error?.message || "Sesi Google tidak dapat dibuat" });
         console.warn("Google Sign-In native tidak dapat membentuk sesi", error?.message || "unknown");
