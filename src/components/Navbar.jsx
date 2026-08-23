@@ -42,6 +42,10 @@ export default function Navbar() {
     setMenuOpen(false);
   }
 
+  function refreshStorichi() {
+    window.location.reload();
+  }
+
   function toggleGroup(groupId) {
     setOpenGroups((current) => ({ ...current, [groupId]: !current[groupId] }));
   }
@@ -79,6 +83,13 @@ export default function Navbar() {
           <img className="navbar-logo-image" src="/storichi-logo.jpg" alt="" />
           <span>STORICHI</span>
         </Link>
+
+        <nav className="navbar-desktop-links" aria-label="Navigasi desktop">
+          <Link to="/">Beranda</Link>
+          <Link to="/wishlist">Wishlist</Link>
+          <Link to="/transaksi">Transaksi</Link>
+          <Link to="/rekber">Rekber</Link>
+        </nav>
 
         <div className="navbar-actions">
           <Link to="/cari" className="icon-btn" aria-label="Cari produk" title="Cari produk">
@@ -154,6 +165,9 @@ export default function Navbar() {
             {drawerReady && standaloneCategories.map((category) => <Link key={category.id} to={categoryHref(category)} onClick={closeMenu}>{category.label}</Link>)}
             <Link to="/chat" onClick={closeMenu}>Chat</Link>
             <Link to="/bantuan" onClick={closeMenu}>Cara Pakai & Bantuan</Link>
+            <button type="button" className="navbar-drawer-refresh" onClick={refreshStorichi} aria-label="Refresh Storichi">
+              <span aria-hidden="true">↻</span> Refresh
+            </button>
             {user && (
               <button className="navbar-drawer-signout" onClick={() => { closeMenu(); signOut(); }}>
                 Keluar
