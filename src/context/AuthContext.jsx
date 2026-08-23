@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { nativeOAuth, supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 const NATIVE_CALLBACK_STORAGE_KEY = "storichi.native-oauth-callback";
@@ -58,6 +58,19 @@ export function AuthProvider({ children }) {
       }
     }
 
+    async function acceptNativeGoogleIdToken(event) {
+      const idToken = event?.detail?.idToken;
+      if (typeof idToken !== "string" || !idToken) return;
+      try {
+        const result = await supabase.auth.signInWithIdToken({ provider: "google", token: idToken });
+        if (result.error || !result.data.session) throw result.error || new Error("Sesi Google native tidak terbentuk");
+        notifyNative("storichi-native-auth-complete");
+      } catch (error) {
+        notifyNative("storichi-native-auth-failed");
+        console.warn("Google Sign-In native tidak dapat membentuk sesi", error?.message || "unknown");
+      }
+    }
+
     const recoverPersistedCallback = () => {
       const callback = window.__storichiNativeAuthCallback
         || window.localStorage.getItem(NATIVE_CALLBACK_STORAGE_KEY)
@@ -67,10 +80,14 @@ export function AuthProvider({ children }) {
 
     window.addEventListener("storichi:native-auth-callback", acceptNativeCallback);
     document.addEventListener("storichi:native-auth-callback", acceptNativeCallback);
+    window.addEventListener("storichi:native-google-id-token", acceptNativeGoogleIdToken);
+    document.addEventListener("storichi:native-google-id-token", acceptNativeGoogleIdToken);
     recoverPersistedCallback();
     return () => {
       window.removeEventListener("storichi:native-auth-callback", acceptNativeCallback);
       document.removeEventListener("storichi:native-auth-callback", acceptNativeCallback);
+      window.removeEventListener("storichi:native-google-id-token", acceptNativeGoogleIdToken);
+      document.removeEventListener("storichi:native-google-id-token", acceptNativeGoogleIdToken);
     };
   }, []);
 
@@ -116,17 +133,18 @@ export function AuthProvider({ children }) {
 
   async function signInWithGoogle() {
     const isNativeWrapper = typeof window !== "undefined" && Boolean(window.ReactNativeWebView);
-    const oauthClient = isNativeWrapper ? nativeOAuth : supabase;
-    const { data, error } = await oauthClient.auth.signInWithOAuth({
+    if (isNativeWrapper) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "storichi-native-google-sign-in" }));
+      return;
+    }
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: isNativeWrapper ? "storichi://auth/callback" : window.location.origin,
-        skipBrowserRedirect: isNativeWrapper,
+        redirectTo: window.location.origin,
+        skipBrowserRedirect: false,
       },
     });
-    if (!error && isNativeWrapper && data?.url) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "storichi-google-auth-url", url: data.url }));
-    }
+    if (!error && data?.url) window.location.assign(data.url);
   }
 
   async function signOut() {
