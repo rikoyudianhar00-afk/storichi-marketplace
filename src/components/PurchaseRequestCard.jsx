@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { dispatchNativePush } from "../lib/nativePush";
 
 const VERIFIED_NOTICE_KEY = "storichi_rekber_verified_notice_dismissed";
 
@@ -93,6 +94,7 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
     setBusy(false);
     if (updateError) return setError("Status permintaan gagal diperbarui.");
     onUpdate?.({ ...request, status });
+    void dispatchNativePush({ event: "purchase-decision", purchaseRequestId: request.id });
   }
 
   async function chooseDirect() {
@@ -158,9 +160,11 @@ export default function PurchaseRequestCard({ request, isSeller, currentUserId, 
     if (responseError) return setError(responseError.message || "Persetujuan Midman (MM) gagal diproses.");
     if (!accept) {
       setInvitation((current) => current ? { ...current, status: "declined" } : current);
+      void dispatchNativePush({ event: "rekber-buyer-decision", invitationId: invitation.id });
       return;
     }
     void supabase.functions.invoke("send-rekber-invite-push", { body: { invitationId: invitation.id } });
+    void dispatchNativePush({ event: "rekber-buyer-decision", invitationId: invitation.id });
     setInvitation((current) => current ? { ...current, status: "buyer_approved", buyer_approved_at: new Date().toISOString() } : current);
   }
 
