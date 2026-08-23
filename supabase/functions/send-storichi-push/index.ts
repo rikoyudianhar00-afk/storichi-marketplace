@@ -34,16 +34,39 @@ async function resolveNotice(event: PushEvent, actorId: string): Promise<Notice 
   if (event.event === "chat-message") {
     const { data: message } = await supabase
       .from("chat_messages")
-      .select("id, thread_id, sender_id, content, attachment_type")
+      .select("id, thread_id, sender_id, content, attachment_type, visibility")
       .eq("id", event.messageId)
       .maybeSingle();
     if (!message || message.sender_id !== actorId) return null;
 
-    const { data: recipients } = await supabase
-      .from("chat_notifications")
-      .select("recipient_id")
-      .eq("message_id", message.id);
-    const recipientIds = [...new Set((recipients || []).map((row) => row.recipient_id).filter((id) => id && id !== actorId))];
+    const { data: purchaseRequest } = await supabase
+      .from("purchase_requests")
+      .select("id")
+      .eq("thread_id", message.thread_id)
+      .maybeSingle();
+    const { data: group } = purchaseRequest
+      ? await supabase
+        .from("rekber_groups")
+        .select("buyer_id, seller_id, third_party_id")
+        .eq("purchase_request_id", purchaseRequest.id)
+        .in("status", ["active", "completed"])
+        .maybeSingle()
+      : { data: null };
+    let recipientIds: string[];
+    if (group?.third_party_id) {
+      const members = message.visibility === "seller_whisper"
+        ? [group.seller_id, group.third_party_id]
+        : message.visibility === "buyer_whisper"
+          ? [group.buyer_id, group.third_party_id]
+          : [group.buyer_id, group.seller_id, group.third_party_id];
+      recipientIds = [...new Set(members.filter((id) => id && id !== actorId))];
+    } else {
+      const { data: recipients } = await supabase
+        .from("chat_notifications")
+        .select("recipient_id")
+        .eq("message_id", message.id);
+      recipientIds = [...new Set((recipients || []).map((row) => row.recipient_id).filter((id) => id && id !== actorId))];
+    }
     if (!recipientIds.length) return null;
 
     const { data: actor } = await supabase.from("profiles").select("display_name").eq("id", actorId).maybeSingle();
@@ -124,15 +147,17 @@ async function notifyMobile(notice: Notice) {
   const recipients = [...new Set(notice.recipients.filter(Boolean).filter((id) => id !== notice.actorId))];
   if (!recipients.length) return { delivered: 0 };
 
-  await supabase.from("user_notifications").insert(recipients.map((recipientId) => ({
-    recipient_id: recipientId,
-    actor_id: notice.actorId,
-    type: notice.type,
-    title: notice.title,
-    body: notice.body,
-    href: notice.href,
-    entity_id: notice.entityId || null,
-  })));
+  if (notice.type !== "chat_message") {
+    await supabase.from("user_notifications").insert(recipients.map((recipientId) => ({
+      recipient_id: recipientId,
+      actor_id: notice.actorId,
+      type: notice.type,
+      title: notice.title,
+      body: notice.body,
+      href: notice.href,
+      entity_id: notice.entityId || null,
+    })));
+  }
 
   const { data: rows } = await supabase
     .from("mobile_push_tokens")
