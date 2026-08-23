@@ -21,6 +21,7 @@ const json = (request: Request, body: unknown, status = 200) =>
 
 type PushEvent =
   | { event: "chat-message"; messageId: string }
+  | { event: "rekber-message"; messageId: string }
   | { event: "purchase-decision"; purchaseRequestId: string }
   | { event: "direct-rating-request"; purchaseRequestId: string }
   | { event: "rekber-custody-request"; groupId: string }
@@ -43,6 +44,32 @@ function isExpoPushToken(value: unknown): value is string {
 }
 
 async function resolveNotice(event: PushEvent, actorId: string): Promise<Notice | null> {
+  if (event.event === "rekber-message") {
+    const { data: message } = await supabase
+      .from("rekber_messages")
+      .select("id, group_id, sender_id, content, attachment_type")
+      .eq("id", event.messageId)
+      .maybeSingle();
+    if (!message || message.sender_id !== actorId) return null;
+    const { data: group } = await supabase
+      .from("rekber_groups")
+      .select("id, buyer_id, seller_id, third_party_id, purchase_request:purchase_requests(thread_id)")
+      .eq("id", message.group_id)
+      .maybeSingle();
+    if (!group) return null;
+    const recipients = [group.buyer_id, group.seller_id, group.third_party_id].filter((id) => id && id !== actorId);
+    const { data: actor } = await supabase.from("profiles").select("display_name").eq("id", actorId).maybeSingle();
+    return {
+      recipients,
+      actorId,
+      title: actor?.display_name ? `${actor.display_name} mengirim pesan Rekber` : "Pesan Rekber baru",
+      body: message.attachment_type === "image" ? "Mengirim gambar" : message.attachment_type === "video" ? "Mengirim video" : message.content || "Kamu menerima pesan Rekber baru.",
+      href: group.purchase_request?.thread_id ? `/chat/${group.purchase_request.thread_id}` : "/rekber",
+      type: "chat_message",
+      entityId: message.id,
+    };
+  }
+
   if (event.event === "chat-message") {
     const { data: message } = await supabase
       .from("chat_messages")
