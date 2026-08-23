@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
+const NATIVE_CALLBACK_STORAGE_KEY = "storichi.native-oauth-callback";
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -22,9 +23,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    async function acceptNativeCallback(event) {
-      const callbackUrl = event.detail;
+    let processingCallback = null;
+
+    function notifyNative(type) {
+      if (!window.ReactNativeWebView) return;
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type }));
+    }
+
+    async function acceptNativeCallback(eventOrCallback) {
+      const callbackUrl = typeof eventOrCallback === "string" ? eventOrCallback : eventOrCallback?.detail;
       if (typeof callbackUrl !== "string" || !callbackUrl.startsWith("storichi://auth/callback")) return;
+      if (processingCallback === callbackUrl) return;
+      processingCallback = callbackUrl;
       try {
         const url = new URL(callbackUrl);
         const query = url.searchParams;
@@ -32,14 +42,38 @@ export function AuthProvider({ children }) {
         const code = query.get("code");
         const accessToken = fragment.get("access_token");
         const refreshToken = fragment.get("refresh_token");
-        if (code) await supabase.auth.exchangeCodeForSession(code);
-        else if (accessToken && refreshToken) await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-      } catch {
-        // Callback tidak valid dibiarkan tanpa mengubah sesi aplikasi.
+        const result = code
+          ? await supabase.auth.exchangeCodeForSession(code)
+          : accessToken && refreshToken
+            ? await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+            : { data: { session: null }, error: new Error("Callback OAuth tidak memuat kredensial sesi") };
+        if (result.error || !result.data.session) throw result.error || new Error("Sesi OAuth tidak terbentuk");
+        window.localStorage.removeItem(NATIVE_CALLBACK_STORAGE_KEY);
+        window.sessionStorage.removeItem(NATIVE_CALLBACK_STORAGE_KEY);
+        window.__storichiNativeAuthCallback = null;
+        notifyNative("storichi-native-auth-complete");
+      } catch (error) {
+        notifyNative("storichi-native-auth-failed");
+        console.warn("Native OAuth callback tidak dapat ditukar menjadi sesi", error?.message || "unknown");
+      } finally {
+        processingCallback = null;
       }
     }
+
+    const recoverPersistedCallback = () => {
+      const callback = window.__storichiNativeAuthCallback
+        || window.localStorage.getItem(NATIVE_CALLBACK_STORAGE_KEY)
+        || window.sessionStorage.getItem(NATIVE_CALLBACK_STORAGE_KEY);
+      void acceptNativeCallback(callback);
+    };
+
     window.addEventListener("storichi:native-auth-callback", acceptNativeCallback);
-    return () => window.removeEventListener("storichi:native-auth-callback", acceptNativeCallback);
+    document.addEventListener("storichi:native-auth-callback", acceptNativeCallback);
+    recoverPersistedCallback();
+    return () => {
+      window.removeEventListener("storichi:native-auth-callback", acceptNativeCallback);
+      document.removeEventListener("storichi:native-auth-callback", acceptNativeCallback);
+    };
   }, []);
 
   useEffect(() => {
