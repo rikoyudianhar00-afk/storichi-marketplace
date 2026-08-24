@@ -924,6 +924,7 @@ input[type="checkbox"], input[type="radio"] {
 .account-security-card > .btn { margin-top: 14px; }
 .authenticator-enrollment { display: grid; justify-items: center; gap: 10px; margin-top: 14px; padding: 14px; border-radius: 14px; background: rgba(36,84,255,.05); text-align: center; }
 .authenticator-enrollment p { margin: 0; color: var(--ink-500); font-size: 13px; line-height: 1.45; }
+.authenticator-enrollment-warning { color: #a84b00; font-size: 12px; line-height: 1.4; }
 .authenticator-enrollment img { width: 180px; height: 180px; padding: 8px; border-radius: 10px; background: #fff; }
 .authenticator-enrollment details { width: 100%; color: var(--ink-500); font-size: 12px; }
 .authenticator-enrollment code { display: block; overflow-wrap: anywhere; margin-top: 8px; color: var(--ink-900); font-size: 11px; }

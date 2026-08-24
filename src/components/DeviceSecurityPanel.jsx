@@ -51,18 +51,21 @@ export default function DeviceSecurityPanel() {
   }
 
   async function replacePendingEnrollment() {
+    await recoverAndStartEnrollment();
+  }
+
+  async function recoverAndStartEnrollment() {
     setBusy(true);
     setMessage("");
     try {
-      for (const factor of pendingFactors) {
-        const { error } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
-        if (error) throw error;
-      }
+      const { data, error } = await supabase.functions.invoke("recover-storichi-totp", { body: { action: "recover" } });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Aktivasi lama belum dapat dipulihkan.");
       setPendingFactors([]);
+      await loadFactors();
       const created = await startEnrollment();
-      if (created) setMessage("QR baru siap dipindai. Masukkan kode enam digit untuk menyelesaikan aktivasi.");
+      if (created) setMessage("QR baru siap dipindai. Jangan refresh atau tutup halaman sebelum kode enam digit berhasil dimasukkan.");
     } catch (error) {
-      setMessage(error?.message || "Aktivasi lama belum dapat dibatalkan. Coba muat ulang halaman lalu ulangi.");
+      setMessage(error?.message || "Aktivasi lama belum dapat dipulihkan. Coba lagi setelah memastikan koneksi stabil.");
     } finally {
       setBusy(false);
     }
@@ -127,7 +130,7 @@ export default function DeviceSecurityPanel() {
   }
 
   async function enrollAndChallenge() {
-    await startEnrollment();
+    await recoverAndStartEnrollment();
   }
 
   useEffect(() => {
@@ -137,6 +140,23 @@ export default function DeviceSecurityPanel() {
       else setChallenge({ factorId: enrollment.factorId, challengeId: data.id, purpose: "enroll" });
     });
   }, [enrollment?.factorId]);
+
+  useEffect(() => {
+    if (!enrollment) return undefined;
+    const warnBeforeRefresh = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    };
+    const root = document.documentElement;
+    const previousOverscroll = root.style.overscrollBehaviorY;
+    root.style.overscrollBehaviorY = "none";
+    window.addEventListener("beforeunload", warnBeforeRefresh);
+    return () => {
+      root.style.overscrollBehaviorY = previousOverscroll;
+      window.removeEventListener("beforeunload", warnBeforeRefresh);
+    };
+  }, [enrollment]);
 
   return (
     <section className="account-security-card" aria-labelledby="account-security-title">
@@ -157,6 +177,7 @@ export default function DeviceSecurityPanel() {
       {enrollment && (
         <div className="authenticator-enrollment">
           <p>Pindai QR ini menggunakan aplikasi autentikator, lalu masukkan kode enam digitnya.</p>
+          <strong className="authenticator-enrollment-warning">Jangan refresh, kembali, atau tutup halaman sampai aktivasi selesai.</strong>
           <img src={enrollment.qrCode} alt="QR code untuk Storichi Authenticator" />
           <details><summary>Tidak bisa memindai QR?</summary><code>{enrollment.secret}</code></details>
         </div>
