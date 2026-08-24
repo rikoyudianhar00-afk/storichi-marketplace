@@ -33,7 +33,9 @@ export default function DeviceSecurityPanel() {
   async function startEnrollment() {
     setBusy(true);
     setMessage("");
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "Storichi Authenticator" });
+    // Nama faktor dibiarkan dibuat Supabase agar enrollment yang terputus
+    // tidak memblokir QR baru dengan kesalahan friendly-name duplikat.
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
     if (error || !data?.totp?.qr_code) {
       setMessage(error?.message || "Autentikator belum dapat dibuat.");
       setBusy(false);
