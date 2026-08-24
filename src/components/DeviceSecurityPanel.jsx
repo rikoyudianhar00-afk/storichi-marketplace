@@ -7,6 +7,7 @@ function normalizeOtp(value) {
 
 export default function DeviceSecurityPanel() {
   const [factors, setFactors] = useState([]);
+  const [pendingFactors, setPendingFactors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrollment, setEnrollment] = useState(null);
   const [challenge, setChallenge] = useState(null);
@@ -19,7 +20,11 @@ export default function DeviceSecurityPanel() {
     setLoading(true);
     const { data, error } = await supabase.auth.mfa.listFactors();
     if (error) setMessage(error.message || "Status autentikator belum dapat dimuat.");
-    else setFactors([...(data?.totp || [])].filter((factor) => factor.status === "verified"));
+    else {
+      const totpFactors = [...(data?.totp || [])];
+      setFactors(totpFactors.filter((factor) => factor.status === "verified"));
+      setPendingFactors(totpFactors.filter((factor) => factor.status !== "verified"));
+    }
     setLoading(false);
   }
 
@@ -29,13 +34,36 @@ export default function DeviceSecurityPanel() {
     setBusy(true);
     setMessage("");
     const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "Storichi Authenticator" });
-    if (error || !data?.totp?.qr_code) setMessage(error?.message || "Autentikator belum dapat dibuat.");
+    if (error || !data?.totp?.qr_code) {
+      setMessage(error?.message || "Autentikator belum dapat dibuat.");
+      setBusy(false);
+      return false;
+    }
     else {
       setEnrollment({ factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret });
       setChallenge(null);
       setOtp("");
     }
     setBusy(false);
+    return true;
+  }
+
+  async function replacePendingEnrollment() {
+    setBusy(true);
+    setMessage("");
+    try {
+      for (const factor of pendingFactors) {
+        const { error } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+        if (error) throw error;
+      }
+      setPendingFactors([]);
+      const created = await startEnrollment();
+      if (created) setMessage("QR baru siap dipindai. Masukkan kode enam digit untuk menyelesaikan aktivasi.");
+    } catch (error) {
+      setMessage(error?.message || "Aktivasi lama belum dapat dibatalkan. Coba muat ulang halaman lalu ulangi.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function startApproval() {
@@ -112,10 +140,17 @@ export default function DeviceSecurityPanel() {
     <section className="account-security-card" aria-labelledby="account-security-title">
       <div className="account-section-heading">
         <div><h3 id="account-security-title">Autentikator & perangkat</h3><p>Gunakan Google Authenticator, Authy, Microsoft Authenticator, atau aplikasi TOTP lain untuk mengamankan login aplikasi.</p></div>
-        <span className="account-qris-status">{loading ? "Memuat" : factors.length ? "Aktif" : "Belum aktif"}</span>
+        <span className="account-qris-status">{loading ? "Memuat" : factors.length ? "Aktif" : pendingFactors.length ? "Aktivasi belum selesai" : "Belum aktif"}</span>
       </div>
 
-      {!loading && !factors.length && !enrollment && <button type="button" className="btn btn-primary" onClick={enrollAndChallenge} disabled={busy}>Aktifkan autentikator</button>}
+      {!loading && !factors.length && !pendingFactors.length && !enrollment && <button type="button" className="btn btn-primary" onClick={enrollAndChallenge} disabled={busy}>Aktifkan autentikator</button>}
+
+      {!loading && !factors.length && pendingFactors.length > 0 && !enrollment && (
+        <div className="authenticator-recovery" role="status">
+          <p>Aktivasi sebelumnya belum selesai. QR lama tidak dapat dipakai lagi setelah halaman dimuat ulang.</p>
+          <button type="button" className="btn btn-primary" onClick={replacePendingEnrollment} disabled={busy}>{busy ? "Menyiapkan QR…" : "Buat QR autentikator baru"}</button>
+        </div>
+      )}
 
       {enrollment && (
         <div className="authenticator-enrollment">
