@@ -1470,3 +1470,39 @@ body:has(.chat-thread-page) { padding-bottom: 0 !important; }
   .transaction-rekber-meta { grid-template-columns: 1fr; }
   .transaction-chat-lines div { grid-template-columns: minmax(0, 1fr) auto; }
 }
+
+/* ---------- Authoritative Android WebView composer boundary ----------
+   Native Android reports keyboard visibility. With resize mode, fixed bottom: 0
+   is the keyboard boundary already; never add the keyboard pixel height here. */
+@media (max-width: 860px) {
+  html.storichi-android-webview body.storichi-native-keyboard-open .bottom-nav {
+    display: none !important;
+  }
+
+  html.storichi-android-webview body.storichi-native-keyboard-open .chat-thread-page .chat-composer-shell.is-keyboard-active,
+  html.storichi-android-webview body.storichi-native-keyboard-open .chat-thread-page .whisper-panel.is-keyboard-active .whisper-panel-composer,
+  html.storichi-android-webview body.storichi-native-keyboard-open .rekber-room-page .chat-input-bar.is-keyboard-active {
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    bottom: 0 !important;
+    z-index: 1400 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+  }
+
+  html.storichi-android-webview body.storichi-native-keyboard-open .chat-thread-page .chat-composer-shell.is-keyboard-active,
+  html.storichi-android-webview body.storichi-native-keyboard-open .rekber-room-page .chat-input-bar.is-keyboard-active {
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    background: rgba(255, 255, 255, .99) !important;
+    box-shadow: 0 -8px 24px rgba(20, 35, 80, .18) !important;
+  }
+
+  html.storichi-android-webview body.storichi-native-keyboard-open .chat-thread-page .whisper-panel.is-keyboard-active .whisper-panel-composer {
+    padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px)) !important;
+    background: rgba(255, 253, 242, .99) !important;
+    box-shadow: 0 -8px 24px rgba(20, 35, 80, .18) !important;
+  }
+}
